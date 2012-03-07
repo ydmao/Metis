@@ -295,6 +295,16 @@ main(int argc, char *argv[])
     matrix_A_ptr = malloc(sizeof(int) * matrix_len * matrix_len);
     matrix_B_ptr = malloc(sizeof(int) * matrix_len * matrix_len);
     fdata_out = malloc(sizeof(int) * matrix_len * matrix_len);
+   
+    // randomize the physical page layout
+    // this helps prevent bad stride
+    // accesses of certain array sizes
+    int M = matrix_len*matrix_len;
+    for (i = 0; i < M/2048; i++) {
+   	matrix_A_ptr[rand()%M] = 0;
+	matrix_B_ptr[rand()%M] = 0;
+	fdata_out[rand()%M] = 0;
+    }
 
     for (i = 0; i < matrix_len; i++) {
 	for (j = 0; j < matrix_len; j++) {
