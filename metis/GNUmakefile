@@ -64,6 +64,7 @@ PROGS := app/kmeans 			    \
 	 app/hist			    \
 	 app/string_match		    \
 	 app/wrmem			    \
+         app/matrix_mult2                   \
 	 micro/sf_sample
 
 PROGS := $(addprefix $(O)/,$(PROGS))
