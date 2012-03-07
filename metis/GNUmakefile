@@ -40,7 +40,6 @@ OPTFLAG := -O3
 #OPTFLAG := -g
 INCLUDES := -I$(TOP) -I$(TOP)/lib
 
-# Modify JOS_NCPU to support more than 48 cores
 CFLAGS	:= -std=c99 -fms-extensions -D_GNU_SOURCE -Wall $(OPTFLAG) \
 	   -D_X86_64_ $(INCLUDES) -DJTLS=__thread -DJSHARED_ATTR=  \
 	   -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64 -MD $(SF_MMOPT) 	   \
