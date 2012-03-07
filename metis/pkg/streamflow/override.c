@@ -206,7 +206,7 @@ discover_cpu()
 	exit(1);
     }
 
-    fscanf(stats,
+    int r = fscanf(stats,
 	   "%d %s %c %d %d %d %d %d %lu %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %d %ld %llu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %d %d %lu %lu\n",
 	   &dint, tcomm, &stat, &dint, &dint, &dint, &dint, &dint, &dulong,
 	   &dulong, &dulong, &dulong, &dulong, &dulong, &dulong, &dlong,
@@ -214,7 +214,7 @@ discover_cpu()
 	   &dulong, &dulong, &dulong, &dulong, &dulong, &dulong, &dulong,
 	   &dulong, &dulong, &dulong, &dulong, &dulong, &dulong, &dint, &cpu,
 	   &dulong, &dulong);
-
+    assert(r > 0);
     fflush(stdout);
 
     fclose(stats);
