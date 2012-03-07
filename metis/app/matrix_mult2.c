@@ -198,13 +198,26 @@ matrixmult_splitter(void *arg, split_t * out, int ncore)
     return 1;
 }
 
+/** processInnerLoop()
+ * Extract inner loop to make auto vectorization easier
+ * to analyze
+ */
+void 
+processInnerLoop(int* out, int out_offset, int* mat_a, int a_offset, int *mat_b,
+                 int b_offset, int start, int end) {
+    int i;
+    int a = mat_a[a_offset];
+    for (i = start; i < end; ++i)
+	out[out_offset + i] += a * mat_b[b_offset + i];
+}
+
 /** matrixmul_map()
  * Multiplies the allocated regions of matrix to compute partial sums
  */
 void
 matrixmult_map(split_t * args)
 {
-    int i, j, k, end_i, end_j, end_k, a, b, c;
+    int i, j, k, end_i, end_j, end_k, a, c;
     prof_enterapp();
     assert(args);
 
@@ -220,13 +233,12 @@ matrixmult_map(split_t * args)
 	end_i = i + block_len;
 	end_j = j + block_len;
 	end_k = k + block_len;
-	for (a = i; a < end_i && a < data->matrix_len; a++)
-	    for (b = j; b < end_j && b < data->matrix_len; b++)
-		for (c = k; c < end_k && c < data->matrix_len; c++) {
-		    data->output[data->matrix_len * a + b] +=
-			(data->matrix_A[data->matrix_len * a + c] *
-			 data->matrix_B[data->matrix_len * c + b]);
-		}
+	int end = (end_j < data->matrix_len) ? end_j : data->matrix_len;
+	for (a = i; a < end_i && a < data->matrix_len; ++a)
+            for (c = k; c < end_k && c < data->matrix_len; ++c)
+	        processInnerLoop(data->output, data->matrix_len * a, data->matrix_A, 
+                                 data->matrix_len * a + c, data->matrix_B, 
+                                 data->matrix_len * c, j, end);
     }
     dprintf("Finished Map task %d\n", data->row_num);
 
