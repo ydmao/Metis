@@ -166,7 +166,7 @@ main(int argc, char *argv[])
     char *fname;
     struct stat finfo;
     int i;
-    int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0, quiet = 0;
+    int nprocs = 0, map_tasks = 0, quiet = 0;
     int c;
 
     // Make sure a filename is specified
@@ -176,19 +176,13 @@ main(int argc, char *argv[])
 	lr_usage(argv[0]);
 	exit(EXIT_FAILURE);
     }
-    while ((c = getopt(argc - 1, argv + 1, "p:l:m:r:q")) != -1) {
+    while ((c = getopt(argc - 1, argv + 1, "p:m:q")) != -1) {
 	switch (c) {
 	case 'p':
 	    nprocs = atoi(optarg);
 	    break;
-	case 'l':
-	    ndisp = atoi(optarg);
-	    break;
 	case 'm':
 	    map_tasks = atoi(optarg);
-	    break;
-	case 'r':
-	    reduce_tasks = atoi(optarg);
 	    break;
 	case 'q':
 	    quiet = 1;

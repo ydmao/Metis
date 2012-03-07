@@ -17,6 +17,7 @@
  */
 
 #include <new>
+#include <sys/types.h>
 
 extern "C" {
 	void* malloc(size_t);

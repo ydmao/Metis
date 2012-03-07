@@ -261,7 +261,7 @@ main(int argc, char *argv[])
     char *fdata_keys;
     struct stat finfo_keys;
     char *fname_keys;
-    int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0, quiet = 0;
+    int nprocs = 0, map_tasks = 0, reduce_tasks = 0, quiet = 0;
     /* Option to provide the encrypted words in a file as opposed to source code */
     //fname_encrypt = "encrypt.txt";
     if (argc < 2) {
@@ -272,13 +272,10 @@ main(int argc, char *argv[])
     fname_keys = argv[1];
 
     int c;
-    while ((c = getopt(argc - 1, argv + 1, "p:l:m:r:q")) != -1) {
+    while ((c = getopt(argc - 1, argv + 1, "p:m:r:q")) != -1) {
 	switch (c) {
 	case 'p':
 	    nprocs = atoi(optarg);
-	    break;
-	case 'l':
-	    ndisp = atoi(optarg);
 	    break;
 	case 'm':
 	    map_tasks = atoi(optarg);

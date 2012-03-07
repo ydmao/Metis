@@ -40,7 +40,8 @@ worker(void *arg)
     }
     uint64_t start = read_tsc();
     for (int i = 0; i < nmallocs; i++) {
-	malloc(100);
+	void *p = malloc(100);
+        (void) p;
     }
     uint64_t end = read_tsc();
     gstate->state[c].v.cycles = end - start;

@@ -134,7 +134,7 @@ static void
 matrixmult_map2(split_t * args)
 {
     int row_count = 0;
-    int i, j, x_loc, y_loc, value;
+    int i, j, x_loc, value;
     int *a_ptr, *b_ptr;
     prof_enterapp();
     assert(args);
@@ -155,7 +155,6 @@ matrixmult_map2(split_t * args)
 		b_ptr += data->matrix_len;
 	    }
 	    x_loc = (data->row_num + row_count);
-	    y_loc = i;
 	    data->output[x_loc * data->matrix_len + i] = value;
 	    fflush(stdout);
 	}
@@ -242,7 +241,6 @@ mm_usage(char *fn)
     printf("options:\n");
     printf("  -p nprocs : # of processors to use\n");
     printf("  -m #map tasks : # of map tasks (pre-split input before MR)\n");
-    printf("  -r #reduce tasks : # of reduce tasks\n");
     printf("  -q : quiet output (for batch test)\n");
     printf("  -l : matrix dimentions. (assume squaure)\n");
 }
@@ -263,7 +261,7 @@ main(int argc, char *argv[])
     }
 
     int c;
-    while ((c = getopt(argc, argv, "p:m:ql:f")) != -1) {
+    while ((c = getopt(argc, argv, "p:m:ql:")) != -1) {
 	switch (c) {
 	case 'p':
 	    assert((nprocs = atoi(optarg)) >= 0);
