@@ -1,21 +1,23 @@
 /**
- * Matrix multiply optimized by Mark Roth (mroth@cs.sfu.ca). The optimizations
- * are:
+ * Matrix multiply optimized by Mark Roth (mroth@cs.sfu.ca)
+ * SFU Systems Research Group (http://synar.cs.sfu.ca/systems-research.html)
+ *
+ * The optimizations are: 
  *
  * - Swapping the order of the inner two most loops of matrixmult_map, which
- *   improved performance by 3.5x on input size 4096 running on a 24 core 
+ *   improves performance by ~3.5x on input size 4096 running on a 24 core 
  *   AMD system with 64kb L1 cache and 2 way associativity. Performance also 
  *   seems to increase in general by 30% on other input sizes as cache line 
  *   reuse is increased.
  *
  * - Using processInnerLoop() to let gcc vectorize the inner loop at 
- *   O3. Speed up is appropriately 3x over the above version.
+ *   O3. Speed up is ~3x over the above version.
  *
  * - The last optimization helps to prevent L1 collisions by pre-faulting
- *   the matrix pages randomly, particularly for multiples of 2048. This is 
- *   particularly useful for caches that have a low associativity. On an AMD 
- *   system with a 64kb 2 way associative cache, the patch make about a 20-30% 
- *   improve for input size 4096.
+ *   the matrix pages randomly. This is useful for caches that have a low 
+ *   associativity and with inputs that are multiples of 2048. On an AMD 
+ *   system with a 64kb 2 way associative cache, the patch makes about a 
+ *   20-30% improvement for input size 4096.
  */
 /* Copyright (c) 2007, Stanford University
  * All rights reserved.
