@@ -58,12 +58,6 @@ mthread_entry(void *args)
 {
     cur_lcpu = PTR2INT(args);
     assert(affinity_set(lcpu_to_pcpu[cur_lcpu]) == 0);
-#ifdef HUGETLB
-    // Initialize the HUGETLB by allocate a Streamflow super page,
-    // which would call hugemmap
-    void *p = malloc(SPAGE_SM * 1024 * 1024);
-    free(p);
-#endif
     for (;;) {
 	while (!(thread_pool[cur_lcpu].ready))
 	    nop_pause();
