@@ -53,13 +53,8 @@ mthread_join(pthread_t tid, int lid, void **exitcode)
 	*exitcode = 0;
 }
 
-#ifndef __WIN__
 static void *
 mthread_entry(void *args)
-#else
-static DWORD WINAPI
-mthread_entry(LPVOID args)
-#endif
 {
     cur_lcpu = PTR2INT(args);
     assert(affinity_set(lcpu_to_pcpu[cur_lcpu]) == 0);
@@ -104,11 +99,7 @@ mthread_init(int nlcpus, int mlcpu)
 static void * __attribute__ ((noreturn))
     mthread_exit(void __attribute__ ((unused)) * args)
 {
-#ifndef __WIN__
     pthread_exit(NULL);
-#else
-    ExitThread(NULL);
-#endif
 }
 
 void
@@ -119,15 +110,9 @@ mthread_finalize(void)
 	    continue;
 	mthread_create(NULL, i, mthread_exit, NULL);
     }
-    for (int i = 0; i < used_nlcpus; i++) {
-	if (i != main_lcpu) {
-#ifndef __WIN__
+    for (int i = 0; i < used_nlcpus; i++)
+	if (i != main_lcpu)
 	    pthread_join(thread_pool[i].tid, NULL);
-#else
-	    WaitForSingleObject(thread_pool[i].tid, INFINITE);
-#endif
-	}
-    }
     memset(&thread_pool, 0, sizeof(thread_pool));
     mthread_inited = 0;
 }

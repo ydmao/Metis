@@ -192,12 +192,7 @@ static inline int
 atomic_add32_ret(int *cnt)
 {
     int __c = 1;
-#ifndef __WIN__
     __asm__ __volatile("lock; xadd %0,%1":"+r"(__c), "+m"(*cnt)::"memory");
-#else
-    __asm {
-    mov eax, 1 mov ebx, cnt lock xadd dword ptr[ebx], eax mov __c, eax}
-#endif
     return __c;
 }
 #endif
