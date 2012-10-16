@@ -1,34 +1,34 @@
 OBJDIRS += lib
 
-LIB_SRCS := lib/mr-sched.c		\
-	    lib/appendbktmgr.c		\
-	    lib/btreebktmgr.c		\
-	    lib/arraybktmgr.c		\
-	    lib/kvstore.c		\
-	    lib/keyvals_array.c		\
-	    lib/keyvals_btree.c		\
-	    lib/keyval_array.c		\
-	    lib/keyvals_len_array.c	\
-	    lib/reduce.c		\
-	    lib/defsplitter.c		\
-	    lib/presplitter.c		\
-	    lib/pthreadpool.c		\
-	    lib/profile.c		\
-	    lib/bsearch.c		\
-	    lib/value_helper.c		\
-	    lib/apphelper.c		\
-	    lib/estimation.c		\
-	    lib/psrs.c			\
-	    lib/ibs.c			\
-	    lib/platform.c		\
-	    lib/cpumap.c		\
-	    lib/mergesort.c		\
-	    lib/rbktsmgr.c
+LIB_SRCS := lib/mr-sched.cc		\
+	    lib/appendbktmgr.cc		\
+	    lib/btreebktmgr.cc		\
+	    lib/arraybktmgr.cc		\
+	    lib/kvstore.cc		\
+	    lib/keyvals_array.cc	\
+	    lib/keyvals_btree.cc	\
+	    lib/keyval_array.cc		\
+	    lib/keyvals_len_array.cc	\
+	    lib/reduce.cc		\
+	    lib/defsplitter.cc		\
+	    lib/presplitter.cc		\
+	    lib/pthreadpool.cc		\
+	    lib/profile.cc		\
+	    lib/bsearch.cc		\
+	    lib/value_helper.cc		\
+	    lib/apphelper.cc		\
+	    lib/estimation.cc		\
+	    lib/psrs.cc			\
+	    lib/ibs.cc			\
+	    lib/platform.cc		\
+	    lib/cpumap.cc		\
+	    lib/mergesort.cc		\
+	    lib/rbktsmgr.cc
 
-LIB_OBJS := $(patsubst %.c, $(O)/%.o, $(LIB_SRCS))
+LIB_OBJS := $(patsubst %.cc, $(O)/%.o, $(LIB_SRCS))
 LIB_OBJS := $(patsubst %.S, $(O)/%.o, $(LIB_OBJS))
 
-$(O)/lib/%.o: lib/%.c
+$(O)/lib/%.o: lib/%.cc
 	$(Q)mkdir -p $(@D)
 	@echo "CC	$<"
 	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
