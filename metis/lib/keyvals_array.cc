@@ -98,42 +98,6 @@ uint64_t pch_kvsarray::pch_get_len(void *coll)
     return ((keyvals_arr_t *) coll)->len;
 }
 
-typedef struct {
-    int next;
-} iter_t;
-
-int pch_kvsarray::pch_iter_begin(void *coll, void **iter_)
-{
-    if (!coll) {
-	*iter_ = 0;
-	return 1;
-    }
-    iter_t *iter;
-    assert(iter = (iter_t *) malloc(sizeof(iter_t)));
-    iter->next = 0;
-    *iter_ = iter;
-    return 0;
-}
-
-int pch_kvsarray::pch_iter_next_kvs(void *coll, keyvals_t * kvs, void *iter_, int bclear)
-{
-    keyvals_arr_t *arr = (keyvals_arr_t *) coll;
-    iter_t *iter = (iter_t *) iter_;
-    if (iter->next == int(arr->len))
-	return 1;
-    *kvs = arr->arr[iter->next];
-    if (bclear)
-	memset(&arr->arr[iter->next], 0, sizeof(keyvals_t));
-    iter->next++;
-    return 0;
-}
-
-void pch_kvsarray::pch_iter_end(void *iter)
-{
-    if (iter)
-	free(iter);
-}
-
 size_t pch_kvsarray::pch_get_pair_size(void)
 {
     return sizeof(keyvals_t);

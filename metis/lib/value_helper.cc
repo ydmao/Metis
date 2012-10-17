@@ -17,9 +17,8 @@ values_insert(keyvals_t * kvs, void *val)
 	if (kvs->len == 0) {
 	    kvs->len = 1;
 	    kvs->vals = (void **)the_app.mapreduce.vm(0, val, 1);
-	} else {
+	} else
 	    kvs->vals = (void **)the_app.mapreduce.vm(kvs->vals, val, 0);
-	}
 	return;
     }
     if (kvs->alloc_len == 0) {
@@ -57,10 +56,8 @@ values_mv(keyvals_t * dst, keyvals_t * src)
 	    dst->vals = src->vals;
 	    dst->alloc_len = src->alloc_len;
 	    dst->len = 1;
-	} else {
-	    dst->vals =
-		(void **) the_app.mapreduce.vm(dst->vals, src->vals, 0);
-	}
+	} else
+	    dst->vals = (void **) the_app.mapreduce.vm(dst->vals, src->vals, 0);
 	src->alloc_len = 0;
 	src->len = 0;
 	src->vals = NULL;

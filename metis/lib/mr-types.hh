@@ -63,6 +63,13 @@ struct keyvals_arr_t {
     unsigned alloc_len;
     keyvals_t *arr;
 
+    void shallow_free() {
+        if (arr) {
+            free(arr);
+            arr = 0;
+        }
+    }
+
     struct iterator {
         iterator(keyvals_arr_t *p, int i) : p_(p), i_(i) {}
         iterator(keyvals_arr_t *p) : p_(p), i_(0) {}

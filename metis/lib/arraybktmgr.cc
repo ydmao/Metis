@@ -96,17 +96,15 @@ void arraybktmgr::mbm_rehash_bak(int row)
 	return;
     for (int i = 0; i < mapper_bak.map_cols; i++) {
 	htable_entry_t *bucket = &mapper_bak.mbks[row][i];
-	void *iter = NULL;
-	if (!hkvsarr.pch_iter_begin(&bucket->v, &iter)) {
-	    keyvals_t kvs;
-	    while (!hkvsarr.pch_iter_next_kvs(&bucket->v, &kvs, iter, 1)) {
-		htable_entry_t *dest =
-		    &mapper.mbks[row][kvs.hash % mapper.map_cols];
-		hkvsarr.pch_insert_kvs(&dest->v, &kvs);
-	    }
-	    hkvsarr.pch_iter_end(iter);
+        keyvals_arr_t::iterator it = bucket->v.begin();
+	while (it != bucket->v.end()) {
+	    htable_entry_t *dest =
+		    &mapper.mbks[row][it->hash % mapper.map_cols];
+	    hkvsarr.pch_insert_kvs(&dest->v, &it);
+            memset(&it, 0, sizeof(keyvals_t));
+            ++it;
 	}
-	hkvsarr.pch_shallow_free(&bucket->v);
+        bucket->v.shallow_free();
     }
 }
 

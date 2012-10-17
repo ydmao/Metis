@@ -24,12 +24,6 @@ struct pc_handler_t {
     /* get results */
     virtual uint64_t pch_copy_kvs(void *coll, keyvals_t * dst) = 0;
     virtual uint64_t pch_copy_kv(void *coll, keyval_t * dst) = 0;
-    /* iteartor */
-    virtual int pch_iter_begin(void *coll, void **iter) = 0;
-    virtual int pch_iter_next_kvs(void *coll, keyvals_t * next, void *iter,
-	                  int bclear) = 0;
-    virtual int pch_iter_next_kv(void *coll, keyval_t * next, void *iter) = 0;
-    virtual void pch_iter_end(void *iter) = 0;
     /* free the collection, but not the values of the pairs */
     virtual void pch_shallow_free(void *coll) = 0;
     /* properties of the pair handler which handles pairs arrays */

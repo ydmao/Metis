@@ -42,39 +42,6 @@ int pch_kvarray::pch_insert_kv(void *coll, void *key, void *val, size_t keylen, 
     return 1;
 }
 
-typedef struct {
-    int next;
-} iter_t;
-
-int pch_kvarray::pch_iter_begin(void *coll, void **iter_)
-{
-    if (!coll) {
-	*iter_ = 0;
-	return 1;
-    }
-    iter_t *iter;
-    assert(iter = (iter_t *) malloc(sizeof(iter_t)));
-    iter->next = 0;
-    *iter_ = iter;
-    return 0;
-}
-
-int pch_kvarray::pch_iter_next_kv(void *coll, keyval_t * next, void *iter_)
-{
-    keyval_arr_t *arr = (keyval_arr_t *) coll;
-    iter_t *iter = (iter_t *) iter_;
-    if (iter->next == int(arr->len))
-	return 1;
-    *next = arr->arr[iter->next++];
-    return 0;
-}
-
-void pch_kvarray::pch_iter_end(void *iter)
-{
-    if (iter)
-	free(iter);
-}
-
 uint64_t pch_kvarray::pch_copy_kv(void *coll, keyval_t * dst)
 {
     keyval_arr_t *arr = (keyval_arr_t *) coll;

@@ -24,14 +24,6 @@ struct pch_kvarray : public pc_handler_t {
         assert(0);
     }
     uint64_t pch_copy_kv(void *coll, keyval_t * dst);
-    /* iteartor */
-    int pch_iter_begin(void *coll, void **iter);
-    int pch_iter_next_kvs(void *coll, keyvals_t * next, void *iter,
-	                  int bclear) {
-        assert(0 && "Should never call");
-    }
-    int pch_iter_next_kv(void *coll, keyval_t * next, void *iter);
-    void pch_iter_end(void *iter);
     /* free the collection, but not the values of the pairs */
     void pch_shallow_free(void *coll);
     /* properties of the pair handler which handles pairs arrays */

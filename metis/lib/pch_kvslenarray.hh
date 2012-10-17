@@ -27,20 +27,6 @@ struct pch_kvslenarray : public pc_handler_t {
     uint64_t pch_copy_kv(void *coll, keyval_t * dst) {
         assert(0);
     }
-    /* iteartor */
-    int pch_iter_begin(void *coll, void **iter) {
-        assert(0);
-    }
-    int pch_iter_next_kvs(void *coll, keyvals_t * next, void *iter,
-	                  int bclear) {
-        assert(0);
-    }
-    inline int pch_iter_next_kv(void *coll, keyval_t * next, void *iter) {
-        assert(0 && "should not come here");
-    }
-    void pch_iter_end(void *iter) {
-        assert(0);
-    }
     /* free the collection, but not the values of the pairs */
     void pch_shallow_free(void *coll);
     /* properties of the pair handler which handles pairs arrays */
