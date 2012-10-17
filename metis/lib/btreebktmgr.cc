@@ -11,6 +11,9 @@
 #include "pch_kvsarray.hh"
 
 static pch_kvsarray hkvsarr;
+btreebktmgr::mapper_t btreebktmgr::mapper;
+btreebktmgr::mapper_t btreebktmgr::mapper_bak;
+keyvals_arr_t *btreebktmgr::map_out;
 
 void btreebktmgr::mbm_mbks_init(int rows, int cols)
 {

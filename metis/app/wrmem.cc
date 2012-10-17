@@ -247,7 +247,6 @@ main(int argc, char *argv[])
 	fdata[pos++] = ' ';
         ++n;
     }
-    fprintf(stderr, "The input consists of %d words\n", n);
     memset(&fdata[pos], 0, inputsize - pos);
     do_mapreduce(nprocs, map_tasks, reduce_tasks, fdata, inputsize, &wr_val);
     mr_print_stats();

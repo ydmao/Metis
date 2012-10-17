@@ -128,6 +128,17 @@ struct btree_type {
     size_t size() const;
     uint64_t copy_kvs(keyvals_t *dst);
 
+    /* @brief: return the number of values in the tree */
+    uint64_t test_get_nvalue() {
+        iterator i = begin();
+        uint64_t n = 0;
+        while (i != end()) {
+            n += i->len;
+            ++ i;
+        }
+        return n;
+    }
+
     struct iterator {
         iterator() : c_(NULL), i_(0) {}
         explicit iterator(btnode_leaf *c) : c_(c), i_(0) {}

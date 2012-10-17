@@ -4,7 +4,7 @@
 #include "pchandler.hh"
 
 struct btreebktmgr : public mbkts_mgr_t {
-    btreebktmgr() : map_out(NULL) {
+    btreebktmgr() {
     }
     void mbm_set_util(key_cmp_t kcmp);
     void mbm_mbks_init(int rows, int cols);
@@ -38,9 +38,9 @@ struct btreebktmgr : public mbkts_mgr_t {
     void map_put_kvs(int row, keyvals_t *kvs);
     void bkt_rehash(htable_entry_t *entry, int row);
 
-    mapper_t mapper;
-    mapper_t mapper_bak;
-    keyvals_arr_t *map_out;
+    static mapper_t mapper;
+    static mapper_t mapper_bak;
+    static keyvals_arr_t *map_out;
 };
 
 inline void btreebktmgr::mapper_t::init(int rows, int cols) {
