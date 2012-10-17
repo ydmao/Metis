@@ -106,9 +106,7 @@ void btreebktmgr::mbm_map_prepare_merge(int row)
 	uint64_t alloc_len = mapper.mbks[row][i].v.size();
 	keyvals_t *arr = new keyvals_t[alloc_len];
         mapper.mbks[row][i].v.copy_kvs(arr);
-	map_out[row * mapper.map_cols + i].alloc_len = alloc_len;
-	map_out[row * mapper.map_cols + i].len = alloc_len;
-	map_out[row * mapper.map_cols + i].arr = arr;
+	map_out[row * mapper.map_cols + i].set_array(arr, alloc_len);
     }
 }
 

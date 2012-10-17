@@ -38,51 +38,25 @@ void pch_kvsarray::pch_append_kvs(void *coll, const keyvals_t * kvs)
 void pch_kvsarray::pch_insert_kvs(void *coll, const keyvals_t * kvs)
 {
     keyvals_arr_t *arr = (keyvals_arr_t *) coll;
-    arr->make_room();
-    bool bfound = false;
-    int dst = bsearch_eq(kvs, arr->arr, arr->len, sizeof(keyvals_t),
-			 keyvals_cmp, &bfound);
-    assert(!bfound);
-    if (dst < int(arr->len))
-	memmove(&arr->arr[dst + 1], &arr->arr[dst],
-		sizeof(keyvals_t) * (arr->len - dst));
-    arr->arr[dst] = *kvs;
-    arr->len++;
+    assert(arr->insert_new(kvs, keyvals_cmp));
 }
 
 int pch_kvsarray::pch_insert_kv(void *coll, void *key, void *val, size_t keylen, unsigned hash)
 {
     keyvals_arr_t *arr = (keyvals_arr_t *) coll;
-    bool bfound = false;
-    keyvals_t tmp;
-    tmp.key = key;
-    int dst = bsearch_eq(&tmp, arr->arr, arr->len, sizeof(keyvals_t),
-			 keyvals_cmp, &bfound);
-    if (bfound) {
-	values_insert(&arr->arr[dst], val);
-	return 0;
-    }
-    // insert the node into the keynode set
-    arr->make_room();
-    if (dst < int(arr->len))
-	memmove(&arr->arr[dst + 1], &arr->arr[dst],
-		sizeof(keyvals_t) * (arr->len - dst));
-    arr->len++;
-    arr->arr[dst].alloc_len = 0;
-    arr->arr[dst].len = 0;
-    arr->arr[dst].hash = hash;
-    if (keylen && mrkeycopy)
-	arr->arr[dst].key = mrkeycopy(key, keylen);
-    else
-	arr->arr[dst].key = key;
-    values_insert(&arr->arr[dst], val);
-    return 1;
+    keyvals_t tmp(key, hash);
+    int pos = 0;
+    bool bnew = arr->insert_new(&tmp, keyvals_cmp, &pos);
+    if (bnew && keylen && mrkeycopy)
+	(*arr)[pos].key = mrkeycopy(key, keylen);
+    values_insert(&(*arr)[pos], val);
+    return bnew;
 }
 
 uint64_t pch_kvsarray::pch_get_len(void *coll)
 {
     assert(coll);
-    return ((keyvals_arr_t *) coll)->len;
+    return ((keyvals_arr_t *) coll)->size();
 }
 
 size_t pch_kvsarray::pch_get_pair_size(void)
@@ -97,7 +71,7 @@ size_t pch_kvsarray::pch_get_parr_size(void)
 
 void *pch_kvsarray::pch_get_arr_elems(void *coll)
 {
-    return ((keyvals_arr_t *) coll)->arr;
+    return ((keyvals_arr_t *) coll)->array();
 }
 
 void *pch_kvsarray::pch_get_key(const void *pair)
@@ -108,19 +82,13 @@ void *pch_kvsarray::pch_get_key(const void *pair)
 void pch_kvsarray::pch_set_elems(void *coll, void *elems, int len)
 {
     keyvals_arr_t *arr = (keyvals_arr_t *) coll;
-    arr->arr = reinterpret_cast<keyvals_t *>(elems);
-    arr->len = len;
-    arr->alloc_len = len;
+    arr->set_array(reinterpret_cast<keyvals_t *>(elems), len);
 }
 
 void pch_kvsarray::pch_shallow_free(void *coll)
 {
     assert(coll);
     keyvals_arr_t *parr = (keyvals_arr_t *) coll;
-    if (parr->arr) {
-	free(parr->arr);
-	parr->arr = NULL;
-	parr->len = 0;
-    }
+    parr->shallow_free();
 }
 

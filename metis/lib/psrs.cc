@@ -129,13 +129,11 @@ reduce_or_group(pc_handler_t * pch, void **elems, int *subsize,
 	keyvals_arr_t colls[JOS_NCPU];
 	keyvals_arr_t *pcolls[JOS_NCPU];
 	for (int i = 0; i < ncpus; i++) {
-	    colls[i].arr =
+	    keyvals_t *elem = 
 		(keyvals_t *) ARRELEM(elems[i], psz,
 				      subsize[i * (ncpus + 1) + lcpu]);
-	    colls[i].alloc_len =
-		subsize[i * (ncpus + 1) + lcpu + 1] -
-		subsize[i * (ncpus + 1) + lcpu];
-	    colls[i].len = colls[i].alloc_len;
+	    int sz = subsize[i * (ncpus + 1) + lcpu + 1] - subsize[i * (ncpus + 1) + lcpu];
+            colls[i].set_array(elem, sz);
 	    pcolls[i] = &colls[i];
 	}
 	reduce_or_group::do_kvs(pcolls, ncpus);
@@ -144,13 +142,11 @@ reduce_or_group(pc_handler_t * pch, void **elems, int *subsize,
 	keyval_arr_t colls[JOS_NCPU];
 	keyval_arr_t *pcolls[JOS_NCPU];
 	for (int i = 0; i < ncpus; i++) {
-	    colls[i].arr =
+	    keyval_t *elem =
 		(keyval_t *) ARRELEM(elems[i], psz,
 				     subsize[i * (ncpus + 1) + lcpu]);
-	    colls[i].alloc_len =
-		subsize[i * (ncpus + 1) + lcpu + 1] -
-		subsize[i * (ncpus + 1) + lcpu];
-	    colls[i].len = colls[i].alloc_len;
+            int len = subsize[i * (ncpus + 1) + lcpu + 1] - subsize[i * (ncpus + 1) + lcpu];
+            colls[i].set_array(elem, len);
 	    pcolls[i] = &colls[i];
 	}
 	reduce_or_group::do_kv(pcolls, ncpus, NULL, NULL);

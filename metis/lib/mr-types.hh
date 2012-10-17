@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <string.h>
+#include "array.hh"
 
 typedef struct {
     void *data;
@@ -33,7 +35,7 @@ typedef struct {
 } final_data_kvs_len_t;
 
 /* types used internally */
-typedef struct {
+struct keyval_arr_t : public xarray<keyval_t> {
     unsigned len;
     unsigned alloc_len;
     keyval_t *arr;
@@ -43,7 +45,7 @@ typedef struct {
     keyval_t *get_arr_elems() {
         return arr;
     }
-} keyval_arr_t;
+};
 
 typedef struct {
     unsigned len;
@@ -51,86 +53,27 @@ typedef struct {
     keyvals_len_t *arr;
 } keyvals_len_arr_t;
 
-typedef struct {
+struct keyvals_t {
     void *key;			/* put key at the same offset with keyval_t */
     void **vals;
     unsigned len;
     unsigned alloc_len;
     unsigned hash;
-} keyvals_t;
-
-struct keyvals_arr_t {
-    unsigned len;
-    unsigned alloc_len;
-    keyvals_t *arr;
-    enum {init_array_size = 8};
-
-    void make_room() {
-        if (alloc_len == 0) {
-	    alloc_len = init_array_size;
-	    arr = new keyvals_t[arr->alloc_len];
-        } else if (len == alloc_len) {
-	    alloc_len *= 2;
-	    assert(arr = (keyvals_t *)
-	           realloc(arr, alloc_len * sizeof(keyvals_t)));
-        }
+    keyvals_t() {
+        memset(this, 0, sizeof(*this));
     }
+    keyvals_t(void *k) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+    }
+    keyvals_t(void *k, unsigned h) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+        hash = h;
+    }
+};
 
-    void push_back(const keyvals_t *kvs) {
-        make_room();
-        arr[len ++] = *kvs;
-    }
-
-    void init() {
-        len = 0;
-        arr = 0;
-        alloc_len = 0;
-    }
-
-    void shallow_free() {
-        if (arr) {
-            free(arr);
-            arr = 0;
-        }
-    }
-
-    struct iterator {
-        iterator(keyvals_arr_t *p, int i) : p_(p), i_(i) {}
-        iterator(keyvals_arr_t *p) : p_(p), i_(0) {}
-        iterator() : p_(NULL), i_(0) {}
-        iterator(const iterator &a) : p_(a.p_), i_(a.i_) {}
-        bool operator==(const iterator &a) {
-            return p_ == a.p_ && i_ == a.i_;
-        }
-        bool operator!=(const iterator &a) {
-            return !(*this == a);
-        }
-        void operator++(int) {
-            ++i_;
-        }
-        void operator++() {
-            ++i_;
-        }
-        keyvals_t &operator*() {
-            return p_->arr[i_];
-        }
-        keyvals_t *operator->() {
-            return &p_->arr[i_];
-        }
-        keyvals_t *operator&() {
-            return &p_->arr[i_];
-        }
-      private:
-        keyvals_arr_t *p_;
-        int i_;
-    };
-    iterator begin() {
-        return iterator(this);
-    }
-    iterator end() {
-        return iterator(this, len);
-    }
-};   
+typedef xarray<keyvals_t> keyvals_arr_t;
 
 typedef enum {
     MAP,
