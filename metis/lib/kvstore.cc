@@ -61,7 +61,7 @@ kvst_set_bktmgr(int idx)
     the_bucket_manager = create(idx);
     the_bucket_manager->mbm_set_util(keycmp);
     rbkts_set_util(keycmp);
-    reduce_or_group_setcmp(keycmp);
+    reduce_or_group::setcmp(keycmp);
 }
 
 void

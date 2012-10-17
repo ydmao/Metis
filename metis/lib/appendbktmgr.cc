@@ -84,7 +84,7 @@ void appendbktmgr::mbm_do_reduce_task(int col) {
     keyval_arr_t *pnodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	pnodes[i] = &mapper.mbks[i][col].v;
-    reduce_or_groupkv(&hkvarr, (void **) pnodes, mapper.map_rows, NULL, NULL);
+    reduce_or_group::do_kv(&hkvarr, (void **) pnodes, mapper.map_rows, NULL, NULL);
     for (int i = 0; i < mapper.map_rows; i++)
 	hkvarr.pch_shallow_free(&mapper.mbks[i][col].v);
 }
@@ -130,7 +130,7 @@ void appendbktmgr::mbm_map_prepare_merge(int row) {
 	memset(&mapper.mbks[row][0].v, 0, sizeof(mapper.mbks[row][0].v));
     } else {
 	keyval_arr_t *p = &mapper.mbks[row][0].v;
-	reduce_or_groupkv(&hkvarr, (void **) &p, 1, hkvsarr.pch_append_kvs,
+	reduce_or_group::do_kv(&hkvarr, (void **) &p, 1, hkvsarr.pch_append_kvs,
 			  &((keyvals_arr_t *) map_out)[row]);
 	hkvarr.pch_shallow_free(&mapper.mbks[row][0].v);
     }

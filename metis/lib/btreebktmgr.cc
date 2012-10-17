@@ -59,7 +59,7 @@ void btreebktmgr::mbm_do_reduce_task(int col)
     void *nodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	nodes[i] = &mapper.mbks[i][col].v;
-    reduce_or_groupkvs(&hkvsbtree, nodes, mapper.map_rows);
+    reduce_or_group::do_kvs(&hkvsbtree, nodes, mapper.map_rows);
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }
