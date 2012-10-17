@@ -29,29 +29,16 @@ keyvals_cmp(const void *k1, const void *k2)
     return keycmp(p1->key, p2->key);
 }
 
-void checkfull(keyvals_arr_t * arr)
-{
-    if (arr->alloc_len == 0) {
-	arr->alloc_len = init_array_size;
-	arr->arr = new keyvals_t[arr->alloc_len];
-    } else if (arr->len == arr->alloc_len) {
-	arr->alloc_len *= 2;
-	assert(arr->arr = (keyvals_t *)
-	       realloc(arr->arr, arr->alloc_len * sizeof(keyvals_t)));
-    }
-}
-
 void pch_kvsarray::pch_append_kvs(void *coll, const keyvals_t * kvs)
 {
     keyvals_arr_t *arr = (keyvals_arr_t *) coll;
-    checkfull(arr);
-    arr->arr[arr->len++] = *kvs;
+    arr->push_back(kvs);
 }
 
 void pch_kvsarray::pch_insert_kvs(void *coll, const keyvals_t * kvs)
 {
     keyvals_arr_t *arr = (keyvals_arr_t *) coll;
-    checkfull(arr);
+    arr->make_room();
     bool bfound = false;
     int dst = bsearch_eq(kvs, arr->arr, arr->len, sizeof(keyvals_t),
 			 keyvals_cmp, &bfound);
@@ -76,7 +63,7 @@ int pch_kvsarray::pch_insert_kv(void *coll, void *key, void *val, size_t keylen,
 	return 0;
     }
     // insert the node into the keynode set
-    checkfull(arr);
+    arr->make_room();
     if (dst < int(arr->len))
 	memmove(&arr->arr[dst + 1], &arr->arr[dst],
 		sizeof(keyvals_t) * (arr->len - dst));

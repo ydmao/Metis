@@ -51,7 +51,7 @@ void appendbktmgr::mbm_mbks_init(int rows, int cols) {
     if (group_before_merge) {
 	keyvals_arr_t *out = new keyvals_arr_t[rows * cols];
 	for (int i = 0; i < rows * cols; i++)
-	    hkvsarr.pch_init(&out[i]);
+	    out[i].init();
 	map_out = out;
     } else {
 	keyval_arr_t *out = new keyval_arr_t[rows * cols];

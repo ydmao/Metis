@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <inttypes.h>
+#include <assert.h>
 
 typedef struct {
     void *data;
@@ -62,6 +63,29 @@ struct keyvals_arr_t {
     unsigned len;
     unsigned alloc_len;
     keyvals_t *arr;
+    enum {init_array_size = 8};
+
+    void make_room() {
+        if (alloc_len == 0) {
+	    alloc_len = init_array_size;
+	    arr = new keyvals_t[arr->alloc_len];
+        } else if (len == alloc_len) {
+	    alloc_len *= 2;
+	    assert(arr = (keyvals_t *)
+	           realloc(arr, alloc_len * sizeof(keyvals_t)));
+        }
+    }
+
+    void push_back(const keyvals_t *kvs) {
+        make_room();
+        arr[len ++] = *kvs;
+    }
+
+    void init() {
+        len = 0;
+        arr = 0;
+        alloc_len = 0;
+    }
 
     void shallow_free() {
         if (arr) {

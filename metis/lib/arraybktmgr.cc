@@ -41,7 +41,7 @@ void arraybktmgr::mbm_mbks_init(int rows, int cols)
     for (int i = 0; i < rows; i++) {
 	buckets[i] = (htable_entry_t *) malloc(cols * sizeof(htable_entry_t));
 	for (int j = 0; j < cols; j++)
-	    hkvsarr.pch_init(&buckets[i][j].v);
+	    buckets[i][j].v.init();
     }
     if (map_out) {
 	free(map_out);
@@ -49,7 +49,7 @@ void arraybktmgr::mbm_mbks_init(int rows, int cols)
     }
     map_out = (keyvals_arr_t *) malloc(rows * cols * sizeof(keyvals_arr_t));
     for (int i = 0; i < rows * cols; i++)
-	hkvsarr.pch_init(&map_out[i]);
+	map_out[i].init();
     mapper.mbks = buckets;
 }
 
@@ -62,7 +62,7 @@ void arraybktmgr::mbm_mbks_destroy(void)
 {
     for (int i = 0; i < mapper.map_rows; i++) {
 	for (int j = 0; j < mapper.map_cols; j++)
-	    hkvsarr.pch_shallow_free(&mapper.mbks[i][j].v);
+	    mapper.mbks[i][j].v.shallow_free();
 	free(mapper.mbks[i]);
     }
     free(mapper.mbks);
@@ -87,7 +87,7 @@ void arraybktmgr::mbm_do_reduce_task(int col)
 	nodes[i] = &mapper.mbks[i][col].v;
     reduce_or_group::do_kvs(nodes, mapper.map_rows);
     for (int i = 0; i < mapper.map_rows; i++)
-	hkvsarr.pch_shallow_free(&mapper.mbks[i][col].v);
+	mapper.mbks[i][col].v.shallow_free();
 }
 
 void arraybktmgr::mbm_rehash_bak(int row)
