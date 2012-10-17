@@ -1,44 +1,42 @@
-OBJDIRS += lib
-
-LIB_SRCS := lib/mr-sched.cc		\
-	    lib/appendbktmgr.cc		\
-	    lib/btreebktmgr.cc		\
-	    lib/arraybktmgr.cc		\
-	    lib/kvstore.cc		\
-	    lib/keyvals_array.cc	\
-	    lib/keyvals_btree.cc	\
-	    lib/keyval_array.cc		\
-	    lib/keyvals_len_array.cc	\
-	    lib/reduce.cc		\
-	    lib/defsplitter.cc		\
-	    lib/presplitter.cc		\
-	    lib/pthreadpool.cc		\
-	    lib/profile.cc		\
-	    lib/bsearch.cc		\
-	    lib/value_helper.cc		\
-	    lib/apphelper.cc		\
-	    lib/estimation.cc		\
-	    lib/psrs.cc			\
-	    lib/ibs.cc			\
-	    lib/platform.cc		\
-	    lib/cpumap.cc		\
-	    lib/mergesort.cc		\
-	    lib/rbktsmgr.cc
+LIB_SRCS := mr-sched.cc		\
+	    appendbktmgr.cc		\
+	    btreebktmgr.cc		\
+	    arraybktmgr.cc		\
+	    kvstore.cc		\
+	    keyvals_array.cc	\
+	    keyvals_btree.cc	\
+	    keyval_array.cc		\
+	    keyvals_len_array.cc	\
+	    reduce.cc		\
+	    defsplitter.cc		\
+	    presplitter.cc		\
+	    pthreadpool.cc		\
+	    profile.cc		\
+	    value_helper.cc		\
+	    apphelper.cc		\
+	    estimation.cc		\
+	    psrs.cc			\
+	    ibs.cc			\
+	    platform.cc		\
+	    cpumap.cc		\
+	    mergesort.cc		\
+	    rbktsmgr.cc             \
+            btree.cc
 
 LIB_OBJS := $(patsubst %.cc, $(O)/%.o, $(LIB_SRCS))
 LIB_OBJS := $(patsubst %.S, $(O)/%.o, $(LIB_OBJS))
 
-$(O)/lib/%.o: lib/%.cc
+$(O)/%.o: lib/%.cc $(DEPSDIR)/stamp
 	$(Q)mkdir -p $(@D)
 	@echo "CC	$<"
-	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+	$(Q)$(CC) $(DEPCFLAGS) $(CFLAGS) -o $@ -c $<
 
-$(O)/lib/%.o: lib/%.S
+$(O)/%.o: lib/%.S $(DEPSDIR)/stamp
 	$(Q)mkdir -p $(@D)
 	@echo "CC	$<"
-	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+	$(Q)$(CC) $(DEPCFLAGS) $(CFLAGS) -o $@ -c $<
 
-$(O)/lib/libmetis.a: $(LIB_OBJS)
+$(O)/libmetis.a: $(LIB_OBJS) $(DEPSDIR)/stamp
 	$(Q)mkdir -p $(@D)
 	@echo "AR	$@"
 	$(Q)$(AR) r $@ $(LIB_OBJS)
