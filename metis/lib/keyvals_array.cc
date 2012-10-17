@@ -52,7 +52,7 @@ void pch_kvsarray::pch_insert_kvs(void *coll, const keyvals_t * kvs)
 {
     keyvals_arr_t *arr = (keyvals_arr_t *) coll;
     checkfull(arr);
-    int bfound = 0;
+    bool bfound = false;
     int dst = bsearch_eq(kvs, arr->arr, arr->len, sizeof(keyvals_t),
 			 keyvals_cmp, &bfound);
     assert(!bfound);
@@ -66,7 +66,7 @@ void pch_kvsarray::pch_insert_kvs(void *coll, const keyvals_t * kvs)
 int pch_kvsarray::pch_insert_kv(void *coll, void *key, void *val, size_t keylen, unsigned hash)
 {
     keyvals_arr_t *arr = (keyvals_arr_t *) coll;
-    int bfound = 0;
+    bool bfound = false;
     keyvals_t tmp;
     tmp.key = key;
     int dst = bsearch_eq(&tmp, arr->arr, arr->len, sizeof(keyvals_t),

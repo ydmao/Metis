@@ -11,34 +11,12 @@
 #include "pch_kvsbtree.hh"
 #include "pch_kvsarray.hh"
 
-typedef struct {
-    btree_t v;
-} htable_entry_t;
-
-typedef struct {
-    int map_rows;
-    int map_cols;
-    htable_entry_t **mbks;
-} mapper_t;
-
-static mapper_t mapper;
-static mapper_t mapper_bak;
-static keyvals_arr_t *map_out = NULL;
 static pch_kvsbtree hkvsbtree;
 static pch_kvsarray hkvsarr;
 
 void btreebktmgr::mbm_mbks_init(int rows, int cols)
 {
-    mapper.map_rows = rows;
-    mapper.map_cols = cols;
-
-    htable_entry_t **buckets =
-	(htable_entry_t **) malloc(rows * sizeof(htable_entry_t *));
-    for (int i = 0; i < rows; i++) {
-	buckets[i] = (htable_entry_t *) malloc(cols * sizeof(htable_entry_t));
-	for (int j = 0; j < cols; j++)
-	    hkvsbtree.pch_init(&buckets[i][j].v);
-    }
+    mapper.init(rows, cols);
     if (map_out) {
 	free(map_out);
 	map_out = NULL;
@@ -46,50 +24,32 @@ void btreebktmgr::mbm_mbks_init(int rows, int cols)
     map_out = (keyvals_arr_t *) malloc(rows * cols * sizeof(keyvals_arr_t));
     for (int i = 0; i < rows * cols; i++)
 	hkvsarr.pch_init(&map_out[i]);
-    mapper.mbks = buckets;
 }
 
 void btreebktmgr::mbm_set_util(key_cmp_t cmp)
 {
-    hkvsbtree.pch_set_util(cmp);
-}
-
-static void mapper_destroy(mapper_t * m)
-{
-    if (!m->mbks)
-	return;
-    for (int i = 0; i < m->map_rows; i++) {
-	if (m->mbks[i]) {
-	    for (int j = 0; j < m->map_cols; j++)
-		hkvsbtree.pch_shallow_free(&m->mbks[i][j].v);
-	    free(m->mbks[i]);
-	    m->mbks[i] = NULL;
-	}
-    }
-    free(m->mbks);
-    memset(m, 0, sizeof(mapper_t));
+    btree_type::set_key_compare(cmp);
 }
 
 void btreebktmgr::mbm_mbks_destroy(void)
 {
-    mapper_destroy(&mapper);
-    mapper_destroy(&mapper_bak);
+    mapper.destroy();
+    mapper_bak.destroy();
 }
 
-static void map_put_kvs(int row, keyvals_t * kvs)
+void btreebktmgr::map_put_kvs(int row, keyvals_t *kvs)
 {
-    unsigned hash = kvs->hash;
+    const unsigned hash = kvs->hash;
     int col = hash % mapper.map_cols;
-    htable_entry_t *entry = &mapper.mbks[row][col];
-    hkvsbtree.pch_insert_kvs(&entry->v, kvs);
+    mapper.mbks[row][col].v.insert_kvs(kvs);
 }
 
 void btreebktmgr::mbm_map_put(int row, void *key, void *val, size_t keylen, unsigned hash)
 {
     assert(mapper.mbks);
-    int col = hash % mapper.map_cols;
+    const int col = hash % mapper.map_cols;
     htable_entry_t *entry = &mapper.mbks[row][col];
-    int bnewkey = hkvsbtree.pch_insert_kv(&entry->v, key, val, keylen, hash);
+    int bnewkey = entry->v.insert_kv(key, val, keylen, hash);
     est_newpair(row, bnewkey);
 }
 
@@ -101,19 +61,18 @@ void btreebktmgr::mbm_do_reduce_task(int col)
 	nodes[i] = &mapper.mbks[i][col].v;
     reduce_or_groupkvs(&hkvsbtree, nodes, mapper.map_rows);
     for (int i = 0; i < mapper.map_rows; i++)
-	hkvsbtree.pch_shallow_free(&mapper.mbks[i][col].v);
+	mapper.mbks[i][col].v.shallow_free();
 }
 
-static void bkt_rehash(htable_entry_t * entry, int row)
+void btreebktmgr::bkt_rehash(htable_entry_t *entry, int row)
 {
-    void *iter = NULL;
-    if (!hkvsbtree.pch_iter_begin(&entry->v, &iter)) {
-	keyvals_t kvs;
-	while (!hkvsbtree.pch_iter_next_kvs(&entry->v, &kvs, iter, 1))
-	    map_put_kvs(row, &kvs);
-	hkvsbtree.pch_iter_end(iter);
+    btree_type::iterator it = entry->v.begin();
+    while (it != entry->v.end()) {
+	map_put_kvs(row, &(*it));
+        memset(&(*it), 0, sizeof(keyvals_t));
+        ++ it;
     }
-    hkvsbtree.pch_shallow_free(&entry->v);
+    entry->v.shallow_free();
 }
 
 void btreebktmgr::mbm_rehash_bak(int row)
@@ -143,9 +102,9 @@ void *btreebktmgr::mbm_map_get_output(pc_handler_t ** pch, int *narr)
 void btreebktmgr::mbm_map_prepare_merge(int row)
 {
     for (int i = 0; i < mapper.map_cols; i++) {
-	uint64_t alloc_len = hkvsbtree.pch_get_len(&mapper.mbks[row][i].v);
+	uint64_t alloc_len = mapper.mbks[row][i].v.size();
 	keyvals_t *arr = new keyvals_t[alloc_len];
-	hkvsbtree.pch_copy_kvs(&mapper.mbks[row][i].v, arr);
+        mapper.mbks[row][i].v.copy_kvs(arr);
 	map_out[row * mapper.map_cols + i].alloc_len = alloc_len;
 	map_out[row * mapper.map_cols + i].len = alloc_len;
 	map_out[row * mapper.map_cols + i].arr = arr;

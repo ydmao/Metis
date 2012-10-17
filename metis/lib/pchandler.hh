@@ -2,6 +2,7 @@
 #define PCHANDLER_H
 
 #include "mr-types.hh"
+#include "btree.hh"
 
 extern keycopy_t mrkeycopy;
 
@@ -40,25 +41,5 @@ struct pc_handler_t {
     /* set elements */
     virtual void pch_set_elems(void *coll, void *elems, int len) = 0;
 };
-
-//extern const pc_handler_t hkvsarr;
-//extern const pc_handler_t hkvsbtree;
-//extern const pc_handler_t hkvslenarr;
-//extern const pc_handler_t hkvarr;
-
-enum { order = 3 };
-
-typedef struct {
-    short nkeys;
-    void *parent;
-    keyvals_t arr[2 * order + 2];	//keyvals_t for leaf, keyval_t for internal
-    void *next;
-} btnode_t;
-
-typedef struct {
-    uint64_t nkeys;
-    short nlevel;
-    btnode_t *root;
-} btree_t;
 
 #endif
