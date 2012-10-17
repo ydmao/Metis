@@ -4,7 +4,6 @@ LIB_SRCS := mr-sched.cc		\
 	    arraybktmgr.cc		\
 	    kvstore.cc		\
 	    keyvals_array.cc	\
-	    keyvals_btree.cc	\
 	    keyval_array.cc		\
 	    keyvals_len_array.cc	\
 	    reduce.cc		\

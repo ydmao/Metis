@@ -8,10 +8,8 @@
 #include "reduce.hh"
 #include "estimation.hh"
 #include "btreebktmgr.hh"
-#include "pch_kvsbtree.hh"
 #include "pch_kvsarray.hh"
 
-static pch_kvsbtree hkvsbtree;
 static pch_kvsarray hkvsarr;
 
 void btreebktmgr::mbm_mbks_init(int rows, int cols)
