@@ -2,15 +2,11 @@
 #define REDUCE_H
 
 #include "mr-types.hh"
-#include "pchandler.hh"
 #include "value_helper.hh"
 #include "apphelper.hh"
 #include "rbktsmgr.hh"
 #include "mr-sched.hh"
 #include "bench.hh"
-#include "pch_kvsbtree.hh"
-#include "pch_kvsarray.hh"
-#include "pch_kvarray.hh"
 #include "compiler.hh"
 #include <assert.h>
 #include <string.h>
@@ -28,10 +24,14 @@ struct reduce_or_group {
     }
 
     // Each node contains an iteratable collection of keyval_t
-    static void do_kv(pc_handler_t * pch, void **colls, int n,
-  		           group_emit_t meth, void *arg);
+    // reduce or group key/values pairs from different nodes
+    // (each node contains pairs sorted by key)
+    template <typename C>
+    static void do_kv(C **colls, int n, group_emit_t meth, void *arg);
     // Each node contains an iteratable collection of keyvals_t
-    static void do_kvs(pc_handler_t * pch, void **colls, int n);
+    // reduce or group key/value pairs from different nodes
+    template <typename C>
+    static void do_kvs(C **colls, int n);
 
     enum { init_valloclen = 8 };
 
@@ -40,21 +40,13 @@ struct reduce_or_group {
     }
 };
 
-// reduce or group key/values pairs from different nodes
-// (each node contains pairs sorted by key)
-inline void reduce_or_group::do_kvs(pc_handler_t * pch, void **nodes, int n)
-{
-    assert(instanceOf<pch_kvsarray>(pch)|| instanceOf<pch_kvsbtree>(pch));
-    void *iters[JOS_NCPU];
-    keyvals_t kvs[JOS_NCPU];
-    int ended[JOS_NCPU];
+template <typename C>
+void reduce_or_group::do_kvs(C **nodes, int n) {
+    if (!n)
+        return;
+    typename C::iterator it[JOS_NCPU];
     for (int i = 0; i < n; i++)
-	ended[i] = pch->pch_iter_begin(nodes[i], &iters[i]);
-    for (int i = 0; i < n; i++) {
-	if (ended[i])
-	    continue;
-	ended[i] = pch->pch_iter_next_kvs(nodes[i], &kvs[i], iters[i], 1);
-    }
+	 it[i] = nodes[i]->begin();
     int marks[JOS_NCPU];
     keyvals_t dst;
     memset(&dst, 0, sizeof(dst));
@@ -63,36 +55,33 @@ inline void reduce_or_group::do_kvs(pc_handler_t * pch, void **nodes, int n)
 	memset(marks, 0, sizeof(marks[0]) * n);
 	int m = 0;
 	// Find minimum key
-	for (int i = 0; i < n; i++) {
-	    if (ended[i])
+	for (int i = 0; i < n; ++i) {
+	    if (it[i] == nodes[i]->end())
 		continue;
-	    int res = 0;
+	    int cmp = 0;
 	    if (min_idx >= 0)
-		res = keycmp_(kvs[min_idx].key, kvs[i].key);
-	    if (min_idx < 0 || res > 0) {
-		m++;
+		cmp = keycmp_(it[min_idx]->key, it[i]->key);
+	    if (min_idx < 0 || cmp > 0) {
+		++ m;
 		marks[i] = m;
 		min_idx = i;
-	    } else if (!res) {
+	    } else if (!cmp)
 		marks[i] = m;
-	    }
 	}
 	if (min_idx < 0)
 	    break;
 	// Merge all the values with the same mimimum key.
 	// Since keys may duplicate in each node, vlen
 	// is temporary.
-	dst.key = kvs[min_idx].key;
+	dst.key = it[min_idx]->key;
 	// Eat up all the pairs with the same key
 	for (int i = 0; i < n; i++) {
 	    if (marks[i] != m)
 		continue;
 	    do {
-		values_mv(&dst, &kvs[i]);
-		ended[i] =
-		    pch->pch_iter_next_kvs(nodes[i], &kvs[i], iters[i], 1);
-	    }
-	    while (!ended[i] && keycmp_(dst.key, kvs[i].key) == 0);
+		values_mv(&dst, &it[i]);
+                ++it[i];
+	    } while (it[i] != nodes[i]->end() && keycmp_(dst.key, it[i]->key) == 0);
 	}
 	if (the_app.atype == atype_mapreduce) {
 	    if (the_app.mapreduce.vm) {
@@ -100,7 +89,7 @@ inline void reduce_or_group::do_kvs(pc_handler_t * pch, void **nodes, int n)
 		memset(&dst, 0, sizeof(dst));
 	    } else {
 		the_app.mapreduce.reduce_func(dst.key, dst.vals, dst.len);
-		// Reuse the values
+		// Reuse the values array
 		dst.len = 0;
 	    }
 	} else {		// mapgroup
@@ -109,26 +98,27 @@ inline void reduce_or_group::do_kvs(pc_handler_t * pch, void **nodes, int n)
 	}
     }
     values_deep_free(&dst);
-    for (int i = 0; i < n; i++)
-	pch->pch_iter_end(iters[i]);
 }
 
-// reduce or group key/value pairs from different nodes
-inline void reduce_or_group::do_kv(pc_handler_t * pch, void **nodes, int n,
-		            group_emit_t meth, void *arg) {
-    assert(instanceOf<pch_kvarray>(pch));
+template <typename C>
+void reduce_or_group::do_kv(C **nodes, int n, group_emit_t meth, void *arg) {
+    if (!n)
+        return;
     uint64_t total_len = 0;
     for (int i = 0; i < n; i++)
-	total_len += pch->pch_get_len(nodes[i]);
+	total_len += nodes[i]->size();
     keyval_t *arr = 0;
     if (n > 1) {
 	arr = (keyval_t *) malloc(total_len * sizeof(keyval_t));
 	int idx = 0;
-	for (int i = 0; i < n; i++)
-	    idx += pch->pch_copy_kv(nodes[i], &arr[idx]);
-    } else {
-	arr = (keyval_t *)pch->pch_get_arr_elems(nodes[0]);
-    }
+	for (int i = 0; i < n; i++) {
+            memcpy(&arr[idx], nodes[i]->get_arr_elems(),
+                   nodes[i]->size() * sizeof(keyval_t));
+	    idx += nodes[i]->size();
+        }
+    } else
+	arr = (keyval_t *)nodes[0]->get_arr_elems();
+
     qsort(arr, total_len, sizeof(keyval_t), keyval_cmp);
     int start = 0;
     keyvals_t kvs;

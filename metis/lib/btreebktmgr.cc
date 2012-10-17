@@ -56,10 +56,10 @@ void btreebktmgr::mbm_map_put(int row, void *key, void *val, size_t keylen, unsi
 void btreebktmgr::mbm_do_reduce_task(int col)
 {
     assert(mapper.mbks);
-    void *nodes[JOS_NCPU];
+    btree_type *nodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	nodes[i] = &mapper.mbks[i][col].v;
-    reduce_or_group::do_kvs(&hkvsbtree, nodes, mapper.map_rows);
+    reduce_or_group::do_kvs(nodes, mapper.map_rows);
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }

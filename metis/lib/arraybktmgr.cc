@@ -85,7 +85,7 @@ void arraybktmgr::mbm_do_reduce_task(int col)
     keyvals_arr_t *nodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	nodes[i] = &mapper.mbks[i][col].v;
-    reduce_or_group::do_kvs(&hkvsarr, (void **) nodes, mapper.map_rows);
+    reduce_or_group::do_kvs(nodes, mapper.map_rows);
     for (int i = 0; i < mapper.map_rows; i++)
 	hkvsarr.pch_shallow_free(&mapper.mbks[i][col].v);
 }

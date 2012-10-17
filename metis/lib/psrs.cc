@@ -138,8 +138,7 @@ reduce_or_group(pc_handler_t * pch, void **elems, int *subsize,
 	    colls[i].len = colls[i].alloc_len;
 	    pcolls[i] = &colls[i];
 	}
-        static pch_kvsarray pch;
-	reduce_or_group::do_kvs(&pch, (void **) pcolls, ncpus);
+	reduce_or_group::do_kvs(pcolls, ncpus);
     } else {
 	assert(instanceOf<pch_kvarray>(pch));
 	keyval_arr_t colls[JOS_NCPU];
@@ -154,8 +153,7 @@ reduce_or_group(pc_handler_t * pch, void **elems, int *subsize,
 	    colls[i].len = colls[i].alloc_len;
 	    pcolls[i] = &colls[i];
 	}
-        static pch_kvarray pch;
-	reduce_or_group::do_kv(&pch, (void **) pcolls, ncpus, NULL, NULL);
+	reduce_or_group::do_kv(pcolls, ncpus, NULL, NULL);
     }
 }
 

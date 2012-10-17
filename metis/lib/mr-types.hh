@@ -36,6 +36,12 @@ typedef struct {
     unsigned len;
     unsigned alloc_len;
     keyval_t *arr;
+    size_t size() const {
+        return len;
+    }
+    keyval_t *get_arr_elems() {
+        return arr;
+    }
 } keyval_arr_t;
 
 typedef struct {
@@ -52,11 +58,48 @@ typedef struct {
     unsigned hash;
 } keyvals_t;
 
-typedef struct {
+struct keyvals_arr_t {
     unsigned len;
     unsigned alloc_len;
     keyvals_t *arr;
-} keyvals_arr_t;
+
+    struct iterator {
+        iterator(keyvals_arr_t *p, int i) : p_(p), i_(i) {}
+        iterator(keyvals_arr_t *p) : p_(p), i_(0) {}
+        iterator() : p_(NULL), i_(0) {}
+        iterator(const iterator &a) : p_(a.p_), i_(a.i_) {}
+        bool operator==(const iterator &a) {
+            return p_ == a.p_ && i_ == a.i_;
+        }
+        bool operator!=(const iterator &a) {
+            return !(*this == a);
+        }
+        void operator++(int) {
+            ++i_;
+        }
+        void operator++() {
+            ++i_;
+        }
+        keyvals_t &operator*() {
+            return p_->arr[i_];
+        }
+        keyvals_t *operator->() {
+            return &p_->arr[i_];
+        }
+        keyvals_t *operator&() {
+            return &p_->arr[i_];
+        }
+      private:
+        keyvals_arr_t *p_;
+        int i_;
+    };
+    iterator begin() {
+        return iterator(this);
+    }
+    iterator end() {
+        return iterator(this, len);
+    }
+};   
 
 typedef enum {
     MAP,
