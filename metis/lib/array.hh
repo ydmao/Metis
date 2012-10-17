@@ -6,13 +6,26 @@
 template <typename T>
 struct xarray_iterator;
 
+struct xarray_base {
+};
+
 template <typename T>
-struct xarray {
+struct xarray : public xarray_base {
     xarray() : capacity_(0), n_(0), a_(NULL) {
     }
     ~xarray() {
         if (a_ && !multiplex()) // don't free memory in multiplex mode
             resize(0);
+        a_ = NULL;
+        capacity_ = n_ = 0;
+    }
+    void assign(const xarray<T> &a) {
+        a_ = a.a_;
+        n_ = a.n_;
+        capacity_ = a.capacity_;
+    }
+    /* @brief: clear without free memory */
+    void pull_array() {
         a_ = NULL;
         capacity_ = n_ = 0;
     }
@@ -22,7 +35,7 @@ struct xarray {
         a_ = NULL;
         capacity_ = n_ = 0;
     }
-    void element_size() const {
+    static size_t elem_size() {
         return sizeof(T);
     }
     size_t size() const {
@@ -42,6 +55,9 @@ struct xarray {
     T &operator[](int index) {
         return a_[index];
     }
+    T &at(int index) {
+        return a_[index];
+    }
     void push_back(const T &e) {
         make_room();
         a_[n_++] = e;
@@ -51,6 +67,7 @@ struct xarray {
         a_[n_++] = *e;
     }
     typedef xarray_iterator<T> iterator;
+    typedef T element_type;
 
     iterator begin() {
         return iterator(this);
@@ -124,7 +141,7 @@ struct xarray {
     void swap(xarray<T> &dst) {
         std::swap(a_, dst.a_);
         std::swap(n_, dst.n_);
-        std::swap(capacity_, dst.capacity);
+        std::swap(capacity_, dst.capacity_);
     }
     T *pull_array(size_t &n) {
         T *olda = a_;
@@ -134,9 +151,16 @@ struct xarray {
         return olda;
     }
     void append(xarray<T> &src) {
-        set_capacity(n_ + src.size());
-        memcpy(&a_[n_], src.array(), src.size() * sizeof(T));
-        n_ += src.size();
+        append(src.array(), src.size());
+    }
+    void append(T *x, size_t n) {
+        set_capacity(n_ + n);
+        memcpy(&a_[n_], x, n * sizeof(T));
+        n_ += n;
+    }
+    template <typename F>
+    void sort(const F &cmp) {
+        qsort(a_, size(), sizeof(T), cmp);
     }
   private:
     void make_room() {

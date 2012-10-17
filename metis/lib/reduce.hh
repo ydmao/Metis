@@ -14,24 +14,19 @@
 #include <inc/compiler.h>
 #endif
 
+typedef void (*group_emit_t) (void *arg, const keyvals_t * kvs);
+
 // kvs.vals is owned by callee
 struct reduce_or_group {
-    typedef void (*group_emit_t) (void *arg, const keyvals_t * kvs);
     static key_cmp_t keycmp_;
 
     static void setcmp(key_cmp_t cmp) {
         keycmp_ = cmp;
     }
-
-    // Each node contains an iteratable collection of keyval_t
-    // reduce or group key/values pairs from different nodes
-    // (each node contains pairs sorted by key)
-    template <typename C>
-    static void do_kv(C **colls, int n, group_emit_t meth, void *arg);
     // Each node contains an iteratable collection of keyvals_t
     // reduce or group key/value pairs from different nodes
-    template <typename C>
-    static void do_kvs(C **colls, int n);
+    //template <typename C>
+    //static void do_kvs(C **colls, int n);
 
     enum { init_valloclen = 8 };
 
@@ -40,8 +35,69 @@ struct reduce_or_group {
     }
 };
 
+// Each node contains an iteratable collection of keyval_t
+// reduce or group key/values pairs from different nodes
+// (each node contains pairs sorted by key)
 template <typename C>
-void reduce_or_group::do_kvs(C **nodes, int n) {
+inline void reduce_or_group_go(C **colls, int n, group_emit_t meth, void *arg);
+
+template <>
+inline void reduce_or_group_go<xarray<keyval_t> >(xarray<keyval_t> **nodes, int n,
+                                                  group_emit_t meth, void *arg) {
+    if (!n)
+        return;
+    uint64_t total_len = 0;
+    for (int i = 0; i < n; i++)
+	total_len += nodes[i]->size();
+    keyval_t *arr = 0;
+    if (n > 1) {
+	arr = (keyval_t *) malloc(total_len * sizeof(keyval_t));
+	int idx = 0;
+	for (int i = 0; i < n; i++) {
+            memcpy(&arr[idx], nodes[i]->array(),
+                   nodes[i]->size() * sizeof(keyval_t));
+	    idx += nodes[i]->size();
+        }
+    } else
+	arr = (keyval_t *)nodes[0]->array();
+
+    qsort(arr, total_len, sizeof(keyval_t), reduce_or_group::keyval_cmp);
+    int start = 0;
+    keyvals_t kvs;
+    while (start < int(total_len)) {
+	int end = start + 1;
+	while (end < int(total_len) && !reduce_or_group::keycmp_(arr[start].key, arr[end].key))
+	    end++;
+	kvs.key = arr[start].key;
+	for (int i = 0; i < end - start; i++)
+	    values_insert(&kvs, arr[start + i].val);
+	if (meth) {
+	    meth(arg, &kvs);
+	    // kvs.vals is owned by callee
+            kvs.reset();
+	} else if (the_app.atype == atype_mapreduce) {
+	    if (the_app.mapreduce.vm) {
+		assert(kvs.size() == 1);
+		reduce_bucket_manager::instance()->emit(kvs.key, kvs.multiplex_value());
+		memset(&kvs, 0, sizeof(kvs));
+	    } else {
+		the_app.mapreduce.reduce_func(kvs.key, kvs.array(), kvs.size());
+		// Reuse the values
+		kvs.trim(0);
+	    }
+	} else {		// mapgroup
+	    reduce_bucket_manager::instance()->emit(kvs.key, kvs.array(), kvs.size());
+	    // kvs.vals is owned by callee
+            kvs.reset();
+	}
+	start = end;
+    }
+    if (n > 1 && arr)
+	free(arr);
+}
+
+template <typename C>
+inline void reduce_or_group_go(C **nodes, int n, group_emit_t, void *) {
     if (!n)
         return;
     typename C::iterator it[JOS_NCPU];
@@ -59,7 +115,7 @@ void reduce_or_group::do_kvs(C **nodes, int n) {
 		continue;
 	    int cmp = 0;
 	    if (min_idx >= 0)
-		cmp = keycmp_(it[min_idx]->key, it[i]->key);
+		cmp = reduce_or_group::keycmp_(it[min_idx]->key, it[i]->key);
 	    if (min_idx < 0 || cmp > 0) {
 		++ m;
 		marks[i] = m;
@@ -80,74 +136,21 @@ void reduce_or_group::do_kvs(C **nodes, int n) {
 	    do {
 		values_mv(&dst, &it[i]);
                 ++it[i];
-	    } while (it[i] != nodes[i]->end() && keycmp_(dst.key, it[i]->key) == 0);
+	    } while (it[i] != nodes[i]->end() && reduce_or_group::keycmp_(dst.key, it[i]->key) == 0);
 	}
 	if (the_app.atype == atype_mapreduce) {
 	    if (the_app.mapreduce.vm) {
-		rbkts_emit_kv(dst.key, dst.multiplex_value());
+		reduce_bucket_manager::instance()->emit(dst.key, dst.multiplex_value());
                 dst.reset();
 	    } else {
 		the_app.mapreduce.reduce_func(dst.key, dst.array(), dst.size());
 		dst.trim(0);  // Reuse the values array
 	    }
 	} else {		// mapgroup
-	    rbkts_emit_kvs_len(dst.key, dst.array(), dst.size());
+	    reduce_bucket_manager::instance()->emit(dst.key, dst.array(), dst.size());
             dst.reset();
 	}
     }
 }
 
-template <typename C>
-void reduce_or_group::do_kv(C **nodes, int n, group_emit_t meth, void *arg) {
-    if (!n)
-        return;
-    uint64_t total_len = 0;
-    for (int i = 0; i < n; i++)
-	total_len += nodes[i]->size();
-    keyval_t *arr = 0;
-    if (n > 1) {
-	arr = (keyval_t *) malloc(total_len * sizeof(keyval_t));
-	int idx = 0;
-	for (int i = 0; i < n; i++) {
-            memcpy(&arr[idx], nodes[i]->array(),
-                   nodes[i]->size() * sizeof(keyval_t));
-	    idx += nodes[i]->size();
-        }
-    } else
-	arr = (keyval_t *)nodes[0]->array();
-
-    qsort(arr, total_len, sizeof(keyval_t), keyval_cmp);
-    int start = 0;
-    keyvals_t kvs;
-    while (start < int(total_len)) {
-	int end = start + 1;
-	while (end < int(total_len) && !keycmp_(arr[start].key, arr[end].key))
-	    end++;
-	kvs.key = arr[start].key;
-	for (int i = 0; i < end - start; i++)
-	    values_insert(&kvs, arr[start + i].val);
-	if (meth) {
-	    meth(arg, &kvs);
-	    // kvs.vals is owned by callee
-            kvs.reset();
-	} else if (the_app.atype == atype_mapreduce) {
-	    if (the_app.mapreduce.vm) {
-		assert(kvs.size() == 1);
-		rbkts_emit_kv(kvs.key, kvs.multiplex_value());
-		memset(&kvs, 0, sizeof(kvs));
-	    } else {
-		the_app.mapreduce.reduce_func(kvs.key, kvs.array(), kvs.size());
-		// Reuse the values
-		kvs.trim(0);
-	    }
-	} else {		// mapgroup
-	    rbkts_emit_kvs_len(kvs.key, kvs.array(), kvs.size());
-	    // kvs.vals is owned by callee
-            kvs.reset();
-	}
-	start = end;
-    }
-    if (n > 1 && arr)
-	free(arr);
-}
 #endif

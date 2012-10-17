@@ -221,7 +221,7 @@ print_top(final_data_kv_t * wc_vals, int ndisp)
 #ifdef HADOOP
     ndisp = wc_vals->length;
 #endif
-    ndisp = min(ndisp, wc_vals->length);
+    ndisp = std::min(ndisp, int(wc_vals->length));
     for (int i = 0; i < ndisp; i++) {
 	keyval_t *curr = &((keyval_t *) wc_vals->data)[i];
 	printf("%15s - %d\n", (char *) curr->key,

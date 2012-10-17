@@ -84,7 +84,7 @@ void appendbktmgr::mbm_do_reduce_task(int col) {
     keyval_arr_t *pnodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	pnodes[i] = &mapper.mbks[i][col].v;
-    reduce_or_group::do_kv(pnodes, mapper.map_rows, NULL, NULL);
+    reduce_or_group_go(pnodes, mapper.map_rows, NULL, NULL);
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }
@@ -95,14 +95,10 @@ keyval_cmp(const void *kvs1, const void *kvs2)
     return keycmp(((keyval_t *) kvs1)->key, ((keyval_t *) kvs2)->key);
 }
 
-void *appendbktmgr::mbm_map_get_output(pc_handler_t ** phandler,
-                                       int *ntasks) {
-    if (group_before_merge)
-	*phandler = &hkvsarr;
-    else
-	*phandler = &hkvarr;
-    *ntasks = mapper.map_rows * mapper.map_cols;
-    return map_out;
+xarray_base *appendbktmgr::mbm_map_get_output(int *n, bool *kvs) {
+    *kvs = group_before_merge;
+    *n = mapper.map_rows * mapper.map_cols;
+    return (xarray_base *)map_out;
 }
 
 void appendbktmgr::mbm_rehash_bak(int row)
@@ -130,8 +126,8 @@ void appendbktmgr::mbm_map_prepare_merge(int row) {
 	memset(&mapper.mbks[row][0].v, 0, sizeof(mapper.mbks[row][0].v));
     } else {
 	keyval_arr_t *p = &mapper.mbks[row][0].v;
-	reduce_or_group::do_kv(&p, 1, hkvsarr.pch_append_kvs,
-			  &((keyvals_arr_t *) map_out)[row]);
+	reduce_or_group_go(&p, 1, hkvsarr.pch_append_kvs,
+			   &((keyvals_arr_t *) map_out)[row]);
 	mapper.mbks[row][0].v.shallow_free();
     }
 }

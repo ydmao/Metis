@@ -120,7 +120,7 @@ mr_sample()
     uint64_t ntotal = presplitter_nsplits(&mr_state.ps);
     uint64_t nsampled = sample_percent * ntotal / 100;
     if (nsampled < size_t(mr_state.mr_fixed.nr_cpus))
-	nsampled = min(mr_state.mr_fixed.nr_cpus, ntotal);
+	nsampled = std::min(uint64_t(mr_state.mr_fixed.nr_cpus), ntotal);
     if (nsampled == 0)
 	nsampled = 1;
     presplitter_prep_sample(&mr_state.ps, nsampled);
@@ -182,7 +182,7 @@ mr_setup(mr_param_t * param)
 	    uint64_t ntasks = mr_sample();
 	    // update reduce tasks
 	    the_app.mapgr.tasks =
-		max(ntasks, mr_state.mr_fixed.nr_cpus * def_gr_tasks_per_cpu);
+		std::max(ntasks, uint64_t(mr_state.mr_fixed.nr_cpus * def_gr_tasks_per_cpu));
 	}
 	mr_state.merge_nsplits = the_app.mapgr.tasks;
 	kvst_init(mr_state.mr_fixed.nr_cpus, the_app.mapgr.tasks,

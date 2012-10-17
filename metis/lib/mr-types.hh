@@ -34,6 +34,17 @@ struct keyval_t {
         val = v;
         hash = h;
     }
+    keyval_t(void *k, void *v) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+        val = v;
+        hash = 0;
+    }
+    void assign(const keyval_t &a) {
+        key = a.key;
+        val = a.val;
+        hash = a.hash;
+    }
 };
 
 struct final_data_kv_t {
@@ -57,6 +68,16 @@ struct keyvals_len_t {
         key = k;
         vals = v;
         len = l;
+    }
+    void assign(const keyvals_len_t &a) {
+        key = a.key;
+        vals = a.vals;
+        len = a.len;
+    }
+    void reset() {
+        key = NULL;
+        vals = NULL;
+        len = 0;
     }
 };
 
@@ -91,6 +112,11 @@ struct keyvals_t : public xarray<void *> {
         reset();
         key = k;
         hash = h;
+    }
+    void assign(const keyvals_t &a) {
+        key = a.key;
+        hash = a.hash;
+        xarray<void *>::assign(a);
     }
 };
 

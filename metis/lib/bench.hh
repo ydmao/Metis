@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <algorithm>
 #include "platform.hh"
 
 #define JOS_PAGESIZE    4096
@@ -21,9 +22,6 @@
 #define INLINE_ATTR static __inline __attribute__((always_inline, no_instrument_function))
 
 #define ARRELEM(p, s, index) (((char *)(p)) + (s) * (index))
-
-#define min(a, b) (((a) > (b)) ? (b) : (a))
-#define max(a, b) (((a) > (b)) ? (a) : (b))
 
 /*
  * Rounding operations (efficient when n is a power of 2)

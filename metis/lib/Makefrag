@@ -14,7 +14,6 @@ LIB_SRCS := mr-sched.cc		\
 	    value_helper.cc		\
 	    apphelper.cc		\
 	    estimation.cc		\
-	    psrs.cc			\
 	    ibs.cc			\
 	    platform.cc		\
 	    cpumap.cc		\

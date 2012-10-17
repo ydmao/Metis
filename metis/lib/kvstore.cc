@@ -60,7 +60,7 @@ kvst_set_bktmgr(int idx)
     assert(keycmp);
     the_bucket_manager = create(idx);
     the_bucket_manager->mbm_set_util(keycmp);
-    rbkts_set_util(keycmp);
+    reduce_bucket_manager::instance()->set_key_cmp(keycmp);
     reduce_or_group::setcmp(keycmp);
 }
 
@@ -150,13 +150,13 @@ kvst_init(int rows, int cols, int nsplits)
 	kvst_set_bktmgr(def_imgr);
 #endif
     the_bucket_manager->mbm_mbks_init(rows, cols);
-    rbkts_init(nsplits);
+    reduce_bucket_manager::instance()->init(nsplits);
 }
 
 void
 kvst_destroy(void)
 {
-    rbkts_destroy();
+    reduce_bucket_manager::instance()->destroy();
 }
 
 void
@@ -176,7 +176,7 @@ void
 kvst_reduce_do_task(int row, int col)
 {
     assert(the_app.atype != atype_maponly);
-    rbkts_set_reduce_task(col);
+    reduce_bucket_manager::instance()->set_current_reduce_task(col);
     the_bucket_manager->mbm_do_reduce_task(col);
 }
 
@@ -192,18 +192,18 @@ kvst_map_worker_finished(int row, int reduce_skipped)
 void
 kvst_merge(int ncpus, int lcpu, int reduce_skipped)
 {
-    if (the_app.atype == atype_maponly || !reduce_skipped) {
-	rbkts_merge(ncpus, lcpu);
-    } else {
-	pc_handler_t *pch;
-	int ncolls;
-	void *acolls = the_bucket_manager->mbm_map_get_output(&pch, &ncolls);
-	rbkts_merge_reduce(pch, acolls, ncolls, ncpus, lcpu);
+    if (the_app.atype == atype_maponly || !reduce_skipped)
+	reduce_bucket_manager::instance()->merge(ncpus, lcpu);
+    else {
+	int n;
+        bool kvs = false;
+	xarray_base *a = the_bucket_manager->mbm_map_get_output(&n, &kvs);
+	reduce_bucket_manager::instance()->merge_reduce(a, n, kvs, ncpus, lcpu);
     }
 }
 
 void
 kvst_reduce_put(void *key, void *val)
 {
-    rbkts_emit_kv(key, val);
+    reduce_bucket_manager::instance()->emit(key, val);
 }

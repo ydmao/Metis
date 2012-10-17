@@ -2,6 +2,7 @@
 #define MBKTSMGR_H
 #include "mr-types.hh"
 #include "pchandler.hh"
+#include "array.hh"
 
 struct mbkts_mgr_t {
     virtual void mbm_set_util(key_cmp_t kcmp) = 0;
@@ -12,7 +13,7 @@ struct mbkts_mgr_t {
     virtual void mbm_map_put(int row, void *key, void *val, size_t keylen,
 			 unsigned hash) = 0;
     virtual void mbm_map_prepare_merge(int row) = 0;
-    virtual void *mbm_map_get_output(pc_handler_t ** pch, int *narr) = 0;
+    virtual xarray_base *mbm_map_get_output(int *n, bool *kvs) = 0;
     /* make sure the pairs of the reduce bucket is sorted by key, if
      * no out_cmp function is provided by application. */
     virtual void mbm_do_reduce_task(int col) = 0;

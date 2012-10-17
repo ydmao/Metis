@@ -25,8 +25,7 @@ void values_insert(keyvals_t * kvs, void *val) {
     }
 }
 
-void
-values_mv(keyvals_t *dst, keyvals_t *src)
+void values_mv(keyvals_t *dst, keyvals_t *src)
 {
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm) {
 	assert(src->multiplex());
@@ -40,4 +39,11 @@ values_mv(keyvals_t *dst, keyvals_t *src)
         dst->append(*src);
         src->reset();
     }
+}
+
+void values_mv(keyvals_t *dst, keyvals_len_t *src)
+{
+    assert(the_app.atype == atype_mapgroup);  // must be mapgroup
+    dst->append(src->vals, src->len);
+    src->reset();
 }

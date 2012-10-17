@@ -12,7 +12,7 @@ struct appendbktmgr : public mbkts_mgr_t {
     void mbm_map_put(int row, void *key, void *val, size_t keylen,
 			 unsigned hash);
     void mbm_map_prepare_merge(int row);
-    void *mbm_map_get_output(pc_handler_t ** pch, int *narr);
+    xarray_base *mbm_map_get_output(int *n, bool *kvs);
     /* make sure the pairs of the reduce bucket is sorted by key, if
      * no out_cmp function is provided by application. */
     void mbm_do_reduce_task(int col);

@@ -5,5 +5,6 @@
 
 void values_insert(keyvals_t * kvs, void *val);
 void values_mv(keyvals_t * dst, keyvals_t * src);
+void values_mv(keyvals_t *dst, keyvals_len_t *src);
 
 #endif

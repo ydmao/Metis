@@ -85,7 +85,7 @@ void arraybktmgr::mbm_do_reduce_task(int col)
     keyvals_arr_t *nodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	nodes[i] = &mapper.mbks[i][col].v;
-    reduce_or_group::do_kvs(nodes, mapper.map_rows);
+    reduce_or_group_go(nodes, mapper.map_rows, NULL, NULL);
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }
@@ -114,11 +114,11 @@ void arraybktmgr::mbm_mbks_bak(void)
     memset(&mapper, 0, sizeof(mapper));
 }
 
-void *arraybktmgr::mbm_map_get_output(pc_handler_t ** phandler, int *ntasks)
+xarray_base *arraybktmgr::mbm_map_get_output(int *n, bool *kvs)
 {
-    *phandler = &hkvsarr;
-    *ntasks = mapper.map_rows * mapper.map_cols;
-    return map_out;
+    *n = mapper.map_rows * mapper.map_cols;
+    *kvs = true;
+    return (xarray_base *)map_out;
 }
 
 void arraybktmgr::mbm_map_prepare_merge(int row)
