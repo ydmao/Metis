@@ -22,8 +22,8 @@ void check_tree(btree_type &bt) {
     btree_type::iterator it = bt.begin();
     while (it != bt.end()) {
         CHECK_EQ(i, int64_t(it->key));
-        CHECK_EQ(1, int64_t(it->len));
-        CHECK_EQ(i + 1, int64_t(it->vals[0]));
+        CHECK_EQ(1, int64_t(it->size()));
+        CHECK_EQ(i + 1, int64_t((*it)[0]));
         ++it;
         ++i;
     }
@@ -36,8 +36,8 @@ void check_tree_copy(btree_type &bt) {
     bt.copy_kvs(dst);
     for (int64_t i = 1; i <= int64_t(bt.size()); ++i) {
         CHECK_EQ(i, int64_t(dst[i - 1].key));
-        CHECK_EQ(1, int64_t(dst[i - 1].len));
-        CHECK_EQ(i + 1, int64_t(dst[i - 1].vals[0]));
+        CHECK_EQ(1, int64_t(dst[i - 1].size()));
+        CHECK_EQ(i + 1, int64_t(dst[i - 1][0]));
         ++i;
     }
 }
@@ -49,8 +49,8 @@ void check_tree_copy_and_free(btree_type &bt) {
     bt.shallow_free();
     for (int64_t i = 1; i <= int64_t(bt.size()); ++i) {
         CHECK_EQ(i, int64_t(dst[i - 1].key));
-        CHECK_EQ(1, int64_t(dst[i - 1].len));
-        CHECK_EQ(i + 1, int64_t(dst[i - 1].vals[0]));
+        CHECK_EQ(1, int64_t(dst[i - 1].size()));
+        CHECK_EQ(i + 1, int64_t(dst[i - 1][0]));
         ++i;
     }
 }
@@ -78,10 +78,7 @@ void test2() {
     for (int64_t i = 1; i < 1000; ++i) {
         keyvals_t kvs;
         kvs.key = (void *)i;
-        kvs.len = 1;
-        kvs.alloc_len = 1;
-        kvs.vals = new void *[1];
-        kvs.vals[0] = (void *)(i + 1);
+        kvs.push_back((void *) (i + 1));
         bt.insert_kvs(&kvs);
         check_tree(bt);
         check_tree_copy(bt);

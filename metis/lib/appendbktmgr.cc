@@ -86,7 +86,7 @@ void appendbktmgr::mbm_do_reduce_task(int col) {
 	pnodes[i] = &mapper.mbks[i][col].v;
     reduce_or_group::do_kv(pnodes, mapper.map_rows, NULL, NULL);
     for (int i = 0; i < mapper.map_rows; i++)
-	hkvarr.pch_shallow_free(&mapper.mbks[i][col].v);
+	mapper.mbks[i][col].v.shallow_free();
 }
 
 static inline int
@@ -114,7 +114,7 @@ void appendbktmgr::mbm_rehash_bak(int row)
 	for (uint32_t j = 0; j < bucket->v.size(); j++)
 	    mbm_map_put(row, bucket->v[j].key, bucket->v[j].val,
 			0, bucket->v[j].hash);
-	hkvarr.pch_shallow_free(&bucket->v);
+	bucket->v.shallow_free();
     }
 }
 
@@ -132,7 +132,7 @@ void appendbktmgr::mbm_map_prepare_merge(int row) {
 	keyval_arr_t *p = &mapper.mbks[row][0].v;
 	reduce_or_group::do_kv(&p, 1, hkvsarr.pch_append_kvs,
 			  &((keyvals_arr_t *) map_out)[row]);
-	hkvarr.pch_shallow_free(&mapper.mbks[row][0].v);
+	mapper.mbks[row][0].v.shallow_free();
     }
 }
 

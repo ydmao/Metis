@@ -49,7 +49,6 @@ void reduce_or_group::do_kvs(C **nodes, int n) {
 	 it[i] = nodes[i]->begin();
     int marks[JOS_NCPU];
     keyvals_t dst;
-    memset(&dst, 0, sizeof(dst));
     while (1) {
 	int min_idx = -1;
 	memset(marks, 0, sizeof(marks[0]) * n);
@@ -85,19 +84,17 @@ void reduce_or_group::do_kvs(C **nodes, int n) {
 	}
 	if (the_app.atype == atype_mapreduce) {
 	    if (the_app.mapreduce.vm) {
-		rbkts_emit_kv(dst.key, (void *) dst.vals);
-		memset(&dst, 0, sizeof(dst));
+		rbkts_emit_kv(dst.key, dst.multiplex_value());
+                dst.reset();
 	    } else {
-		the_app.mapreduce.reduce_func(dst.key, dst.vals, dst.len);
-		// Reuse the values array
-		dst.len = 0;
+		the_app.mapreduce.reduce_func(dst.key, dst.array(), dst.size());
+		dst.trim(0);  // Reuse the values array
 	    }
 	} else {		// mapgroup
-	    rbkts_emit_kvs_len(dst.key, dst.vals, dst.len);
-	    memset(&dst, 0, sizeof(dst));
+	    rbkts_emit_kvs_len(dst.key, dst.array(), dst.size());
+            dst.reset();
 	}
     }
-    values_deep_free(&dst);
 }
 
 template <typename C>
@@ -122,7 +119,6 @@ void reduce_or_group::do_kv(C **nodes, int n, group_emit_t meth, void *arg) {
     qsort(arr, total_len, sizeof(keyval_t), keyval_cmp);
     int start = 0;
     keyvals_t kvs;
-    memset(&kvs, 0, sizeof(kvs));
     while (start < int(total_len)) {
 	int end = start + 1;
 	while (end < int(total_len) && !keycmp_(arr[start].key, arr[end].key))
@@ -133,25 +129,24 @@ void reduce_or_group::do_kv(C **nodes, int n, group_emit_t meth, void *arg) {
 	if (meth) {
 	    meth(arg, &kvs);
 	    // kvs.vals is owned by callee
-	    memset(&kvs, 0, sizeof(kvs));
+            kvs.reset();
 	} else if (the_app.atype == atype_mapreduce) {
 	    if (the_app.mapreduce.vm) {
-		assert(kvs.len == 1);
-		rbkts_emit_kv(kvs.key, (void *) kvs.vals);
+		assert(kvs.size() == 1);
+		rbkts_emit_kv(kvs.key, kvs.multiplex_value());
 		memset(&kvs, 0, sizeof(kvs));
 	    } else {
-		the_app.mapreduce.reduce_func(kvs.key, kvs.vals, kvs.len);
+		the_app.mapreduce.reduce_func(kvs.key, kvs.array(), kvs.size());
 		// Reuse the values
-		kvs.len = 0;
+		kvs.trim(0);
 	    }
 	} else {		// mapgroup
-	    rbkts_emit_kvs_len(kvs.key, kvs.vals, kvs.len);
+	    rbkts_emit_kvs_len(kvs.key, kvs.array(), kvs.size());
 	    // kvs.vals is owned by callee
-	    memset(&kvs, 0, sizeof(kvs));
+            kvs.reset();
 	}
 	start = end;
     }
-    values_deep_free(&kvs);
     if (n > 1 && arr)
 	free(arr);
 }

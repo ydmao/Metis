@@ -11,8 +11,16 @@ struct xarray {
     xarray() : capacity_(0), n_(0), a_(NULL) {
     }
     ~xarray() {
-        if (a_)
-            delete[] a_;
+        if (a_ && !multiplex()) // don't free memory in multiplex mode
+            resize(0);
+        a_ = NULL;
+        capacity_ = n_ = 0;
+    }
+    void clear() {
+        if (a_ && !multiplex())
+            resize(0);
+        a_ = NULL;
+        capacity_ = n_ = 0;
     }
     void element_size() const {
         return sizeof(T);
@@ -20,7 +28,13 @@ struct xarray {
     size_t size() const {
         return n_;
     }
+    /* @brief: resize without resizing the underlying array */
+    void trim(size_t n) {
+        assert(n <= n_);
+        n_ = n;
+    }
     void resize(size_t n) {
+        assert(!multiplex());
         if (capacity_ < n)
            set_capacity(n);
         n_ = n;
@@ -81,18 +95,52 @@ struct xarray {
     T *array() {
         return a_;
     }
+    T multiplex_value() const {
+        if (size() == 0)
+            return NULL;
+        assert(multiplex());
+        return reinterpret_cast<T>(a_);
+    }
+    void set_multiplex_value(const T &v) {
+        if (!multiplex())
+            assert(size() == 0);
+        a_ = reinterpret_cast<T *>(v);
+        n_ = 1;
+        capacity_ = (size_t(1) << 63);
+    }
+    bool multiplex() const {
+        return capacity_ & (size_t(1) << 63);
+    }
     void shallow_free() {
         resize(0);
     }
     void init() {
         resize(0);
     }
-    size_t copy(T *dst) {
+    size_t copy(T *dst) const {
         memcpy(dst, a_, n_ * sizeof(T));
         return n_;
     }
+    void swap(xarray<T> &dst) {
+        std::swap(a_, dst.a_);
+        std::swap(n_, dst.n_);
+        std::swap(capacity_, dst.capacity);
+    }
+    T *pull_array(size_t &n) {
+        T *olda = a_;
+        n = n_;
+        a_ = NULL;
+        n_ = capacity_ = 0;
+        return olda;
+    }
+    void append(xarray<T> &src) {
+        set_capacity(n_ + src.size());
+        memcpy(&a_[n_], src.array(), src.size() * sizeof(T));
+        n_ += src.size();
+    }
   private:
     void make_room() {
+        assert(!multiplex());
         if (n_ == capacity_)
             set_capacity(std::max(size_t(4), capacity_) * 2);
     }

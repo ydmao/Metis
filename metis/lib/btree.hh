@@ -133,7 +133,7 @@ struct btree_type {
         iterator i = begin();
         uint64_t n = 0;
         while (i != end()) {
-            n += i->len;
+            n += i->size();
             ++ i;
         }
         return n;

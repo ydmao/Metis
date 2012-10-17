@@ -36,16 +36,29 @@ struct keyval_t {
     }
 };
 
-typedef struct {
+struct final_data_kv_t {
     keyval_t *data;
     size_t length;
-} final_data_kv_t;
+};
 
-typedef struct {
+struct keyvals_len_t {
     void *key;
     void **vals;
     uint64_t len;
-} keyvals_len_t;
+    keyvals_len_t() {
+        memset(this, 0, sizeof(*this));
+    }
+    keyvals_len_t(void *k) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+    }
+    keyvals_len_t(void *k, void **v, uint64_t l) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+        vals = v;
+        len = l;
+    }
+};
 
 typedef struct {
     keyvals_len_t *data;
@@ -53,29 +66,29 @@ typedef struct {
 } final_data_kvs_len_t;
 
 /* types used internally */
-typedef public xarray<keyval_t> keyval_arr_t;
+typedef xarray<keyval_t> keyval_arr_t;
+typedef xarray<keyvals_len_t> keyvals_len_arr_t;
 
-typedef struct {
-    unsigned len;
-    unsigned alloc_len;
-    keyvals_len_t *arr;
-} keyvals_len_arr_t;
-
-struct keyvals_t {
+struct keyvals_t : public xarray<void *> {
     void *key;			/* put key at the same offset with keyval_t */
-    void **vals;
-    unsigned len;
-    unsigned alloc_len;
     unsigned hash;
     keyvals_t() {
-        memset(this, 0, sizeof(*this));
+        reset();
+    }
+    ~keyvals_t() {
+        reset();
+    }
+    void reset() {
+        key = NULL;
+        hash = 0;
+        xarray<void *>::clear();
     }
     keyvals_t(void *k) {
-        memset(this, 0, sizeof(*this));
+        reset();
         key = k;
     }
     keyvals_t(void *k, unsigned h) {
-        memset(this, 0, sizeof(*this));
+        reset();
         key = k;
         hash = h;
     }
