@@ -87,6 +87,10 @@ struct xarray {
     void init() {
         resize(0);
     }
+    size_t copy(T *dst) {
+        memcpy(dst, a_, n_ * sizeof(T));
+        return n_;
+    }
   private:
     void make_room() {
         if (n_ == capacity_)

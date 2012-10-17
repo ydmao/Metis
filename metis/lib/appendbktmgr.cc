@@ -111,9 +111,9 @@ void appendbktmgr::mbm_rehash_bak(int row)
 	return;
     for (int i = 0; i < mapper_bak.map_cols; i++) {
 	htable_entry_t *bucket = &mapper_bak.mbks[row][i];
-	for (uint32_t j = 0; j < bucket->v.len; j++)
-	    mbm_map_put(row, bucket->v.arr[j].key, bucket->v.arr[j].val,
-			0, bucket->v.arr[j].hash);
+	for (uint32_t j = 0; j < bucket->v.size(); j++)
+	    mbm_map_put(row, bucket->v[j].key, bucket->v[j].val,
+			0, bucket->v[j].hash);
 	hkvarr.pch_shallow_free(&bucket->v);
     }
 }

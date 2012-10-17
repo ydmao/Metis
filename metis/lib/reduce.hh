@@ -112,12 +112,12 @@ void reduce_or_group::do_kv(C **nodes, int n, group_emit_t meth, void *arg) {
 	arr = (keyval_t *) malloc(total_len * sizeof(keyval_t));
 	int idx = 0;
 	for (int i = 0; i < n; i++) {
-            memcpy(&arr[idx], nodes[i]->get_arr_elems(),
+            memcpy(&arr[idx], nodes[i]->array(),
                    nodes[i]->size() * sizeof(keyval_t));
 	    idx += nodes[i]->size();
         }
     } else
-	arr = (keyval_t *)nodes[0]->get_arr_elems();
+	arr = (keyval_t *)nodes[0]->array();
 
     qsort(arr, total_len, sizeof(keyval_t), keyval_cmp);
     int start = 0;

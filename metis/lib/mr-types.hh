@@ -12,11 +12,29 @@ typedef struct {
     size_t length;
 } split_t;
 
-typedef struct {
+struct keyval_t {
     void *key;
     void *val;
     unsigned hash;
-} keyval_t;
+    keyval_t() {
+        memset(this, 0, sizeof(*this));
+    }
+    keyval_t(void *k) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+    }
+    keyval_t(void *k, unsigned h) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+        hash = h;
+    }
+    keyval_t(void *k, void *v, unsigned h) {
+        memset(this, 0, sizeof(*this));
+        key = k;
+        val = v;
+        hash = h;
+    }
+};
 
 typedef struct {
     keyval_t *data;
@@ -35,17 +53,7 @@ typedef struct {
 } final_data_kvs_len_t;
 
 /* types used internally */
-struct keyval_arr_t : public xarray<keyval_t> {
-    unsigned len;
-    unsigned alloc_len;
-    keyval_t *arr;
-    size_t size() const {
-        return len;
-    }
-    keyval_t *get_arr_elems() {
-        return arr;
-    }
-};
+typedef public xarray<keyval_t> keyval_arr_t;
 
 typedef struct {
     unsigned len;
