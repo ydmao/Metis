@@ -11,7 +11,6 @@ struct reduce_bucket_manager {
         static reduce_bucket_manager instance;
         return &instance;
     }
-    void set_key_cmp(key_cmp_t keycmp);
     void init(int n);
     void destroy();
     xarray_base *get(int p);
@@ -57,7 +56,6 @@ struct reduce_bucket_manager {
     }
     reduce_bucket_manager() {}
     xarray<xarray_base> rb_; // reduce buckets
-    static key_cmp_t keycmp_;
     static JTLS int cur_task_;
 };
 

@@ -3,7 +3,6 @@ LIB_SRCS := mr-sched.cc		\
 	    btreebktmgr.cc		\
 	    arraybktmgr.cc		\
 	    kvstore.cc		\
-	    reduce.cc		\
 	    defsplitter.cc		\
 	    presplitter.cc		\
 	    pthreadpool.cc		\

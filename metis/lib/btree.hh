@@ -196,8 +196,6 @@ struct btree_type {
     /* @brief: insert (@key, @right) into left's parent */
     void insert_internal(void *key, btnode_base *left, btnode_base *right);
     btnode_leaf *get_leaf(void *key);
-
-    static key_cmp_t keycmp_;
 };
 
 #endif

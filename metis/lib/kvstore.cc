@@ -44,8 +44,6 @@ enum				// available options are index_arraybkt, index_appendbkt, index_btreebkt
 };
 #endif
 
-static key_cmp_t JSHARED_ATTR keycmp = NULL;
-
 static int ncols = 0;
 static int nrows = 0;
 static int has_backup = 0;
@@ -58,10 +56,7 @@ keycopy_t mrkeycopy = NULL;
 static void
 kvst_set_bktmgr(int idx)
 {
-    assert(keycmp);
     the_bucket_manager = create(idx);
-    reduce_bucket_manager::instance()->set_key_cmp(keycmp);
-    reduce_or_group::setcmp(keycmp);
 }
 
 void
@@ -168,8 +163,7 @@ kvst_map_put(int row, void *key, void *val, size_t keylen, unsigned hash)
 void
 kvst_set_util(key_cmp_t kcmp, keycopy_t kcp)
 {
-    comparator::set_key_compare(keycmp);
-    keycmp = kcmp;
+    comparator::set_key_compare(kcmp);
     mrkeycopy = kcp;
 }
 

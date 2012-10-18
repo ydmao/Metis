@@ -16,25 +16,6 @@
 
 typedef void (*group_emit_t) (void *arg, const keyvals_t * kvs);
 
-// kvs.vals is owned by callee
-struct reduce_or_group {
-    static key_cmp_t keycmp_;
-
-    static void setcmp(key_cmp_t cmp) {
-        keycmp_ = cmp;
-    }
-    // Each node contains an iteratable collection of keyvals_t
-    // reduce or group key/value pairs from different nodes
-    //template <typename C>
-    //static void do_kvs(C **colls, int n);
-
-    enum { init_valloclen = 8 };
-
-    static int keyval_cmp(const void *kvs1, const void *kvs2) {
-        return keycmp_(((keyval_t *) kvs1)->key, ((keyval_t *) kvs2)->key);
-    }
-};
-
 // Each node contains an iteratable collection of keyval_t
 // reduce or group key/values pairs from different nodes
 // (each node contains pairs sorted by key)
@@ -61,12 +42,12 @@ inline void reduce_or_group_go<xarray<keyval_t> >(xarray<keyval_t> **nodes, int 
     } else
 	arr = (keyval_t *)nodes[0]->array();
 
-    qsort(arr, total_len, sizeof(keyval_t), reduce_or_group::keyval_cmp);
+    qsort(arr, total_len, sizeof(keyval_t), comparator::keyval_pair_comp);
     int start = 0;
     keyvals_t kvs;
     while (start < int(total_len)) {
 	int end = start + 1;
-	while (end < int(total_len) && !reduce_or_group::keycmp_(arr[start].key, arr[end].key))
+	while (end < int(total_len) && !comparator::keycmp()(arr[start].key, arr[end].key))
 	    end++;
 	kvs.key = arr[start].key;
 	for (int i = 0; i < end - start; i++)
@@ -115,7 +96,7 @@ inline void reduce_or_group_go(C **nodes, int n, group_emit_t, void *) {
 		continue;
 	    int cmp = 0;
 	    if (min_idx >= 0)
-		cmp = reduce_or_group::keycmp_(it[min_idx]->key, it[i]->key);
+		cmp = comparator::keycmp()(it[min_idx]->key, it[i]->key);
 	    if (min_idx < 0 || cmp > 0) {
 		++ m;
 		marks[i] = m;
@@ -136,7 +117,7 @@ inline void reduce_or_group_go(C **nodes, int n, group_emit_t, void *) {
 	    do {
 		values_mv(&dst, &it[i]);
                 ++it[i];
-	    } while (it[i] != nodes[i]->end() && reduce_or_group::keycmp_(dst.key, it[i]->key) == 0);
+	    } while (it[i] != nodes[i]->end() && comparator::keycmp()(dst.key, it[i]->key) == 0);
 	}
 	if (the_app.atype == atype_mapreduce) {
 	    if (the_app.mapreduce.vm) {

@@ -6,13 +6,8 @@
 #include "mergesort.hh"
 #include "rbktsmgr.hh"
 
-key_cmp_t JSHARED_ATTR reduce_bucket_manager::keycmp_ = NULL;
 extern app_arg_t the_app;
 JTLS int reduce_bucket_manager::cur_task_;
-
-void reduce_bucket_manager::set_key_cmp(key_cmp_t keycmp) {
-    keycmp_ = keycmp;
-}
 
 void reduce_bucket_manager::init(int n) {
     rb_.resize(n);
