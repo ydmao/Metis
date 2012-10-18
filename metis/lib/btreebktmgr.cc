@@ -29,6 +29,11 @@ void btreebktmgr::mbm_mbks_destroy(void)
 {
     mapper.destroy();
     mapper_bak.destroy();
+    if (map_out) {
+        // TODO: fix memory leak inside each map_out[X]
+        free(map_out);
+        map_out = NULL;
+    }
 }
 
 void btreebktmgr::map_put_kvs(int row, keyvals_t *kvs)

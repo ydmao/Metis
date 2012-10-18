@@ -129,7 +129,7 @@ kvst_map_worker_init(int row)
 }
 
 void
-kvst_init(int rows, int cols, int nsplits)
+kvst_init_map(int rows, int cols, int nsplits)
 {
     nrows = rows;
     ncols = cols;
@@ -146,9 +146,11 @@ kvst_init(int rows, int cols, int nsplits)
 }
 
 void
-kvst_destroy(void)
+kvst_initialize(void)
 {
     reduce_bucket_manager::instance()->destroy();
+    if (the_bucket_manager)
+        the_bucket_manager->mbm_mbks_destroy();
 }
 
 void

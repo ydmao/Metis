@@ -34,14 +34,18 @@ app_set_arg(app_arg_t * app)
 void
 app_set_final_results(void)
 {
+    // transfer the ownership of final result from reduce bucket 0 to app.results
+    // In this way, the next iterator of MapReduce can safely cleanup internally
     if (the_app.atype == atype_mapgroup) {
         xarray<keyvals_len_t> *x = reduce_bucket_manager::instance()->as_kvslen_array(0);
 	the_app.mapgroup.results->data = x->array();
 	the_app.mapgroup.results->length = x->size();
+        x->init();
     } else {
         xarray<keyval_t> *x = reduce_bucket_manager::instance()->as_kvarray(0);
 	the_app.mapor.results->data = x->array();
 	the_app.mapor.results->length = x->size();
+        x->init();
     }
 }
 

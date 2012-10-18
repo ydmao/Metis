@@ -57,8 +57,10 @@ void arraybktmgr::mbm_mbks_destroy(void)
 	    mapper.mbks[i][j].v.shallow_free();
 	free(mapper.mbks[i]);
     }
-    free(mapper.mbks);
-    mapper.mbks = NULL;
+    if (mapper.mbks)
+        free(mapper.mbks);
+    bzero(&mapper, sizeof(mapper));
+    bzero(&mapper_bak, sizeof(mapper_bak));
 }
 
 void arraybktmgr::mbm_map_put(int row, void *key, void *val, size_t keylen, unsigned hash)

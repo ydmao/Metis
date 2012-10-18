@@ -11,8 +11,8 @@ void kvst_sample_init(int rows, int cols);
 uint64_t kvst_sample_finished(int ntotal);
 
 /* Initialize the data structure for Map and Reduce phase */
-void kvst_init(int rows, int cols, int nsplits);
-void kvst_destroy();
+void kvst_initialize();
+void kvst_init_map(int rows, int cols, int nsplits);
 
 /* map phase */
 void kvst_map_worker_init(int row);

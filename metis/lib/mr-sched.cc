@@ -175,7 +175,7 @@ mr_setup(mr_param_t * param)
     // fix the number of reduce tasks by sampling, if enabled
     if (mr_state.skip_reduce_phase) {
 	mr_state.merge_nsplits = mr_state.mr_fixed.nr_cpus;
-	kvst_init(mr_state.mr_fixed.nr_cpus, 1, mr_state.merge_nsplits);
+	kvst_init_map(mr_state.mr_fixed.nr_cpus, 1, mr_state.merge_nsplits);
     } else {
 	if (the_app.mapgr.tasks == 0) {
 	    the_app.mapgr.tasks = def_sample_reduce_tasks;
@@ -185,8 +185,8 @@ mr_setup(mr_param_t * param)
 		std::max(ntasks, uint64_t(mr_state.mr_fixed.nr_cpus * def_gr_tasks_per_cpu));
 	}
 	mr_state.merge_nsplits = the_app.mapgr.tasks;
-	kvst_init(mr_state.mr_fixed.nr_cpus, the_app.mapgr.tasks,
-		  mr_state.merge_nsplits);
+	kvst_init_map(mr_state.mr_fixed.nr_cpus, the_app.mapgr.tasks,
+		      mr_state.merge_nsplits);
     }
     return 0;
 }
@@ -221,6 +221,7 @@ mr_run_task(task_type_t type)
 int
 mr_run_scheduler(mr_param_t * param)
 {
+    kvst_initialize();
     uint64_t real_start = read_tsc();
     uint64_t start_time, map_time = 0, reduce_time = 0, merge_time = 0;
     memset(&mr_state, 0, sizeof(mr_state_t));
@@ -292,7 +293,6 @@ mr_print_stats(void)
 void
 mr_finalize(void)
 {
-    kvst_destroy();
     mthread_finalize();
 }
 

@@ -2,21 +2,22 @@
 
 import subprocess, sys
 
-commonArgs = ''
+commonArgs = '-q'
 sanityRun = True
 
 def do_test(prog, args, sanityArgs = None):
-    cmd = './obj/%s %s' % (prog, commonArgs);
+    cmd = ['./obj/%s' % prog]
     if sanityRun:
         if not sanityArgs:
             print "skip %s: No sanity args provided" % prog
             return
-        cmd += sanityArgs
+        cmd.append(sanityArgs)
     else:
-        cmd += args
-    print cmd
-    
-    p = subprocess.Popen(cmd, shell = True)
+        cmd.append(args)
+    cmd.append(commonArgs)
+    c = ' '.join(cmd)
+    print c
+    p = subprocess.Popen(c, shell = True)
     p.communicate()
     if p.returncode != 0:
         raise Exception('%s failed' % prog)
