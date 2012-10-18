@@ -12,6 +12,8 @@ JTLS int reduce_bucket_manager::cur_task_;
 
 void reduce_bucket_manager::init(int n) {
     rb_.resize(n);
+    for (int i = 0; i < n; ++i)
+        rb_[i].init();
 }
 
 void reduce_bucket_manager::destroy() {
