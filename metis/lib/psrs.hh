@@ -157,12 +157,7 @@ void psrs<C>::reduce_or_group(typename psrs<C>::pair_type **elems, int *subsize,
         colls[i].set_array(elem, n);
 	pcolls[i] = &colls[i];
     }
-    // TODO: fix this hack
-    //if (sizeof(pair_type) == sizeof(keyvals_t))
-    //    reduce_or_group::do_kvs(pcolls, ncpus);
-    //else 
-    //if (sizeof(pair_type) == sizeof(keyval_t))
-    reduce_or_group_go(pcolls, ncpus, NULL, NULL);
+    group(pcolls, ncpus, reduce_emit_functor::instance());
     // don't free memory because colls doesn't own them
     for (int i = 0; i < ncpus; ++i)
         colls[i].pull_array();

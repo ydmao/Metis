@@ -14,46 +14,9 @@
 #include <inc/compiler.h>
 #endif
 
-typedef void (*group_emit_t) (void *arg, const keyvals_t * kvs);
-
-// Each node contains an iteratable collection of keyval_t
-// reduce or group key/values pairs from different nodes
-// (each node contains pairs sorted by key)
-template <typename C>
-inline void reduce_or_group_go(C **colls, int n, group_emit_t meth, void *arg);
-
-template <>
-inline void reduce_or_group_go<xarray<keyval_t> >(xarray<keyval_t> **nodes, int n,
-                                                  group_emit_t meth, void *arg) {
-    if (!n)
-        return;
-    uint64_t total_len = 0;
-    for (int i = 0; i < n; i++)
-	total_len += nodes[i]->size();
-    xarray<keyval_t> *arr = NULL;
-    if (n > 1) {
-	arr = new xarray<keyval_t>;
-        arr->resize(total_len);
-	for (int i = 0; i < n; i++)
-            arr->append(*nodes[i]);
-    } else
-	arr = nodes[0];
-    arr->sort(comparator::keyval_pair_comp);
-
-    int start = 0;
-    keyvals_t kvs;
-    while (start < int(total_len)) {
-	int end = start + 1;
-	while (end < int(total_len) && !comparator::keycmp()(arr->at(start).key, arr->at(end).key))
-	    end++;
-	kvs.key = arr->at(start).key;
-	for (int i = 0; i < end - start; i++)
-	    values_insert(&kvs, arr->at(start + i).val);
-	if (meth) {
-	    meth(arg, &kvs);
-	    // kvs.vals is owned by callee
-            kvs.reset();
-	} else if (the_app.atype == atype_mapreduce) {
+struct reduce_emit_functor {
+    void operator()(keyvals_t &kvs) const {
+        if (the_app.atype == atype_mapreduce) {
 	    if (the_app.mapreduce.vm) {
 		assert(kvs.size() == 1);
 		reduce_bucket_manager::instance()->emit(kvs.key, kvs.multiplex_value());
@@ -68,14 +31,67 @@ inline void reduce_or_group_go<xarray<keyval_t> >(xarray<keyval_t> **nodes, int 
 	    // kvs.vals is owned by callee
             kvs.reset();
 	}
+    }
+    static reduce_emit_functor &instance() {
+        static reduce_emit_functor in;
+        return in;
+    }
+};
+
+struct append_functor {
+    append_functor(xarray<keyvals_t> *x) {}
+    void operator()(keyvals_t &kvs) {
+	// kvs.vals is owned by callee
+        x_->push_back(kvs);
+        kvs.reset();
+    }
+  private:
+    xarray<keyvals_t> *x_;
+};
+
+// Each node contains an iteratable collection of keyval_t
+// reduce or group key/values pairs from different nodes
+// (each node contains pairs sorted by key)
+template <typename C, typename F>
+inline void group(C **colls, int n, F &f);
+
+template <>
+inline void 
+group<xarray<keyval_t>, append_functor>(xarray<keyval_t> **nodes, 
+                                        int n, append_functor &f) {
+    if (!n)
+        return;
+    size_t total_len = 0;
+    for (int i = 0; i < n; i++)
+	total_len += nodes[i]->size();
+    xarray<keyval_t> *arr = NULL;
+    if (n > 1) {
+	arr = new xarray<keyval_t>;
+        arr->resize(total_len);
+	for (int i = 0; i < n; i++)
+            arr->append(*nodes[i]);
+    } else
+	arr = nodes[0];
+    arr->sort(comparator::keyval_pair_comp);
+
+    size_t start = 0;
+    keyvals_t kvs;
+    while (start < total_len) {
+	size_t end = start + 1;
+	while (end < total_len && !comparator::keycmp()(arr->at(start).key, arr->at(end).key))
+	    end++;
+	kvs.key = arr->at(start).key;
+	for (size_t i = start; i < end; i++)
+	    values_insert(&kvs, arr->at(i).val);
+        f(kvs);
 	start = end;
     }
     if (n > 1 && arr)
         delete arr;
 }
 
-template <typename C>
-inline void reduce_or_group_go(C **nodes, int n, group_emit_t, void *) {
+template <typename C, typename F>
+inline void group(C **nodes, int n, F &f) {
     if (!n)
         return;
     typename C::iterator it[JOS_NCPU];
@@ -116,18 +132,7 @@ inline void reduce_or_group_go(C **nodes, int n, group_emit_t, void *) {
                 ++it[i];
 	    } while (it[i] != nodes[i]->end() && comparator::keycmp()(dst.key, it[i]->key) == 0);
 	}
-	if (the_app.atype == atype_mapreduce) {
-	    if (the_app.mapreduce.vm) {
-		reduce_bucket_manager::instance()->emit(dst.key, dst.multiplex_value());
-                dst.reset();
-	    } else {
-		the_app.mapreduce.reduce_func(dst.key, dst.array(), dst.size());
-		dst.trim(0);  // Reuse the values array
-	    }
-	} else {		// mapgroup
-	    reduce_bucket_manager::instance()->emit(dst.key, dst.array(), dst.size());
-            dst.reset();
-	}
+        f(dst);
     }
 }
 

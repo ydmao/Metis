@@ -53,7 +53,7 @@ void btreebktmgr::mbm_do_reduce_task(int col)
     btree_type *nodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	nodes[i] = &mapper.mbks[i][col].v;
-    reduce_or_group_go(nodes, mapper.map_rows, NULL, NULL);
+    group(nodes, mapper.map_rows, reduce_emit_functor::instance());
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }
