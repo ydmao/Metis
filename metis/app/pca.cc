@@ -369,7 +369,7 @@ static void
 ident_reduce(void *key, void **vals, size_t len)
 {
     assert(len == 1);
-    mr_reduce_emit(key, (void *) vals);
+    mr_reduce_emit(key, vals[0]);
 }
 #endif
 
