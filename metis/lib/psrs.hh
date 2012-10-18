@@ -5,6 +5,7 @@
 #include "bench.hh"
 #include "reduce.hh"
 #include "bsearch.hh"
+#include "mergesort.hh"
 
 template <typename C>
 struct psrs {
@@ -120,25 +121,19 @@ void psrs<C>::mergesort(typename psrs<C>::pair_type **lpairs, int npairs, int *s
                         int lcpu, typename psrs<C>::pair_type *out,
 	                int ncpus, pair_cmp_t pcmp)
 {
-    uint32_t task_pos[JOS_NCPU];
-    for (int i = 0; i < ncpus; i++)
-	task_pos[i] = subsize[i * (ncpus + 1) + lcpu];
-    int nsorted = 0;
-    while (nsorted < npairs) {
-	int min_idx = 0;
-	pair_type *min_pair = NULL;
-	for (int i = 0; i < ncpus; i++) {
-	    if (task_pos[i] >= uint32_t(subsize[i * (ncpus + 1) + lcpu + 1]))
-		continue;
-	    pair_type *ca = lpairs[i];
-	    if (min_pair == NULL || pcmp(min_pair, &ca[task_pos[i]]) > 0) {
-		min_pair = &ca[task_pos[i]];
-		min_idx = i;
-	    }
-	}
-        out[nsorted ++] = *min_pair;
-	task_pos[min_idx]++;
+    C a[JOS_NCPU];
+    for (int i = 0; i < ncpus; ++i) {
+        int s = subsize[i * (ncpus + 1) + lcpu];
+        int e = subsize[i * (ncpus + 1) + lcpu + 1];
+        a[i].set_array(&lpairs[i][s], e - s);
     }
+    C output;
+    output.set_array(out, npairs);
+    mergesort_impl((C *)a, ncpus, 0, 1, pcmp, output);
+    // don't free the array! You guys don't own it!
+    for (int i = 0; i < ncpus; ++i)
+        a[i].pull_array();
+    output.pull_array();
 }
 
 /* input: lpairs
