@@ -161,9 +161,9 @@ mr_setup(mr_param_t * param)
     // setup key comparator and keycopy functions
     kvst_set_util(mr_state.mr_fixed.key_cmp, mr_state.mr_fixed.keycopy);
     mr_state.skip_reduce_phase = 0;
-    if (the_app.atype == atype_maponly) {
+    if (the_app.atype == atype_maponly)
 	mr_state.skip_reduce_phase = 1;
-    } else {
+    else {
 #ifdef MAP_MERGE_REDUCE
 	mr_state.skip_reduce_phase = 1;
 	if (!use_psrs) {
