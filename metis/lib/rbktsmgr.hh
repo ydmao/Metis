@@ -55,7 +55,7 @@ struct reduce_bucket_manager {
         }
     }
     reduce_bucket_manager() {}
-    xarray<xarray_base> rb_; // reduce buckets
+    xarray<xarray<void *> > rb_; // reduce buckets
     static JTLS int cur_task_;
 };
 
