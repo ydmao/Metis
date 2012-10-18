@@ -34,15 +34,11 @@ mbkts_mgr_t *create(int index) {
 mbkts_mgr_t *the_bucket_manager;
 
 #ifdef FORCE_APPEND
-enum				// forced to use index_appendbkt
-{
-    def_imgr = index_appendbktmgr
-};
+// forced to use index_appendbkt
+enum { def_imgr = index_appendbktmgr };
 #else
-enum				// available options are index_arraybkt, index_appendbkt, index_btreebkt
-{
-    def_imgr = index_btreebktmgr
-};
+// available options are index_arraybkt, index_appendbkt, index_btreebkt
+enum { def_imgr = index_btreebktmgr };
 #endif
 
 static int ncols = 0;
