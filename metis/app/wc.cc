@@ -31,7 +31,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <time.h>
-#ifndef __WIN__
 #include <strings.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -39,9 +38,6 @@
 #include <sys/time.h>
 #include <sched.h>
 #define TCHAR char
-#else
-#include "lib/mr-common.hh"
-#endif
 #include "lib/mr-sched.hh"
 #include "bench.hh"
 #ifdef JOS_USER
@@ -343,7 +339,6 @@ main(int argc, TCHAR * argv[])
     }
 
     /* get input file */
-#ifndef __WIN__
     int fd;
     struct stat finfo;
     char *fdata;
@@ -352,20 +347,9 @@ main(int argc, TCHAR * argv[])
     assert((fdata = (char *)mmap(0, finfo.st_size + 1,
 			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,
 			 0)) != MAP_FAILED);
-#else
-    char *fdata;
-    if (getFileMap(fn, &fdata) == false) {
-	printf("error when mapping file\n");
-	return -1;
-    }
-#endif
     final_data_kv_t wc_vals;
-#ifndef __WIN__
     do_mapreduce(nprocs, map_tasks, reduce_tasks, fdata, finfo.st_size,
 		 &wc_vals);
-#else
-    do_mapreduce(nprocs, map_tasks, reduce_tasks, fdata, gFileSize, &wc_vals);
-#endif
     mr_print_stats();
     /* get the number of results to display */
     if (!quiet) {
@@ -376,13 +360,8 @@ main(int argc, TCHAR * argv[])
 	fclose(fout);
     }
     free(wc_vals.data);
-#ifndef __WIN__
     assert(munmap(fdata, finfo.st_size + 1) == 0);
     assert(close(fd) == 0);
-#else
-    assert(UnmapViewOfFile(fdata));
-    closeFileMap();
-#endif
     mr_finalize();
     return 0;
 }

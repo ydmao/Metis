@@ -31,7 +31,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <time.h>
-#ifndef __WIN__
 #include <strings.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -39,7 +38,6 @@
 #include <sys/time.h>
 #include <sched.h>
 #define TCHAR char
-#endif
 #include "mr-sched.hh"
 #include "bench.hh"
 
