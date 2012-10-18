@@ -230,10 +230,9 @@ void psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp, int dor
     if (ncpus == 1 || total_len < ncpus * ncpus * ncpus) {
 	assert(lcpu == main_lcpu && size_t(total_len) == localpairs->size());
 	free_arr_colls(a, n);
-	if (!doreduce) {
-            a[0].pull_array();
+	if (!doreduce)
             a[0].swap(*localpairs);
-	} else {
+	else {
 	    subsize[0] = 0;
 	    subsize[1] = total_len;
 	    reduce_or_group(lpairs, subsize, lcpu, 1);
