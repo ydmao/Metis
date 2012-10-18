@@ -255,6 +255,8 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp)
     cpu_barrier(lcpu, ncpus);
     localpairs->shallow_free();
     localpairs->set_array(&output_->at(output_offset), partsize[lcpu]);
+    // apply a barrier before deinit to make sure no one is using output_
+    cpu_barrier(lcpu, ncpus);
     if (lcpu == main_lcpu)
         deinit();
     return localpairs;
