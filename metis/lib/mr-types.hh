@@ -107,6 +107,11 @@ struct keyvals_t : public xarray<void *> {
     ~keyvals_t() {
         reset();
     }
+    void init() {
+        key = NULL;
+        hash = 0;
+        xarray<void *>::init();
+    }
     void reset() {
         key = NULL;
         hash = 0;

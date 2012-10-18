@@ -68,8 +68,8 @@ void btreebktmgr::bkt_rehash(htable_entry_t *entry, int row)
     btree_type::iterator it = entry->v.begin();
     while (it != entry->v.end()) {
 	map_put_kvs(row, &(*it));
-        memset(&(*it), 0, sizeof(keyvals_t));
-        ++ it;
+        it->init();
+        ++it;
     }
     entry->v.shallow_free();
 }

@@ -3,7 +3,11 @@
 #include "mbktsmgr.hh"
 
 struct btreebktmgr : public mbkts_mgr_t {
-    btreebktmgr() {}
+    btreebktmgr() {
+        map_out = 0;
+        bzero(&mapper, sizeof(mapper));
+        bzero(&mapper_bak, sizeof(mapper_bak));
+    }
     
     void mbm_mbks_init(int rows, int cols);
     void mbm_mbks_destroy();
