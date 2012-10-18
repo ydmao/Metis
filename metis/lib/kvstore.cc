@@ -13,6 +13,7 @@
 #include "btreebktmgr.hh"
 #include "appendbktmgr.hh"
 #include "comparator.hh"
+#include "psrs.hh"
 
 enum { index_appendbktmgr, index_btreebktmgr, index_arraybktmgr };
 
@@ -184,16 +185,54 @@ kvst_map_worker_finished(int row, int reduce_skipped)
     }
 }
 
+template <typename T, typename F>
+void psrs_and_reduce_impl(xarray_base *a, int na, size_t np, int ncpus, int lcpu, F &f) {
+    typedef xarray<T> C;
+    C *xo = NULL;
+    if (psrs<C>::main_cpu(lcpu)) {
+        xo = new C;
+        xo->resize(np);
+        psrs<C>::instance()->init(xo);
+    }
+    // reduce the output of psrs
+    reduce_bucket_manager::instance()->set_current_reduce_task(lcpu);
+    if (C *out = psrs<C>::instance()->do_psrs((C *)a, na, ncpus, lcpu, f))
+        group_one_sorted(*out, reduce_emit_functor::instance());
+    // apply a barrier before freeing xo to make sure no
+    // one is accessing xo anymore.
+    psrs<C>::instance()->cpu_barrier(lcpu, ncpus);
+    if (psrs<C>::main_cpu(lcpu)) {
+        xo->shallow_free();
+        delete xo;
+    }
+}
+
 void
 kvst_merge(int ncpus, int lcpu, int reduce_skipped)
 {
     if (the_app.atype == atype_maponly || !reduce_skipped)
 	reduce_bucket_manager::instance()->merge_reduced_buckets(ncpus, lcpu);
     else {
+        // make sure we are using psrs so that after merge_reduced_buckets,
+        // the final results is already in reduce bucket 0
+        assert(use_psrs);  
 	int n;
         bool kvs = false;
 	xarray_base *a = the_bucket_manager->mbm_map_get_output(&n, &kvs);
-	reduce_bucket_manager::instance()->merge_and_reduce(a, n, kvs, ncpus, lcpu);
+        // merge using psrs, and do the reduce
+        size_t np = 0;
+        for (int i = 0; i < n; ++i)
+            np += a[i].size();
+        if (kvs)
+            psrs_and_reduce_impl<keyvals_t>(a, n, np, ncpus, lcpu,
+                                            comparator::keyvals_pair_comp);
+        else
+            psrs_and_reduce_impl<keyval_t>(a, n, np, ncpus, lcpu,
+                                           comparator::keyval_pair_comp);
+        for (int i = 0; i < n; ++i)
+            a[i].shallow_free();
+        // merge reduced bucekts
+	reduce_bucket_manager::instance()->merge_reduced_buckets(ncpus, lcpu);
     }
 }
 

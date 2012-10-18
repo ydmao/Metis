@@ -42,8 +42,10 @@ struct reduce_bucket_manager {
     void set_current_reduce_task(int ir) {
         cur_task_ = ir;
     }
+    /** @brief: merge the output buckets of reduce phase, i.e. the final output.
+        For psrs, the result is stored in rb_[0]; for mergesort, the result are
+        spread in rb[0..(ncpus - 1)]. */
     void merge_reduced_buckets(int ncpus, int lcpu);
-    void merge_and_reduce(xarray_base *a, int n, bool kvs, int ncpus, int lcpu);
   private:
     void shallow_free_buckets() {
         for (size_t i = 0; i < rb_.size(); ++i) {
@@ -62,16 +64,6 @@ struct reduce_bucket_manager {
         if (!x)
             return;
         reinterpret_cast<C *>(get(i))->swap(*x);
-    }
-
-    template <typename T>
-    void cat_all() {
-        xarray<T> *a0 = (xarray<T> *)get(0);
-        for (size_t i = 1; i < rb_.size(); ++i) {
-            xarray<T> *x = (xarray<T> *)get(i);
-            a0->append(*x);
-            x->init();
-        }
     }
     reduce_bucket_manager() {}
     xarray<xarray_base> rb_; // reduce buckets
