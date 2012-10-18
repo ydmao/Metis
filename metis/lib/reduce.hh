@@ -30,28 +30,25 @@ inline void reduce_or_group_go<xarray<keyval_t> >(xarray<keyval_t> **nodes, int 
     uint64_t total_len = 0;
     for (int i = 0; i < n; i++)
 	total_len += nodes[i]->size();
-    keyval_t *arr = 0;
+    xarray<keyval_t> *arr = NULL;
     if (n > 1) {
-	arr = (keyval_t *) malloc(total_len * sizeof(keyval_t));
-	int idx = 0;
-	for (int i = 0; i < n; i++) {
-            memcpy(&arr[idx], nodes[i]->array(),
-                   nodes[i]->size() * sizeof(keyval_t));
-	    idx += nodes[i]->size();
-        }
+	arr = new xarray<keyval_t>;
+        arr->resize(total_len);
+	for (int i = 0; i < n; i++)
+            arr->append(*nodes[i]);
     } else
-	arr = (keyval_t *)nodes[0]->array();
+	arr = nodes[0];
+    arr->sort(comparator::keyval_pair_comp);
 
-    qsort(arr, total_len, sizeof(keyval_t), comparator::keyval_pair_comp);
     int start = 0;
     keyvals_t kvs;
     while (start < int(total_len)) {
 	int end = start + 1;
-	while (end < int(total_len) && !comparator::keycmp()(arr[start].key, arr[end].key))
+	while (end < int(total_len) && !comparator::keycmp()(arr->at(start).key, arr->at(end).key))
 	    end++;
-	kvs.key = arr[start].key;
+	kvs.key = arr->at(start).key;
 	for (int i = 0; i < end - start; i++)
-	    values_insert(&kvs, arr[start + i].val);
+	    values_insert(&kvs, arr->at(start + i).val);
 	if (meth) {
 	    meth(arg, &kvs);
 	    // kvs.vals is owned by callee
@@ -74,7 +71,7 @@ inline void reduce_or_group_go<xarray<keyval_t> >(xarray<keyval_t> **nodes, int 
 	start = end;
     }
     if (n > 1 && arr)
-	free(arr);
+        delete arr;
 }
 
 template <typename C>

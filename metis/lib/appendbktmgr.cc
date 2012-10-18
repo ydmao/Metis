@@ -104,8 +104,8 @@ void appendbktmgr::mbm_mbks_bak(void) {
 void appendbktmgr::mbm_map_prepare_merge(int row) {
     assert(mapper.map_cols == 1);
     if (!group_before_merge) {
-	((keyval_arr_t *) map_out)[row] = mapper.mbks[row][0].v;
-	memset(&mapper.mbks[row][0].v, 0, sizeof(mapper.mbks[row][0].v));
+	((keyval_arr_t *)map_out)[row] = mapper.mbks[row][0].v;
+        mapper.mbks[row][0].v.pull_array();
     } else {
 	keyval_arr_t *p = &mapper.mbks[row][0].v;
 	reduce_or_group_go(&p, 1, keyvals_arr_t::append_kvs,
