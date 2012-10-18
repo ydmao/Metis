@@ -155,17 +155,16 @@ struct xarray {
     void sort(const F &cmp) {
         qsort(a_, size(), sizeof(T), cmp);
     }
+    void set_capacity(size_t c) {
+        a_ = reinterpret_cast<T *>(realloc(a_, c * sizeof(T)));
+        capacity_ = c;
+    }
   private:
     void make_room() {
         assert(!multiplex());
         if (n_ == capacity_)
             set_capacity(std::max(size_t(4), capacity_) * 2);
     }
-    void set_capacity(size_t c) {
-        a_ = reinterpret_cast<T *>(realloc(a_, c * sizeof(T)));
-        capacity_ = c;
-    }
-
     size_t capacity_;
     size_t n_;
     T *a_;

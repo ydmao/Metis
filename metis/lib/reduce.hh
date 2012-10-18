@@ -68,24 +68,22 @@ group_one_sorted(C &a, F &f) {
 template <typename C, typename F, typename PC>
 inline void
 group_unsorted(C **a, int na, F &f, PC pc) {
-    if (!na)
+    if (na == 1) {
+        a[0]->sort(pc);
+        group_one_sorted(*a[0], f);
+    }
+    if (na <= 1)
         return;
-    // collect and sort
-    size_t total_len = 0;
+    size_t np = 0;
     for (int i = 0; i < na; i++)
-	total_len += a[i]->size();
-    C *one = NULL;
-    if (na > 1) {
-	one = new C;
-        one->resize(total_len);
-	for (int i = 0; i < na; i++)
-            one->append(*a[i]);
-    } else
-	one = a[0];
+        np += a[i]->size();
+    C *one = new C;
+    one->set_capacity(np);
+    for (int i = 0; i < na; i++)
+        one->append(*a[i]);
     one->sort(pc);
     group_one_sorted(*one, f);
-    if (na > 1)
-        delete one;
+    delete one;
 }
 
 template <typename C, typename F>
