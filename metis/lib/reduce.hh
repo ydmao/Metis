@@ -39,7 +39,7 @@ struct reduce_emit_functor {
 };
 
 struct append_functor {
-    append_functor(xarray<keyvals_t> *x) {}
+    append_functor(xarray<keyvals_t> *x) : x_(x) {}
     void operator()(keyvals_t &kvs) {
 	// kvs.vals is owned by callee
         x_->push_back(kvs);
