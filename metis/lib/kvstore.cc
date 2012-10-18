@@ -188,12 +188,12 @@ void
 kvst_merge(int ncpus, int lcpu, int reduce_skipped)
 {
     if (the_app.atype == atype_maponly || !reduce_skipped)
-	reduce_bucket_manager::instance()->merge(ncpus, lcpu);
+	reduce_bucket_manager::instance()->merge_reduced_buckets(ncpus, lcpu);
     else {
 	int n;
         bool kvs = false;
 	xarray_base *a = the_bucket_manager->mbm_map_get_output(&n, &kvs);
-	reduce_bucket_manager::instance()->merge_reduce(a, n, kvs, ncpus, lcpu);
+	reduce_bucket_manager::instance()->merge_and_reduce(a, n, kvs, ncpus, lcpu);
     }
 }
 

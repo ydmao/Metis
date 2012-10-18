@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include "bench.hh"
-#include "reduce.hh"
 #include "bsearch.hh"
 #include "mergesort.hh"
 
@@ -20,31 +19,42 @@ struct psrs {
      */
     void sublists(pair_type *base, int start, int end, int *subsize,
                   const pair_type *pivots, int fp, int lp, pair_cmp_t pcmp);
-    void reduce_or_group(pair_type **elems, int *subsize, int lcpu, int ncpus);
     C *copy_elems(C *arr_colls, int ncolls, int dst_start, int dst_end);
     void mergesort(pair_type **lpairs, int npairs, int *subsize, int lcpu,
                    pair_type *out, int ncpus, pair_cmp_t pcmp);
-    void free_arr_colls(C *a, int n);
-    void do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp, int doreduce);
+    C *do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp);
+
+    static bool main_cpu(int lcpu) {
+        return lcpu == main_lcpu;
+    }
+    void init(C *xo) {
+        output_ = xo;
+        total_len = output_->size();
+        reset();
+    }
 
   private:
     psrs() {
-        init();
+        status = STOP;
+        deinit();
+        bzero(ready, sizeof(ready));
+        reset();
     }
-    void init() {
-        total_len = 0;
+    void reset() {
 	pivots = new pair_type[JOS_NCPU * (JOS_NCPU - 1)];
 	memset(pivots, 0, JOS_NCPU * (JOS_NCPU - 1) * C::elem_size());
-        output = NULL;
 	memset(subsize, 0, sizeof(subsize));
 	memset(partsize, 0, sizeof(partsize));
  	memset(lpairs, 0, sizeof(lpairs));
-        status = STOP;
+    }
+    void deinit() {
+        output_ = NULL;
+    }
+    void check_inited() {
+        assert(output_ && status == STOP);
     }
 
     enum { main_lcpu = 0 };
-    // the cpu frees the reduce buckets. Can be any one but the main cpu
-    enum { free_lcpu = 1}; 
     enum { STOP, START };
     union {
         char __pad[JOS_CLINE];
@@ -53,7 +63,7 @@ struct psrs {
 
     int total_len;
     pair_type *pivots;
-    pair_type *output;
+    C *output_;
     int subsize[JOS_NCPU * (JOS_NCPU + 1)];
     int partsize[JOS_NCPU];
     pair_type *lpairs[JOS_NCPU];
@@ -136,28 +146,6 @@ void psrs<C>::mergesort(typename psrs<C>::pair_type **lpairs, int npairs, int *s
     output.pull_array();
 }
 
-/* input: lpairs
- * output: rbuckets
- */
-template <typename C>
-void psrs<C>::reduce_or_group(typename psrs<C>::pair_type **elems, int *subsize, int lcpu, int ncpus)
-{
-    C colls[JOS_NCPU];
-    C *pcolls[JOS_NCPU];
-    for (int i = 0; i < ncpus; i++) {
-        const int subsize_offset = subsize[i * (ncpus + 1) + lcpu];
-        const int elem_offset = subsize[subsize_offset];
-        pair_type *elem = &elems[i][elem_offset];
-        const int n = subsize[subsize_offset + 1] - elem_offset;
-        colls[i].set_array(elem, n);
-	pcolls[i] = &colls[i];
-    }
-    group(pcolls, ncpus, reduce_emit_functor::instance());
-    // don't free memory because colls doesn't own them
-    for (int i = 0; i < ncpus; ++i)
-        colls[i].pull_array();
-}
-
 /* Suppose all elements in all arrays of arr_parr are indexed globally.
  * Then this function copies the [needed_start, needed_end] range of
  * the global array into one.
@@ -189,26 +177,15 @@ C *psrs<C>::copy_elems(C *arr_colls, int ncolls, int dst_start, int dst_end) {
     return output;
 }
 
-template <typename C>
-void psrs<C>::free_arr_colls(C *a, int n)
-{
-    for (int i = 0; i < n; ++i)
-        a[i].shallow_free();
-}
-
 /* sort the elements of an array of collections.
  * If doreduce, reduce on each partition and put the elements into rbuckets;
  * otherwise, put the output into the first array of acolls;
  */
 template <typename C>
-void psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp, int doreduce)
+C *psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp)
 {
-    if (lcpu == main_lcpu) {
-	init();
-	total_len = 0;
-	for (int i = 0; i < n; ++i)
-	    total_len += a[i].size();
-    }
+    if (lcpu == main_lcpu)
+	check_inited();
     cpu_barrier(lcpu, ncpus);
     // get the [start, end] subarray
     int w = (total_len + ncpus - 1) / ncpus;
@@ -218,7 +195,7 @@ void psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp, int dor
 	end = total_len - 1;
     if (total_len < ncpus * ncpus * ncpus) {
 	if (lcpu != main_lcpu)
-	    return;
+	    return new C;
 	start = 0;
 	end = total_len - 1;
     }
@@ -229,17 +206,11 @@ void psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp, int dor
     localpairs->sort(pcmp);
     if (ncpus == 1 || total_len < ncpus * ncpus * ncpus) {
 	assert(lcpu == main_lcpu && size_t(total_len) == localpairs->size());
-	free_arr_colls(a, n);
-	if (!doreduce)
-            a[0].swap(*localpairs);
-	else {
-	    subsize[0] = 0;
-	    subsize[1] = total_len;
-	    reduce_or_group(lpairs, subsize, lcpu, 1);
-            localpairs->shallow_free();
-	}
-        delete localpairs;
-	return;
+        // transfer memory ownership to output_
+        output_->shallow_free();
+        output_->set_array(localpairs->array(), localpairs->size());
+        deinit();
+        return localpairs;
     }
     int rsize = (copied + ncpus - 1) / ncpus;
     // sends (p - 1) local pivots to main cpu
@@ -257,11 +228,8 @@ void psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp, int dor
 	for (int i = 0; i < ncpus - 1; i++)
             pivots[i + 1] = pivots[i * ncpus + ncpus / 2];
 	cpu_barrier(lcpu, ncpus);
-    } else {
-	if (lcpu == free_lcpu)
-	    free_arr_colls(a, n);
+    } else
 	cpu_barrier(lcpu, ncpus);
-    }
     // divide the local list into p sublists by the (p - 1) pivots received from main cpu
     subsize[lcpu * (ncpus + 1)] = 0;
     subsize[lcpu * (ncpus + 1) + ncpus] = copied;
@@ -275,26 +243,20 @@ void psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp, int dor
 	int end = subsize[i * (ncpus + 1) + lcpu + 1];
 	partsize[lcpu] += end - start;
     }
-    if (lcpu == main_lcpu && !doreduce) {
-	// allocate and set the output
-        a[0].pull_array();
-        a[0].resize(total_len);
-        output = a[0].array();
-    }
     cpu_barrier(lcpu, ncpus);
-    // merge (and reduce if required) each partition in parallel
-    if (!doreduce) {
-	// determines the position in the final results for local partition
-	int start_pos = 0;
-	for (int i = 0; i < lcpu; i++)
-	    start_pos += partsize[i];
-	mergesort(reinterpret_cast<pair_type **>(lpairs),
-                  partsize[lcpu], reinterpret_cast<int *>(subsize),
-                  lcpu, &output[start_pos], ncpus, pcmp);
-    } else
-	reduce_or_group((pair_type **)lpairs, (int *) subsize, lcpu, ncpus);
+    // merge each partition in parallel
+    // determines the position in the final results for local partition
+    int output_offset = 0;
+    for (int i = 0; i < lcpu; i++)
+        output_offset += partsize[i];
+    mergesort(reinterpret_cast<pair_type **>(lpairs),
+              partsize[lcpu], reinterpret_cast<int *>(subsize),
+              lcpu, &output_->at(output_offset), ncpus, pcmp);
     cpu_barrier(lcpu, ncpus);
     localpairs->shallow_free();
-    delete localpairs;
+    localpairs->set_array(&output_->at(output_offset), partsize[lcpu]);
+    if (lcpu == main_lcpu)
+        deinit();
+    return localpairs;
 }
 #endif

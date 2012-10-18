@@ -77,7 +77,7 @@ void arraybktmgr::mbm_do_reduce_task(int col)
     keyvals_arr_t *nodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	nodes[i] = &mapper.mbks[i][col].v;
-    group(nodes, mapper.map_rows, reduce_emit_functor::instance());
+    group_sorted(nodes, mapper.map_rows, reduce_emit_functor::instance());
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }

@@ -30,21 +30,19 @@ void mergesort_impl(C *a, int nmya, int afirst, int astep, pair_cmp_t pcmp, C &s
 }
 
 template <typename C>
-void mergesort(C *a, int na, int ncpus, int lcpu, pair_cmp_t pcmp) {
+C *mergesort(C *a, int na, int ncpus, int lcpu, pair_cmp_t pcmp) {
     int nmya = na / ncpus + (lcpu < (na % ncpus));
     size_t npairs = 0;
     for (int i = 0; i < nmya; i++)
 	npairs += a[lcpu + i * ncpus].size();
+    C *out = new C;
     if (npairs == 0)
-	return;
-    C out;
-    out.resize(npairs);
-    mergesort_impl(a, nmya, lcpu, ncpus, pcmp, out);
-    for (int i = 0; i < nmya; i++)
-        a[lcpu + i * ncpus].shallow_free();
-    a[lcpu].swap(out);
+	return out;
+    out->resize(npairs);
+    mergesort_impl(a, nmya, lcpu, ncpus, pcmp, *out);
     dprintf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
 	    lcpu, ncpus, na, npairs);
+    return out;
 }
 
 #endif

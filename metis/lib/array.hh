@@ -7,11 +7,8 @@
 template <typename T>
 struct xarray_iterator;
 
-struct xarray_base {
-};
-
 template <typename T>
-struct xarray : public xarray_base {
+struct xarray {
     xarray() : capacity_(0), n_(0), a_(NULL) {
     }
     ~xarray() {
@@ -212,5 +209,6 @@ struct xarray_iterator {
     int i_;
 };
 
+typedef xarray<void *> xarray_base;
 
 #endif

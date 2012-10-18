@@ -53,7 +53,7 @@ void btreebktmgr::mbm_do_reduce_task(int col)
     btree_type *nodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	nodes[i] = &mapper.mbks[i][col].v;
-    group(nodes, mapper.map_rows, reduce_emit_functor::instance());
+    group_sorted(nodes, mapper.map_rows, reduce_emit_functor::instance());
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }
@@ -90,7 +90,7 @@ xarray_base *btreebktmgr::mbm_map_get_output(int *n, bool *kvs)
 {
     *kvs = true;
     *n = mapper.map_rows * mapper.map_cols;
-    return map_out;
+    return (xarray_base *)map_out;
 }
 
 void btreebktmgr::mbm_map_prepare_merge(int row) {

@@ -72,7 +72,8 @@ void appendbktmgr::mbm_do_reduce_task(int col) {
     keyval_arr_t *pnodes[JOS_NCPU];
     for (int i = 0; i < mapper.map_rows; i++)
 	pnodes[i] = &mapper.mbks[i][col].v;
-    group(pnodes, mapper.map_rows, reduce_emit_functor::instance());
+    group_unsorted(pnodes, mapper.map_rows, reduce_emit_functor::instance(),
+                   comparator::keyval_pair_comp);
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
 }
@@ -109,7 +110,7 @@ void appendbktmgr::mbm_map_prepare_merge(int row) {
     } else {
 	keyval_arr_t *p = &mapper.mbks[row][0].v;
         append_functor f(&((xarray<keyvals_t> *)map_out)[row]);
-	group(&p, 1, f);
+	group_one_sorted(*p, f);
 	mapper.mbks[row][0].v.shallow_free();
     }
 }

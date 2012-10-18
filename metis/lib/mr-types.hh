@@ -45,6 +45,10 @@ struct keyval_t {
         val = a.val;
         hash = a.hash;
     }
+    void reset() {
+        key = val = NULL;
+        hash = 0;
+    }
 };
 
 struct final_data_kv_t {

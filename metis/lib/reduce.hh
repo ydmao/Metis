@@ -50,45 +50,46 @@ struct append_functor {
 };
 
 template <typename C, typename F>
-inline void group(C **colls, int n, F &f);
-
-template <>
 inline void 
-group<xarray<keyval_t>, append_functor>(xarray<keyval_t> **nodes, 
-                                        int n, append_functor &f) {
-    assert(0 && "need to templatize this function!");
-    if (!n)
+group_one_sorted(C &a, F &f) {
+    // group and apply functor
+    size_t n = a.size();
+    keyvals_t kvs;
+    for (size_t i = 0; i < n;) {
+	kvs.key = a[i].key;
+        values_mv(&kvs, &a[i]);
+        ++i;
+        for (; i < n && !comparator::keycmp()(kvs.key, a[i].key); ++i)
+	    values_mv(&kvs, &a[i]);
+        f(kvs);
+    }
+}
+
+template <typename C, typename F, typename PC>
+inline void
+group_unsorted(C **a, int na, F &f, PC pc) {
+    if (!na)
         return;
     // collect and sort
     size_t total_len = 0;
-    for (int i = 0; i < n; i++)
-	total_len += nodes[i]->size();
-    xarray<keyval_t> *arr = NULL;
-    if (n > 1) {
-	arr = new xarray<keyval_t>;
-        arr->resize(total_len);
-	for (int i = 0; i < n; i++)
-            arr->append(*nodes[i]);
+    for (int i = 0; i < na; i++)
+	total_len += a[i]->size();
+    C *one = NULL;
+    if (na > 1) {
+	one = new C;
+        one->resize(total_len);
+	for (int i = 0; i < na; i++)
+            one->append(*a[i]);
     } else
-	arr = nodes[0];
-    arr->sort(comparator::keyval_pair_comp);
-
-    // group and apply functor
-    keyvals_t kvs;
-    for (size_t i = 0; i < total_len;) {
-	kvs.key = arr->at(i).key;
-        values_insert(&kvs, arr->at(i).val);
-        ++ i;
-        for (; i < total_len && !comparator::keycmp()(arr->at(i - 1).key, arr->at(i).key); ++i)
-	    values_insert(&kvs, arr->at(i).val);
-        f(kvs);
-    }
-    if (n > 1 && arr)
-        delete arr;
+	one = a[0];
+    one->sort(pc);
+    group_one_sorted(*one, f);
+    if (na > 1)
+        delete one;
 }
 
 template <typename C, typename F>
-inline void group(C **nodes, int n, F &f) {
+inline void group_sorted(C **nodes, int n, F &f) {
     if (!n)
         return;
     typename C::iterator it[JOS_NCPU];

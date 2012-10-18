@@ -13,7 +13,7 @@ struct reduce_bucket_manager {
     }
     void init(int n);
     void destroy();
-    xarray_base *get(int p);
+    xarray<void *> *get(int p);
     void set_rb(int p, keyval_t *elems, int n, int bsorted) {
         assert(the_app.atype == atype_maponly);
         xarray<keyval_t> *b = as_kvarray(p);
@@ -23,11 +23,11 @@ struct reduce_bucket_manager {
     }
     xarray<keyval_t> *as_kvarray(int p) {
         xarray_base *b = get(p);
-        return static_cast<xarray<keyval_t> *>(b);
+        return (xarray<keyval_t> *)b;
     }
     xarray<keyvals_len_t> *as_kvslen_array(int p) {
         xarray_base *b = get(p);
-        return static_cast<xarray<keyvals_len_t> *>(b);
+        return (xarray<keyvals_len_t> *)b;
     }
     void emit(void *key, void *val) {
         xarray<keyval_t> *x = as_kvarray(cur_task_);
@@ -42,9 +42,28 @@ struct reduce_bucket_manager {
     void set_current_reduce_task(int ir) {
         cur_task_ = ir;
     }
-    void merge(int ncpus, int lcpu);
-    void merge_reduce(xarray_base *a, int n, bool kvs, int ncpus, int lcpu);
+    void merge_reduced_buckets(int ncpus, int lcpu);
+    void merge_and_reduce(xarray_base *a, int n, bool kvs, int ncpus, int lcpu);
   private:
+    void shallow_free_buckets() {
+        for (size_t i = 0; i < rb_.size(); ++i) {
+            get(i)->shallow_free();
+            assert(get(i)->size() == 0);
+        }
+    }
+    size_t subsize() {
+        size_t n = 0;
+        for (size_t i = 0; i < rb_.size(); ++i)
+            n += get(i)->size();
+        return n;
+    }
+    template <typename C>
+    void swap(int i, C *x) {
+        if (!x)
+            return;
+        reinterpret_cast<C *>(get(i))->swap(*x);
+    }
+
     template <typename T>
     void cat_all() {
         xarray<T> *a0 = (xarray<T> *)get(0);
@@ -55,7 +74,7 @@ struct reduce_bucket_manager {
         }
     }
     reduce_bucket_manager() {}
-    xarray<xarray<void *> > rb_; // reduce buckets
+    xarray<xarray_base> rb_; // reduce buckets
     static JTLS int cur_task_;
 };
 
