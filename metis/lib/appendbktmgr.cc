@@ -106,7 +106,7 @@ void appendbktmgr::mbm_map_prepare_merge(int row) {
     assert(mapper.map_cols == 1);
     if (!group_before_merge) {
 	((keyval_arr_t *)map_out)[row] = mapper.mbks[row][0].v;
-        mapper.mbks[row][0].v.pull_array();
+        mapper.mbks[row][0].v.init();
     } else {
 	keyval_arr_t *p = &mapper.mbks[row][0].v;
         append_functor f(&((xarray<keyvals_t> *)map_out)[row]);

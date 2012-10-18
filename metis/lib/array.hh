@@ -9,23 +9,16 @@ struct xarray_iterator;
 
 template <typename T>
 struct xarray {
-    xarray() : capacity_(0), n_(0), a_(NULL) {
+    xarray() {
+        init();
     }
     ~xarray() {
-        if (a_ && !multiplex()) // don't free memory in multiplex mode
-            resize(0);
-        a_ = NULL;
-        capacity_ = n_ = 0;
+        clear();
     }
     void assign(const xarray<T> &a) {
         a_ = a.a_;
         n_ = a.n_;
         capacity_ = a.capacity_;
-    }
-    /* @brief: clear without free memory */
-    void pull_array() {
-        a_ = NULL;
-        capacity_ = n_ = 0;
     }
     void clear() {
         if (a_ && !multiplex())
@@ -130,7 +123,9 @@ struct xarray {
         resize(0);
     }
     void init() {
-        resize(0);
+        n_ = 0;
+        a_ = NULL;
+        capacity_ = 0;
     }
     size_t copy(T *dst) const {
         memcpy(dst, a_, n_ * sizeof(T));

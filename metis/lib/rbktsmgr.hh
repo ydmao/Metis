@@ -70,7 +70,7 @@ struct reduce_bucket_manager {
         for (size_t i = 1; i < rb_.size(); ++i) {
             xarray<T> *x = (xarray<T> *)get(i);
             a0->append(*x);
-            x->pull_array();
+            x->init();
         }
     }
     reduce_bucket_manager() {}

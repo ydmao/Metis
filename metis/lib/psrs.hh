@@ -142,8 +142,8 @@ void psrs<C>::mergesort(typename psrs<C>::pair_type **lpairs, int npairs, int *s
     mergesort_impl((C *)a, ncpus, 0, 1, pcmp, output);
     // don't free the array! You guys don't own it!
     for (int i = 0; i < ncpus; ++i)
-        a[i].pull_array();
-    output.pull_array();
+        a[i].init();
+    output.init();
 }
 
 /* Suppose all elements in all arrays of arr_parr are indexed globally.

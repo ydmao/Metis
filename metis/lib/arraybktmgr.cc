@@ -117,7 +117,7 @@ void arraybktmgr::mbm_map_prepare_merge(int row)
 {
     for (int i = 0; i < mapper.map_cols; i++) {
 	map_out[row * mapper.map_cols + i] = mapper.mbks[row][i].v;
-        mapper.mbks[row][i].v.pull_array();
+        mapper.mbks[row][i].v.init();
     }
 }
 
