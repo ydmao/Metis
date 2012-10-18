@@ -10,7 +10,7 @@
 
 enum { combiner_threshold = 8 };
 
-void values_insert(keyvals_t * kvs, void *val) {
+void map_values_insert(keyvals_t * kvs, void *val) {
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm) {
 	kvs->set_multiplex_value(the_app.mapreduce.vm(kvs->multiplex_value(), val, 0));
 	return;
@@ -25,7 +25,7 @@ void values_insert(keyvals_t * kvs, void *val) {
     }
 }
 
-void values_mv(keyvals_t *dst, keyval_t *src)
+void map_values_mv(keyvals_t *dst, keyval_t *src)
 {
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm)
         assert(0 && "Not supported yet");
@@ -34,7 +34,7 @@ void values_mv(keyvals_t *dst, keyval_t *src)
     src->reset();
 }
 
-void values_mv(keyvals_t *dst, keyvals_t *src)
+void map_values_mv(keyvals_t *dst, keyvals_t *src)
 {
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm) {
 	assert(src->multiplex());
@@ -50,7 +50,7 @@ void values_mv(keyvals_t *dst, keyvals_t *src)
     }
 }
 
-void values_mv(keyvals_t *dst, keyvals_len_t *src)
+void map_values_mv(keyvals_t *dst, keyvals_len_t *src)
 {
     assert(the_app.atype == atype_mapgroup);  // must be mapgroup
     dst->append(src->vals, src->len);

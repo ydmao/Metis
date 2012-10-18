@@ -17,6 +17,6 @@ bool keyvals_arr_t::map_insert_kv(void *key, void *val, size_t keylen, unsigned 
     bool bnew = insert_new(&tmp, comparator::keyvals_pair_comp, &pos);
     if (bnew && keylen && mrkeycopy)
         at(pos).key = mrkeycopy(key, keylen);
-    values_insert(&at(pos), val);
+    map_values_insert(&at(pos), val);
     return bnew;
 }

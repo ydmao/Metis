@@ -57,10 +57,10 @@ group_one_sorted(C &a, F &f) {
     keyvals_t kvs;
     for (size_t i = 0; i < n;) {
 	kvs.key = a[i].key;
-        values_mv(&kvs, &a[i]);
+        map_values_mv(&kvs, &a[i]);
         ++i;
         for (; i < n && !comparator::keycmp()(kvs.key, a[i].key); ++i)
-	    values_mv(&kvs, &a[i]);
+	    map_values_mv(&kvs, &a[i]);
         f(kvs);
     }
 }
@@ -121,7 +121,7 @@ inline void group_sorted(C **nodes, int n, F &f) {
 	    if (marks[i] != m)
 		continue;
 	    do {
-		values_mv(&dst, &it[i]);
+		map_values_mv(&dst, &it[i]);
                 ++it[i];
 	    } while (it[i] != nodes[i]->end() &&
                      comparator::keycmp()(dst.key, it[i]->key) == 0);

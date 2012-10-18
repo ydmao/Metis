@@ -39,7 +39,8 @@ struct reduce_bucket_manager {
         keyvals_len_t tmp(key, vals, len);
         x->push_back(tmp);
     }
-    void set_current_reduce_task(int ir) {
+    void set_current_reduce_task(size_t ir) {
+        assert(ir < rb_.size());
         cur_task_ = ir;
     }
     /** @brief: merge the output buckets of reduce phase, i.e. the final output.

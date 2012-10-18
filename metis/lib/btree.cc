@@ -78,7 +78,7 @@ int btree_type::insert_kv(void *key, void *val, size_t keylen, unsigned hash)
         leaf->insert(pos, ik, hash);
         ++ nk_;
     }
-    values_insert(&leaf->e_[pos], val);
+    map_values_insert(&leaf->e_[pos], val);
     if (leaf->need_split()) {
 	btnode_leaf *right = leaf->split();
         insert_internal(right->e_[0].key, leaf, right);
