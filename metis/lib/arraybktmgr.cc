@@ -8,8 +8,6 @@
 #include "reduce.hh"
 #include "estimation.hh"
 #include "arraybktmgr.hh"
-#include "pch_kvsarray.hh"
-#include "pch_kvarray.hh"
 #ifdef JOS_USER
 #include <inc/compiler.h>
 #include <inc/lib.h>
@@ -30,7 +28,6 @@ typedef struct {
 static mapper_t mapper;
 static mapper_t mapper_bak;
 static keyvals_arr_t *map_out = NULL;
-static pch_kvsarray hkvsarr;
 
 void arraybktmgr::mbm_mbks_init(int rows, int cols)
 {
@@ -53,11 +50,6 @@ void arraybktmgr::mbm_mbks_init(int rows, int cols)
     mapper.mbks = buckets;
 }
 
-void arraybktmgr::mbm_set_util(key_cmp_t kcmp)
-{
-    hkvsarr.pch_set_util(kcmp);
-}
-
 void arraybktmgr::mbm_mbks_destroy(void)
 {
     for (int i = 0; i < mapper.map_rows; i++) {
@@ -74,7 +66,7 @@ void arraybktmgr::mbm_map_put(int row, void *key, void *val, size_t keylen, unsi
     assert(mapper.mbks);
     int col = hash % mapper.map_cols;
     htable_entry_t *bucket = &mapper.mbks[row][col];
-    int bnewkey = hkvsarr.pch_insert_kv(&bucket->v, key, val, keylen, hash);
+    bool bnewkey = bucket->v.map_insert_kv(key, val, keylen, hash);
     est_newpair(row, bnewkey);
 }
 
@@ -100,7 +92,7 @@ void arraybktmgr::mbm_rehash_bak(int row)
 	while (it != bucket->v.end()) {
 	    htable_entry_t *dest =
 		    &mapper.mbks[row][it->hash % mapper.map_cols];
-	    hkvsarr.pch_insert_kvs(&dest->v, &it);
+	    dest->v.insert_new(&it, comparator::keyvals_pair_comp);
             memset(&it, 0, sizeof(keyvals_t));
             ++it;
 	}

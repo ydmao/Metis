@@ -87,8 +87,12 @@ typedef struct {
 } final_data_kvs_len_t;
 
 /* types used internally */
-typedef xarray<keyval_t> keyval_arr_t;
-typedef xarray<keyvals_len_t> keyvals_len_arr_t;
+struct keyval_arr_t : public xarray<keyval_t> {
+    bool map_insert_kv(void *key, void *val, size_t keylen, unsigned hash);
+};
+
+struct keyvals_len_arr_t: public xarray<keyvals_len_t> {
+};
 
 struct keyvals_t : public xarray<void *> {
     void *key;			/* put key at the same offset with keyval_t */
@@ -120,7 +124,14 @@ struct keyvals_t : public xarray<void *> {
     }
 };
 
-typedef xarray<keyvals_t> keyvals_arr_t;
+struct keyvals_arr_t : public xarray<keyvals_t> {
+    bool map_insert_kv(void *key, void *val, size_t keylen, unsigned hash);
+
+    static void append_kvs(void *a, const keyvals_t *kvs) {
+        keyvals_arr_t *x = (keyvals_arr_t *)a;
+        x->push_back(kvs);
+    }
+};
 
 typedef enum {
     MAP,

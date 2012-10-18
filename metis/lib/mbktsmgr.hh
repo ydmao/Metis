@@ -1,11 +1,10 @@
 #ifndef MBKTSMGR_H
 #define MBKTSMGR_H
 #include "mr-types.hh"
-#include "pchandler.hh"
 #include "array.hh"
+#include "btree.hh"
 
 struct mbkts_mgr_t {
-    virtual void mbm_set_util(key_cmp_t kcmp) = 0;
     virtual void mbm_mbks_init(int rows, int cols) = 0;
     virtual void mbm_mbks_destroy(void) = 0;
     virtual void mbm_mbks_bak(void) = 0;

@@ -3,18 +3,8 @@
 
 #include "mr-conf.hh"
 #include "mr-types.hh"
-#include "pchandler.hh"
 #include "apphelper.hh"
-
-inline void *extract_key(const void *p) {
-    if (app_output_pair_type() == vt_keyval) {
-        const keyval_t *x = reinterpret_cast<const keyval_t *>(p);
-        return x->key;
-    } else {
-        const keyvals_len_t *x = reinterpret_cast<const keyvals_len_t *>(p);
-        return x->key;
-    }
-}
+#include "comparator.hh"
 
 struct reduce_bucket_manager {
     static reduce_bucket_manager *instance() {
@@ -30,28 +20,7 @@ struct reduce_bucket_manager {
         xarray<keyval_t> *b = as_kvarray(p);
         b->set_array(elems, n);
         if (!use_psrs && (!bsorted || the_app.any.outcmp))
-	    b->sort(pair_cmp);
-    }
-    static int pair_cmp(const void *p1, const void *p2) {
-        if (the_app.any.outcmp)
-	    return the_app.any.outcmp(p1, p2);
-        else
-	    return keycmp_(extract_key(p1), extract_key(p2));
-    }
-    static int keyvals_pair_cmp(const void *p1, const void *p2) {
-        const keyvals_t *x1 = (const keyvals_t *)p1;
-        const keyvals_t *x2 = (const keyvals_t *)p2;
-        return keycmp_(x1->key, x2->key);
-    }
-    static int keyval_pair_cmp(const void *p1, const void *p2) {
-        const keyval_t *x1 = (const keyval_t *)p1;
-        const keyval_t *x2 = (const keyval_t *)p2;
-        return keycmp_(x1->key, x2->key);
-    }
-    static int keyvals_len_pair_cmp(const void *p1, const void *p2) {
-        const keyvals_len_t *x1 = (const keyvals_len_t *)p1;
-        const keyvals_len_t *x2 = (const keyvals_len_t *)p2;
-        return keycmp_(x1->key, x2->key);
+	    b->sort(comparator::final_output_pair_comp);
     }
     xarray<keyval_t> *as_kvarray(int p) {
         xarray_base *b = get(p);

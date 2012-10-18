@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "bench.hh"
 #include "reduce.hh"
+#include "bsearch.hh"
 
 template <typename C>
 struct psrs {

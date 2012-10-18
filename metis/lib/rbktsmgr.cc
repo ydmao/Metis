@@ -31,16 +31,20 @@ void reduce_bucket_manager::merge(int ncpus, int lcpu) {
         xarray<keyval_t> *a = (xarray<keyval_t> *)rb_.array();
         if (use_psrs)
 	    psrs<xarray<keyval_t> >::instance()->do_psrs(
-                    a, rb_.size(), ncpus, lcpu, pair_cmp, 0);
+                    a, rb_.size(), ncpus, lcpu,
+                    comparator::final_output_pair_comp, 0);
         else
-            mergesort(a, rb_.size(), ncpus, lcpu, pair_cmp);
+            mergesort(a, rb_.size(), ncpus, lcpu,
+                      comparator::final_output_pair_comp);
     } else if (app_output_pair_type() == vt_keyvals_len) {
         xarray<keyvals_len_t> *a = (xarray<keyvals_len_t> *)rb_.array();
         if (use_psrs)
              psrs<xarray<keyvals_len_t> >::instance()->do_psrs(
-                    a, rb_.size(), ncpus, lcpu, pair_cmp, 0);
+                    a, rb_.size(), ncpus, lcpu,
+                    comparator::final_output_pair_comp, 0);
         else
-	    mergesort(a, rb_.size(), ncpus, lcpu, pair_cmp);
+	    mergesort(a, rb_.size(), ncpus, lcpu,
+                      comparator::final_output_pair_comp);
     }
 }
 
@@ -50,18 +54,22 @@ void reduce_bucket_manager::merge_reduce(xarray_base *a, int n,
         set_current_reduce_task(lcpu);
         if (kvs)
             psrs<xarray<keyvals_t> >::instance()->do_psrs(
-                (xarray<keyvals_t> *)a, n, ncpus, lcpu, keyvals_pair_cmp, 1);
+                (xarray<keyvals_t> *)a, n, ncpus, lcpu,
+                comparator::keyvals_pair_comp, 1);
         else
             psrs<xarray<keyval_t> >::instance()->do_psrs(
-                (xarray<keyval_t> *)a, n, ncpus, lcpu, keyval_pair_cmp, 1);
+                (xarray<keyval_t> *)a, n, ncpus, lcpu,
+                comparator::keyval_pair_comp, 1);
 
         if (the_app.any.outcmp) {
             if (app_output_pair_type() == vt_keyval)
                 psrs<xarray<keyval_t> >::instance()->do_psrs(
-                        (xarray<keyval_t> *)rb_.array(), rb_.size(), ncpus, lcpu, pair_cmp, 0);
+                        (xarray<keyval_t> *)rb_.array(), rb_.size(), ncpus, lcpu,
+                        comparator::final_output_pair_comp, 0);
             else
                 psrs<xarray<keyvals_len_t> >::instance()->do_psrs(
-                        (xarray<keyvals_len_t> *)rb_.array(), rb_.size(), ncpus, lcpu, pair_cmp, 0);
+                        (xarray<keyvals_len_t> *)rb_.array(), rb_.size(), ncpus,
+                        lcpu, comparator::final_output_pair_comp, 0);
         }
         /* cat the reduce buckets to produce the final results. It is safe
          * for cpu 0 to use all reduce buckets because psrs applies a barrier

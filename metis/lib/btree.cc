@@ -1,6 +1,6 @@
 #include "value_helper.hh"
 #include "btree.hh"
-#include "pchandler.hh"
+#include "comparator.hh"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -8,12 +8,7 @@
 #include <inc/compiler.h>
 #endif
 
-key_cmp_t JSHARED_ATTR btree_type::keycmp_ = NULL;
-
-void btree_type::set_key_compare(key_cmp_t kcmp)
-{
-    keycmp_ = kcmp;
-}
+extern keycopy_t mrkeycopy;
 
 void btree_type::init() {
     nk_ = 0;
@@ -36,7 +31,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
 	right->parent_ = newroot;
 	nlevel_++;
     } else {
-	int ikey = parent->upper_bound_pos(key, keycmp_);
+	int ikey = parent->upper_bound_pos(key, comparator::keycmp());
 	// insert newkey at ikey, values at ikey + 1
 	for (int i = parent->nk_ - 1; i >= ikey; i--)
 	    parent->e_[i + 1].k_ = parent->e_[i].k_;
@@ -68,7 +63,7 @@ btnode_leaf *btree_type::get_leaf(void *key)
     }
     btnode_base *node = root_;
     for (int i = 0; i < nlevel_ - 1; ++i)
-        node = static_cast<btnode_internal *>(node)->upper_bound(key, keycmp_);
+        node = static_cast<btnode_internal *>(node)->upper_bound(key, comparator::keycmp());
     return static_cast<btnode_leaf *>(node);
 }
 
@@ -77,7 +72,7 @@ int btree_type::insert_kv(void *key, void *val, size_t keylen, unsigned hash)
 {
     btnode_leaf *leaf = get_leaf(key);
     bool bfound = false;
-    int pos = leaf->lower_bound(key, keycmp_, &bfound);
+    int pos = leaf->lower_bound(key, comparator::keycmp(), &bfound);
     if (!bfound) {
         void *ik = (keylen && mrkeycopy) ? mrkeycopy(key, keylen) : key;
         leaf->insert(pos, ik, hash);
@@ -95,7 +90,7 @@ void btree_type::insert_kvs(const keyvals_t *k)
 {
     btnode_leaf *leaf = get_leaf(k->key);
     bool bfound = false;
-    int pos = leaf->lower_bound(k->key, keycmp_, &bfound);
+    int pos = leaf->lower_bound(k->key, comparator::keycmp(), &bfound);
     assert(!bfound);
     leaf->insert(pos, k->key, 0);  // do not copy key
     ++ nk_;

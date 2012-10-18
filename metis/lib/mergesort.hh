@@ -1,8 +1,8 @@
 #ifndef MERGESORT_H
 #define MERGESORT_H
 
-#include "pchandler.hh"
 #include "bench.hh"
+#include "mr-types.hh"
 
 template <typename C>
 void mergesort(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp) {

@@ -2,7 +2,6 @@
 #define KVSTORE_H
 
 #include "mr-types.hh"
-#include "pchandler.hh"
 
 void kvst_set_util(key_cmp_t fn, keycopy_t keycopy);
 

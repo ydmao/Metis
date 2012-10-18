@@ -12,6 +12,7 @@
 #include "arraybktmgr.hh"
 #include "btreebktmgr.hh"
 #include "appendbktmgr.hh"
+#include "comparator.hh"
 
 enum { index_appendbktmgr, index_btreebktmgr, index_arraybktmgr };
 
@@ -59,7 +60,6 @@ kvst_set_bktmgr(int idx)
 {
     assert(keycmp);
     the_bucket_manager = create(idx);
-    the_bucket_manager->mbm_set_util(keycmp);
     reduce_bucket_manager::instance()->set_key_cmp(keycmp);
     reduce_or_group::setcmp(keycmp);
 }
@@ -168,6 +168,7 @@ kvst_map_put(int row, void *key, void *val, size_t keylen, unsigned hash)
 void
 kvst_set_util(key_cmp_t kcmp, keycopy_t kcp)
 {
+    comparator::set_key_compare(keycmp);
     keycmp = kcmp;
     mrkeycopy = kcp;
 }

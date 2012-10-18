@@ -3,7 +3,6 @@
 #include "mbktsmgr.hh"
 
 struct appendbktmgr : public mbkts_mgr_t {
-    void mbm_set_util(key_cmp_t kcmp);
     void mbm_mbks_init(int rows, int cols);
     void mbm_mbks_destroy(void) {
     }

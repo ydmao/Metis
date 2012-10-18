@@ -2,6 +2,7 @@
 #define XARRAY_HH_
 
 #include <algorithm>
+#include "bsearch.hh"
 
 template <typename T>
 struct xarray_iterator;

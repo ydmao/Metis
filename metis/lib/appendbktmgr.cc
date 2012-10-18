@@ -8,8 +8,6 @@
 #include "estimation.hh"
 #include "mr-conf.hh"
 #include "appendbktmgr.hh"
-#include "pch_kvsarray.hh"
-#include "pch_kvarray.hh"
 
 typedef struct {
     keyval_arr_t v;
@@ -24,11 +22,8 @@ typedef struct {
 static mapper_t mapper;
 static mapper_t mapper_bak;
 
-static key_cmp_t JSHARED_ATTR keycmp = NULL;
 static void *map_out = NULL;
 static int group_before_merge;
-static pch_kvsarray hkvsarr;
-static pch_kvarray hkvarr;
 
 void appendbktmgr::mbm_mbks_init(int rows, int cols) {
     mapper.map_rows = rows;
@@ -38,7 +33,7 @@ void appendbktmgr::mbm_mbks_init(int rows, int cols) {
 	mapper.mbks[i] =
 	    (htable_entry_t *) malloc(cols * sizeof(htable_entry_t));
 	for (int j = 0; j < cols; j++)
-	    hkvarr.pch_init(&mapper.mbks[i][j].v);
+	    mapper.mbks[i][j].v.init();
     }
     if (map_out) {
 	free(map_out);
@@ -56,16 +51,9 @@ void appendbktmgr::mbm_mbks_init(int rows, int cols) {
     } else {
 	keyval_arr_t *out = new keyval_arr_t[rows * cols];
 	for (int i = 0; i < rows * cols; i++)
-	    hkvarr.pch_init(&out[i]);
+	    out[i].init();
 	map_out = out;
     }
-}
-
-void appendbktmgr::mbm_set_util(key_cmp_t kcmp) {
-    keycmp = kcmp;
-    hkvarr.pch_set_util(kcmp);
-    if (group_before_merge)
-	hkvsarr.pch_set_util(kcmp);
 }
 
 void appendbktmgr::mbm_map_put(int row, void *key, void *val, size_t keylen,
@@ -73,7 +61,7 @@ void appendbktmgr::mbm_map_put(int row, void *key, void *val, size_t keylen,
     assert(mapper.mbks);
     int col = hash % mapper.map_cols;
     htable_entry_t *bucket = &mapper.mbks[row][col];
-    hkvarr.pch_insert_kv(&bucket->v, key, val, keylen, hash);
+    bucket->v.map_insert_kv(key, val, keylen, hash);
     est_newpair(row, 1);
 }
 
@@ -87,12 +75,6 @@ void appendbktmgr::mbm_do_reduce_task(int col) {
     reduce_or_group_go(pnodes, mapper.map_rows, NULL, NULL);
     for (int i = 0; i < mapper.map_rows; i++)
 	mapper.mbks[i][col].v.shallow_free();
-}
-
-static inline int
-keyval_cmp(const void *kvs1, const void *kvs2)
-{
-    return keycmp(((keyval_t *) kvs1)->key, ((keyval_t *) kvs2)->key);
 }
 
 xarray_base *appendbktmgr::mbm_map_get_output(int *n, bool *kvs) {
@@ -126,7 +108,7 @@ void appendbktmgr::mbm_map_prepare_merge(int row) {
 	memset(&mapper.mbks[row][0].v, 0, sizeof(mapper.mbks[row][0].v));
     } else {
 	keyval_arr_t *p = &mapper.mbks[row][0].v;
-	reduce_or_group_go(&p, 1, hkvsarr.pch_append_kvs,
+	reduce_or_group_go(&p, 1, keyvals_arr_t::append_kvs,
 			   &((keyvals_arr_t *) map_out)[row]);
 	mapper.mbks[row][0].v.shallow_free();
     }

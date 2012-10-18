@@ -3,9 +3,6 @@ LIB_SRCS := mr-sched.cc		\
 	    btreebktmgr.cc		\
 	    arraybktmgr.cc		\
 	    kvstore.cc		\
-	    keyvals_array.cc	\
-	    keyval_array.cc		\
-	    keyvals_len_array.cc	\
 	    reduce.cc		\
 	    defsplitter.cc		\
 	    presplitter.cc		\
@@ -19,7 +16,9 @@ LIB_SRCS := mr-sched.cc		\
 	    cpumap.cc		\
 	    mergesort.cc		\
 	    rbktsmgr.cc             \
-            btree.cc
+            btree.cc    \
+            mr-types.cc \
+            comparator.cc
 
 LIB_OBJS := $(patsubst %.cc, $(O)/%.o, $(LIB_SRCS))
 LIB_OBJS := $(patsubst %.S, $(O)/%.o, $(LIB_OBJS))

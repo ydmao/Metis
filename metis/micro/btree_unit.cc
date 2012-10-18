@@ -1,4 +1,5 @@
 #include "btree.hh"
+#include "comparator.hh"
 #include <assert.h>
 #include <iostream>
 using namespace std;
@@ -57,7 +58,7 @@ void check_tree_copy_and_free(btree_type &bt) {
 
 void test1() {
     btree_type bt;
-    bt.set_key_compare(intcmp);
+    comparator::set_key_compare(intcmp);
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);
@@ -71,7 +72,7 @@ void test1() {
 
 void test2() {
     btree_type bt;
-    bt.set_key_compare(intcmp);
+    comparator::set_key_compare(intcmp);
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);

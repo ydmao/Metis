@@ -8,9 +8,7 @@
 #include "reduce.hh"
 #include "estimation.hh"
 #include "btreebktmgr.hh"
-#include "pch_kvsarray.hh"
 
-static pch_kvsarray hkvsarr;
 btreebktmgr::mapper_t btreebktmgr::mapper;
 btreebktmgr::mapper_t btreebktmgr::mapper_bak;
 keyvals_arr_t *btreebktmgr::map_out;
@@ -24,12 +22,7 @@ void btreebktmgr::mbm_mbks_init(int rows, int cols)
     }
     map_out = (keyvals_arr_t *) malloc(rows * cols * sizeof(keyvals_arr_t));
     for (int i = 0; i < rows * cols; i++)
-	hkvsarr.pch_init(&map_out[i]);
-}
-
-void btreebktmgr::mbm_set_util(key_cmp_t cmp)
-{
-    btree_type::set_key_compare(cmp);
+	map_out[i].init();
 }
 
 void btreebktmgr::mbm_mbks_destroy(void)

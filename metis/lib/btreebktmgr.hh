@@ -1,12 +1,10 @@
 #ifndef BTREE_BUCKET_MANAGER_HH_
 #define BTREE_BUCKET_MANAGER_HH_ 1
 #include "mbktsmgr.hh"
-#include "pchandler.hh"
 
 struct btreebktmgr : public mbkts_mgr_t {
-    btreebktmgr() {
-    }
-    void mbm_set_util(key_cmp_t kcmp);
+    btreebktmgr() {}
+    
     void mbm_mbks_init(int rows, int cols);
     void mbm_mbks_destroy();
     void mbm_mbks_bak();
