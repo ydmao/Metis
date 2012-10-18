@@ -43,13 +43,14 @@ void appendbktmgr::mbm_mbks_init(int rows, int cols) {
 #ifdef SINGLE_APPEND_GROUP_MERGE_FIRST
     group_before_merge = 1;
 #endif
+    // XXX: be careful! new [] and delete [] must match!
     if (group_before_merge) {
-	keyvals_arr_t *out = new keyvals_arr_t[rows * cols];
+        keyvals_arr_t *out = (keyvals_arr_t *)malloc(sizeof(keyvals_arr_t) * rows * cols);
 	for (int i = 0; i < rows * cols; i++)
 	    out[i].init();
 	map_out = out;
     } else {
-	keyval_arr_t *out = new keyval_arr_t[rows * cols];
+        keyval_arr_t *out = (keyval_arr_t *)malloc(sizeof(keyval_arr_t) * rows * cols);
 	for (int i = 0; i < rows * cols; i++)
 	    out[i].init();
 	map_out = out;
