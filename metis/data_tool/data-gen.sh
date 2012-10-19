@@ -7,6 +7,13 @@ popd
 
 TOP=./data
 
+if test ! -d ./data ; then
+  echo "Please download data.tar.gz and decompress it"
+  echo "You can download it from the pdos.csail.mit.edu/metis, or \
+        am.csail.mit.edu:~/metis_data_release.git"
+  exit -1
+fi
+exit
 # Generate wr input with many keys and many duplicates
 dd if=$TOP/100MB_1M_Keys.txt of=$TOP/wr/5MB.txt~ count=1 bs=5000000
 i=0

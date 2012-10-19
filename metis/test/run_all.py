@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import subprocess, sys
+import subprocess, sys, os
 
 commonArgs = '-q'
 sanityRun = True
@@ -22,11 +22,16 @@ def do_test(prog, args, sanityArgs = None):
     if p.returncode != 0:
         print '---------- %s failed ----------' % prog
 
+def test_path(path):
+    if os.path.exists(path):
+        return path
+    return None
+
 do_test("wrmem", "", "-s 1");
 do_test("kmeans", "10 16 5000000 40", "10 16 5000 40");
 do_test("pca", "-R 2048 -C 2048", "-R 100 -C 100");
 do_test("matrix_mult", "-l 2048", "-l 100");
-do_test("hist", "data/hist-2.6g.bmp");
+do_test("hist", "data/hist-2.6g.bmp", test_path("data/3MB.bmp"));
 
 # The input is generated via data/data-gen.sh
 do_test("linear_regression", "data/lr_4GB.txt");
@@ -34,12 +39,12 @@ do_test("linear_regression", "data/lr_4GB.txt");
 # The input is generated via data/data-gen.sh
 do_test("string_match", "data/sm_1GB.txt");
 
-do_test("wc", "data/wc/300MB_1M_Keys.txt");
+do_test("wc", "data/wc/300MB_1M_Keys.txt", test_path("data/wc/10MB.txt"));
 # this input is used for comparision with hadoop
 do_test("wc", "data/wc/10MB.txt -p 1");
 
 # many keys and few duplicates
-do_test("wr", "data/wr/100MB_1M_Keys.txt");
+do_test("wr", "data/wr/100MB_1M_Keys.txt", test_path("data/wc/10MB.txt"));
 # few keys and many duplicates
 do_test("wr", "data/wr/100MB_100K_Keys.txt");
 # many keys and many duplicates. The input is generated via data/data-gen.sh
