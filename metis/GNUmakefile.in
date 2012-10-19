@@ -14,11 +14,8 @@ CFLAGS	:= -D_GNU_SOURCE -Wall $(OPTFLAGS) -include config.h \
 	   -DJOS_NCPU=$(MAXCPUS) -D__STDC_FORMAT_MACROS
 
 LIB := -L$(O) -lmetis -ldl @MEM_ALLOCATOR@ -lnuma -lc -lm -lpthread -ldl
-
 LDEPS := $(O)/libmetis.a
 
-# Which MapReduce applications to build?  .sf binaries will be
-# linked against libflow
 PROGS := obj/kmeans 			    \
 	 obj/matrix_mult 		    \
 	 obj/pca 			    \
