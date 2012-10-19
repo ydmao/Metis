@@ -3,7 +3,7 @@
 
 #include "mr-types.hh"
 
-enum { nkeys_per_bkt = 10 };
+enum { expected_keys_per_bucket = 10 };
 
 void est_init();
 void est_newpair(int row, int newkey);

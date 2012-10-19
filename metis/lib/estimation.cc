@@ -1,7 +1,7 @@
 #include <string.h>
 #include "estimation.hh"
 
-typedef union __attribute__ ((__packed__, __aligned__(JOS_CLINE))) {
+union __attribute__ ((__packed__, __aligned__(JOS_CLINE))) mstate_t {
     struct {
 	uint64_t cur_nkeys;
 	uint64_t cur_npairs;
@@ -12,22 +12,18 @@ typedef union __attribute__ ((__packed__, __aligned__(JOS_CLINE))) {
 	uint64_t nsampled;
     };
     char __pad[2 * JOS_CLINE];
-} mstate_t;
+};
 
 enum { est_interval = 1000 };
 
 static void est_interval_passed(int row);
 static mstate_t mstate[JOS_NCPU];
 
-void
-est_init()
-{
+void est_init() {
     memset(mstate, 0, sizeof(mstate));
 }
 
-static void
-est_interval_passed(int row)
-{
+static void est_interval_passed(int row) {
     if (mstate[row].last_nkeys == 0) {
 	mstate[row].key_rate = mstate[row].cur_nkeys;
     } else {
@@ -38,9 +34,7 @@ est_interval_passed(int row)
 
 }
 
-void
-est_task_finished(int row)
-{
+void est_task_finished(int row) {
     if (mstate[row].last_npairs == 0) {
 	mstate[row].pair_rate = mstate[row].cur_npairs;
     } else {
@@ -51,24 +45,18 @@ est_task_finished(int row)
     mstate[row].nsampled++;
 }
 
-void
-est_estimate(uint64_t * nkeys, uint64_t * npairs, int row, int ntotal)
-{
+void est_estimate(uint64_t * nkeys, uint64_t * npairs, int row, int ntotal) {
     *npairs = mstate[row].pair_rate * (ntotal - mstate[row].nsampled) +
 	mstate[row].cur_npairs;
     *nkeys = mstate[row].key_rate * (*npairs - mstate[row].cur_npairs)
 	/ est_interval + mstate[row].cur_nkeys;
 }
 
-int
-est_get_finished(int row)
-{
+int est_get_finished(int row) {
     return mstate[row].nsampled;
 }
 
-void
-est_newpair(int row, int newkey)
-{
+void est_newpair(int row, int newkey) {
     if (newkey)
 	mstate[row].cur_nkeys++;
     mstate[row].cur_npairs++;

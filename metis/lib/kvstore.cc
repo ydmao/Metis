@@ -61,7 +61,7 @@ uint64_t metis_runtime::sample_finished(int ntotal) {
     int nvalid = 0;
     for (int i = 0; i < current_manager_->nrow(); ++i)
 	if (est_get_finished(i)) {
-	    nvalid++;
+	    ++ nvalid;
 	    uint64_t nkeys = 0;
 	    uint64_t npairs = 0;
 	    est_estimate(&nkeys, &npairs, i, ntotal);
@@ -70,28 +70,19 @@ uint64_t metis_runtime::sample_finished(int ntotal) {
 	}
     nkeys_per_mapper /= nvalid;
     npairs_per_mapper /= nvalid;
-    sample_manager_ = current_manager_;
-    current_manager_ = NULL;
 
-    // Compute the estimated tasks
-    uint64_t ntasks = nkeys_per_mapper / nkeys_per_bkt;
-    while (1) {
-	bool prime = true;
-	for (int q = 2; q < sqrt(double(ntasks)); ++q)
-	    if (ntasks % q == 0) {
-		prime = false;
-		break;
-	    }
-	if (!prime) {
-	    ntasks++;
-	    continue;
-	} else
-	    break;
-    };
+    // Compute the # tasks as the closest prime
+    uint64_t ntasks = nkeys_per_mapper / expected_keys_per_bucket;
+    for (int q = 2; q < sqrt(double(ntasks)); ++q)
+        if (ntasks % q == 0)
+            ++ntasks, q = 2;  // restart
     dprintf("Estimated %" PRIu64 " keys, %" PRIu64 " pairs, %"
 	    PRIu64 " reduce tasks, %" PRIu64 " per bucket\n",
 	    nkeys_per_mapper, npairs_per_mapper, ntasks,
 	    nkeys_per_mapper / ntasks);
+
+    sample_manager_ = current_manager_;
+    current_manager_ = NULL;
     sampling_ = false;
     return ntasks;
 }
