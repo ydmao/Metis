@@ -2,7 +2,6 @@
 #define PROFILE_H
 
 #include <inttypes.h>
-#include "mr-conf.hh"
 
 typedef struct {
     uint64_t user;		// ticks spent in user mode

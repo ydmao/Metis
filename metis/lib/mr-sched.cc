@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <inttypes.h>
 
-#include "mr-conf.hh"
 #include "mr-sched.hh"
 #include "metis_runtime.hh"
 #include "bench.hh"
@@ -167,6 +166,7 @@ mr_setup(mr_param_t * param)
     else {
 #ifdef MAP_MERGE_REDUCE
 	mr_state.skip_reduce_phase = 1;
+        const int use_psrs = USE_PSRS;
 	if (!use_psrs) {
 	    printf("TODO: support merge sort in MAP_MERGE_REDUCE mode\n");
 	    exit(0);
@@ -238,6 +238,7 @@ int mr_run_scheduler(mr_param_t * param) {
     }
     // merge phase
     start_time = read_tsc();
+    const int use_psrs = USE_PSRS;
     if (use_psrs) {
 	mr_state.merge_ncpus = mr_state.mr_fixed.nr_cpus;
 	mr_run_task(MERGE);

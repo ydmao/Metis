@@ -1,5 +1,11 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Forced to use append-only data buffer for map phase */
+#undef FORCE_APPEND
+
+/* map -> merge -> reduce */
+#undef MAP_MERGE_REDUCE
+
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
@@ -17,3 +23,22 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Define if you want metis to print out profiling results from performance
+   counters */
+#undef PROFILE_ENABLED
+
+/* Define if you want append-map -> group -> Merge -> Reduce */
+#undef SINGLE_APPEND_GROUP_MERGE_FIRST
+
+/* Define if you want append-map -> Merge -> Reduce */
+#undef SINGLE_APPEND_NOGROUP_MERGE_FIRST
+
+/* Define if you want append-map -> Reduce -> Merge */
+#undef SINGLE_APPEND_REDUCE_FIRST
+
+/* Define if you want grouped-map -> Merge -> Reduce */
+#undef SINGLE_BTREE
+
+/* Define if you want to use psrs for sorting */
+#undef USE_PSRS

@@ -6,7 +6,6 @@
 #include "value_helper.hh"
 #include "apphelper.hh"
 #include "estimation.hh"
-#include "mr-conf.hh"
 #include "reduce_bucket_manager.hh"
 #include "comparator.hh"
 #include "psrs.hh"

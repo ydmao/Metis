@@ -93,6 +93,7 @@ template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu) {
     // make sure we are using psrs so that after merge_reduced_buckets,
     // the final results is already in reduce bucket 0
+    const int use_psrs = USE_PSRS;
     assert(use_psrs);
     typedef output_bucket_type C;
     psrs<C> *pi = psrs<C>::instance();

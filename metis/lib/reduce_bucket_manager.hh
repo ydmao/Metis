@@ -1,7 +1,6 @@
 #ifndef RBKTSMGR_H
 #define RBKTSMGR_H
 
-#include "mr-conf.hh"
 #include "mr-types.hh"
 #include "apphelper.hh"
 #include "comparator.hh"
@@ -47,6 +46,7 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
         spread in rb[0..(ncpus - 1)]. */
     void merge_reduced_buckets(int ncpus, int lcpu) {
         C *out = NULL;
+        const int use_psrs = USE_PSRS;
         if (!use_psrs) {
             out = mergesort(rb_, ncpus, lcpu,
                             comparator::final_output_pair_comp);

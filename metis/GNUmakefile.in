@@ -3,24 +3,17 @@ CC      := g++ -std=gnu++0x
 DEPSDIR := .deps
 DEPCFLAGS = -MD -MF $(DEPSDIR)/$*.d -MP
 TOP	:= $(shell echo $${PWD-'pwd'})
-ARCH 	:= $(shell uname -m | sed -e s/x86_64/amd64/ -e s/i.86/i386/)
 MAXCPUS := $(shell grep -c processor /proc/cpuinfo)
 O       := obj
 
-ifdef DEBUG
-  OPTFLAGS := -g -O0 -fno-omit-frame-pointer
-else
-  OPTFLAGS := -g -O3
-endif
+OPTFLAGS := -g @OPT_LEVEL@ -fno-omit-frame-pointer
 
-CFLAGS	:= -D_GNU_SOURCE -Wall $(OPTFLAGS) \
+CFLAGS	:= -D_GNU_SOURCE -Wall $(OPTFLAGS) -include config.h \
 	   -I$(TOP) -I$(TOP)/lib -DJTLS=__thread -DJSHARED_ATTR=  \
 	   -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64 \
 	   -DJOS_NCPU=$(MAXCPUS) -D__STDC_FORMAT_MACROS
 
-COMMON_LIB := -lc -lm -lpthread -lrt -ldl
-LIB	   := -L$(O) -lmetis $(COMMON_LIB)
-SF_LIB	   := -L$(O) -lmetis -ldl -lflow -lnuma $(COMMON_LIB)
+LIB := -L$(O) -lmetis -ldl @MEM_ALLOCATOR@ -lnuma -lc -lm -lpthread -ldl
 
 LDEPS := $(O)/libmetis.a
 
@@ -39,8 +32,6 @@ PROGS := obj/kmeans 			    \
 	 obj/sf_sample                    \
          obj/btree_unit
 
-PROGS += $(addsuffix .sf,$(PROGS))
-
 all: $(PROGS)
 
 include lib/Makefrag
@@ -57,10 +48,6 @@ $(O)/%.o: app/%.cc $(DEPSDIR)/stamp
 $(O)/%.o: micro/%.cc $(DEPSDIR)/stamp
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(DEPCFLAGS) $(CFLAGS) -o $@ -c $<
-
-$(O)/%.sf: $(O)/%.o $(LDEPS) $(DEPSDIR)/stamp
-	@echo "MAKE	$@"
-	$(Q)$(CC) $(DEPCFLAGS) $(CFLAGS) -o $@ $< $(SF_LIB)
 
 $(DEPSDIR)/stamp:
 	@echo "MAKE	$@"
