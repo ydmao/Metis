@@ -10,28 +10,10 @@
 #include "rbktsmgr.hh"
 #include "comparator.hh"
 #include "psrs.hh"
-#include "map_bucket_manager.hh"
 #include "btree.hh"
+#include "map_bucket_manager.hh"
 
 enum { index_appendbktmgr, index_btreebktmgr, index_arraybktmgr };
-
-map_bucket_manager_base *create(int index) {
-    switch (index) {
-        case index_appendbktmgr:
-#if SINGLE_APPEND_GROUP_MERGE_FIRST
-            return new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
-#else
-            return new map_bucket_manager<false, keyval_arr_t, keyval_t>;
-#endif
-        case index_btreebktmgr:
-            return new map_bucket_manager<true, btree_type, keyvals_t>;
-        case index_arraybktmgr:
-            return new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;
-        default:
-            assert(0);
-    }
-};
-
 #ifdef FORCE_APPEND
 // forced to use index_appendbkt
 enum { def_imgr = index_appendbktmgr };
@@ -39,144 +21,6 @@ enum { def_imgr = index_appendbktmgr };
 // available options are index_arraybkt, index_appendbkt, index_btreebkt
 enum { def_imgr = index_btreebktmgr };
 #endif
-
-static map_bucket_manager_base *the_bucket_manager = NULL;
-static map_bucket_manager_base *backup_manager = NULL;
-static int bsampling = 0;
-static uint64_t nkeys_per_mapper = 0;
-static uint64_t npairs_per_mapper = 0;
-
-keycopy_t mrkeycopy = NULL;
-
-static void
-kvst_set_bktmgr(int idx)
-{
-    the_bucket_manager = create(idx);
-}
-
-void
-kvst_sample_init(int rows, int cols)
-{
-    backup_manager = NULL;
-    kvst_set_bktmgr(def_imgr);
-    the_bucket_manager->init(rows, cols);
-    est_init();
-    bsampling = 1;
-}
-
-void
-kvst_map_task_finished(int row)
-{
-    if (bsampling)
-	est_task_finished(row);
-}
-
-uint64_t
-kvst_sample_finished(int ntotal)
-{
-    int nvalid = 0;
-    for (int i = 0; i < the_bucket_manager->nrow(); i++) {
-	if (est_get_finished(i)) {
-	    nvalid++;
-	    uint64_t nkeys = 0;
-	    uint64_t npairs = 0;
-	    est_estimate(&nkeys, &npairs, i, ntotal);
-	    nkeys_per_mapper += nkeys;
-	    npairs_per_mapper += npairs;
-	}
-    }
-    nkeys_per_mapper /= nvalid;
-    npairs_per_mapper /= nvalid;
-    backup_manager = the_bucket_manager;
-
-    // Compute the estimated tasks
-    uint64_t ntasks = nkeys_per_mapper / nkeys_per_bkt;
-    while (1) {
-	int prime = 1;
-	for (int q = 2; q < sqrt((double) ntasks); q++) {
-	    if (ntasks % q == 0) {
-		prime = 0;
-		break;
-	    }
-	}
-	if (!prime) {
-	    ntasks++;
-	    continue;
-	} else {
-	    break;
-	}
-    };
-    dprintf("Estimated %" PRIu64 " keys, %" PRIu64 " pairs, %"
-	    PRIu64 " reduce tasks, %" PRIu64 " per bucket\n",
-	    nkeys_per_mapper, npairs_per_mapper, ntasks,
-	    nkeys_per_mapper / ntasks);
-    bsampling = 0;
-    return ntasks;
-}
-
-void
-kvst_map_worker_init(int row)
-{
-    if (backup_manager) {
-	assert(the_app.atype != atype_maponly);
-	the_bucket_manager->rehash(row, backup_manager);
-    }
-}
-
-void
-kvst_init_map(int rows, int cols, int nsplits)
-{
-#ifdef FORCE_APPEND
-    kvst_set_bktmgr(index_appendbktmgr);
-#else
-    if (the_app.atype == atype_maponly)
-	kvst_set_bktmgr(index_appendbktmgr);
-    else
-	kvst_set_bktmgr(def_imgr);
-#endif
-    the_bucket_manager->init(rows, cols);
-    reduce_bucket_manager::instance()->init(nsplits);
-}
-
-void
-kvst_initialize(void)
-{
-    reduce_bucket_manager::instance()->destroy();
-    if (the_bucket_manager)
-        the_bucket_manager->destroy();
-    if (backup_manager)
-        backup_manager->destroy();
-}
-
-void
-kvst_map_put(int row, void *key, void *val, size_t keylen, unsigned hash)
-{
-    the_bucket_manager->emit(row, key, val, keylen, hash);
-}
-
-void
-kvst_set_util(key_cmp_t kcmp, keycopy_t kcp)
-{
-    comparator::set_key_compare(kcmp);
-    mrkeycopy = kcp;
-}
-
-void
-kvst_reduce_do_task(int row, int col)
-{
-    assert(the_app.atype != atype_maponly);
-    reduce_bucket_manager::instance()->set_current_reduce_task(col);
-    the_bucket_manager->do_reduce_task(col);
-}
-
-void
-kvst_map_worker_finished(int row, int reduce_skipped)
-{
-    if (reduce_skipped) {
-	assert(!bsampling);
-	the_bucket_manager->prepare_merge(row);
-    }
-}
 
 template <typename T, typename F>
 void psrs_and_reduce_impl(xarray_base *a, int na, size_t np, int ncpus, int lcpu, F &f) {
@@ -200,9 +44,132 @@ void psrs_and_reduce_impl(xarray_base *a, int na, size_t np, int ncpus, int lcpu
     }
 }
 
-void
-kvst_merge(int ncpus, int lcpu, int reduce_skipped)
-{
+void metis_runtime::set_map_bucket_manager(int index) {
+    switch (index) {
+        case index_appendbktmgr:
+#if SINGLE_APPEND_GROUP_MERGE_FIRST
+            current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
+#else
+            current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyval_t>;
+#endif
+            break;
+        case index_btreebktmgr:
+            current_manager_ = new map_bucket_manager<true, btree_type, keyvals_t>;
+            break;
+        case index_arraybktmgr:
+            current_manager_ = new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;
+            break;
+        default:
+            assert(0);
+    }
+};
+
+void metis_runtime::sample_init(int rows, int cols) {
+    sample_manager_ = NULL;
+    set_map_bucket_manager(def_imgr);
+    current_manager_->init(rows, cols);
+    est_init();
+    sampling_ = true;
+}
+
+void metis_runtime::map_task_finished(int row) {
+    if (sampling_)
+	est_task_finished(row);
+}
+
+uint64_t metis_runtime::sample_finished(int ntotal) {
+    uint64_t nkeys_per_mapper = 0;
+    uint64_t npairs_per_mapper = 0;
+    int nvalid = 0;
+    for (int i = 0; i < current_manager_->nrow(); ++i)
+	if (est_get_finished(i)) {
+	    nvalid++;
+	    uint64_t nkeys = 0;
+	    uint64_t npairs = 0;
+	    est_estimate(&nkeys, &npairs, i, ntotal);
+	    nkeys_per_mapper += nkeys;
+	    npairs_per_mapper += npairs;
+	}
+    nkeys_per_mapper /= nvalid;
+    npairs_per_mapper /= nvalid;
+    sample_manager_ = current_manager_;
+    current_manager_ = NULL;
+
+    // Compute the estimated tasks
+    uint64_t ntasks = nkeys_per_mapper / nkeys_per_bkt;
+    while (1) {
+	bool prime = true;
+	for (int q = 2; q < sqrt(double(ntasks)); ++q)
+	    if (ntasks % q == 0) {
+		prime = false;
+		break;
+	    }
+	if (!prime) {
+	    ntasks++;
+	    continue;
+	} else
+	    break;
+    };
+    dprintf("Estimated %" PRIu64 " keys, %" PRIu64 " pairs, %"
+	    PRIu64 " reduce tasks, %" PRIu64 " per bucket\n",
+	    nkeys_per_mapper, npairs_per_mapper, ntasks,
+	    nkeys_per_mapper / ntasks);
+    sampling_ = false;
+    return ntasks;
+}
+
+void metis_runtime::map_worker_init(int row) {
+    if (sample_manager_) {
+	assert(the_app.atype != atype_maponly);
+	current_manager_->rehash(row, sample_manager_);
+    }
+}
+
+void metis_runtime::init_map(int rows, int cols, int nsplits) {
+#ifdef FORCE_APPEND
+    set_map_bucket_manager(index_appendbktmgr);
+#else
+    if (the_app.atype == atype_maponly)
+	set_map_bucket_manager(index_appendbktmgr);
+    else
+	set_map_bucket_manager(def_imgr);
+#endif
+    current_manager_->init(rows, cols);
+    reduce_bucket_manager::instance()->init(nsplits);
+}
+
+void metis_runtime::initialize(void) {
+    reduce_bucket_manager::instance()->destroy();
+    if (current_manager_)
+        current_manager_->destroy();
+    if (sample_manager_)
+        sample_manager_->destroy();
+}
+
+void metis_runtime::map_emit(int row, void *key, void *val,
+                             size_t keylen, unsigned hash) {
+    current_manager_->emit(row, key, val, keylen, hash);
+}
+
+void metis_runtime::set_util(key_cmp_t kcmp, keycopy_t kcp) {
+    comparator::set_key_compare(kcmp);
+    app_set_util(kcp);
+}
+
+void metis_runtime::reduce_do_task(int row, int col) {
+    assert(the_app.atype != atype_maponly);
+    reduce_bucket_manager::instance()->set_current_reduce_task(col);
+    current_manager_->do_reduce_task(col);
+}
+
+void metis_runtime::map_worker_finished(int row, int reduce_skipped) {
+    if (reduce_skipped) {
+	assert(!sampling_);
+	current_manager_->prepare_merge(row);
+    }
+}
+
+void metis_runtime::merge(int ncpus, int lcpu, int reduce_skipped) {
     if (the_app.atype == atype_maponly || !reduce_skipped)
 	reduce_bucket_manager::instance()->merge_reduced_buckets(ncpus, lcpu);
     else {
@@ -211,7 +178,7 @@ kvst_merge(int ncpus, int lcpu, int reduce_skipped)
         assert(use_psrs);  
 	int n;
         bool kvs = false;
-	xarray_base *a = the_bucket_manager->get_output(&n, &kvs);
+	xarray_base *a = current_manager_->get_output(&n, &kvs);
         // merge using psrs, and do the reduce
         size_t np = 0;
         for (int i = 0; i < n; ++i)
@@ -229,8 +196,6 @@ kvst_merge(int ncpus, int lcpu, int reduce_skipped)
     }
 }
 
-void
-kvst_reduce_put(void *key, void *val)
-{
+void metis_runtime::reduce_emit(void *key, void *val) {
     reduce_bucket_manager::instance()->emit(key, val);
 }

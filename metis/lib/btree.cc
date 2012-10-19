@@ -1,6 +1,7 @@
 #include "value_helper.hh"
 #include "btree.hh"
 #include "comparator.hh"
+#include "apphelper.hh"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -74,7 +75,7 @@ int btree_type::map_insert_sorted(void *key, void *val, size_t keylen, unsigned 
     bool bfound = false;
     int pos = leaf->lower_bound(key, comparator::keycmp(), &bfound);
     if (!bfound) {
-        void *ik = (keylen && mrkeycopy) ? mrkeycopy(key, keylen) : key;
+        void *ik = app_make_new_key(key, keylen);
         leaf->insert(pos, ik, hash);
         ++ nk_;
     }

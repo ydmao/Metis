@@ -7,6 +7,17 @@
 #include "rbktsmgr.hh"
 
 app_arg_t the_app;
+static keycopy_t mrkeycopy_;
+
+void app_set_util(keycopy_t keycopy) {
+    mrkeycopy_ = keycopy;
+}
+
+void *app_make_new_key(void *key, size_t keylen) {
+    if (mrkeycopy_ && keylen)
+        return mrkeycopy_(key, keylen);
+    return key;
+}
 
 void
 app_set_arg(app_arg_t * app)

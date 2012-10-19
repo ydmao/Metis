@@ -3,6 +3,7 @@
 
 #include "comparator.hh"
 #include "array.hh"
+#include "reduce.hh"
 
 struct map_bucket_manager_base {
     virtual void init(int rows, int cols) = 0;

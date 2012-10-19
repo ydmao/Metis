@@ -47,6 +47,7 @@ static uint64_t total_reduce_time;
 static uint64_t total_merge_time;
 static uint64_t total_real_time;
 extern TLS int cur_lcpu;	// defined in lib/pthreadpool.c
+metis_runtime *rt_;
 
 static unsigned
 default_hasher(void *key, int key_size)
@@ -64,7 +65,7 @@ mr_map_worker(void *arg)
 {
     prof_worker_start(MAP, cur_lcpu);
     int num_tasks = 0;
-    kvst_map_worker_init(cur_lcpu);
+    rt_->map_worker_init(cur_lcpu);
     while (1) {
 	split_t ma;
 	int ret;
@@ -72,10 +73,10 @@ mr_map_worker(void *arg)
 	if (ret == 0)
 	    break;
 	mr_state.mr_fixed.map_func(&ma);
-	kvst_map_task_finished(cur_lcpu);
+	rt_->map_task_finished(cur_lcpu);
 	num_tasks++;
     }
-    kvst_map_worker_finished(cur_lcpu, mr_state.skip_reduce_phase);
+    rt_->map_worker_finished(cur_lcpu, mr_state.skip_reduce_phase);
     dprintf("total %d map tasks executed in thread %ld(%d)\n",
 	    num_tasks, pthread_self(), cur_lcpu);
     prof_worker_end(MAP, cur_lcpu);
@@ -93,7 +94,7 @@ mr_reduce_worker(void *arg)
 	int cur_task = atomic_add32_ret(task_idx);
 	if (cur_task >= the_app.mapgr.tasks)
 	    break;
-	kvst_reduce_do_task(cur_lcpu, cur_task);
+	rt_->reduce_do_task(cur_lcpu, cur_task);
 	num_tasks++;
 	dprintf("thread : %d, num of tasks : %d\n", cur_lcpu, cur_task);
     }
@@ -108,7 +109,7 @@ mr_merge_worker(void * __attribute__ ((unused)) arg)
 {
     prof_worker_start(MERGE, cur_lcpu);
     int lcpu = cur_lcpu;
-    kvst_merge(mr_state.merge_ncpus, lcpu, mr_state.skip_reduce_phase);
+    rt_->merge(mr_state.merge_ncpus, lcpu, mr_state.skip_reduce_phase);
     prof_worker_end(MERGE, cur_lcpu);
     return 0;
 }
@@ -124,9 +125,9 @@ mr_sample()
     if (nsampled == 0)
 	nsampled = 1;
     presplitter_prep_sample(&mr_state.ps, nsampled);
-    kvst_sample_init(mr_state.mr_fixed.nr_cpus, the_app.mapgr.tasks);
+    rt_->sample_init(mr_state.mr_fixed.nr_cpus, the_app.mapgr.tasks);
     mr_run_task(MAP);
-    uint64_t ntasks = kvst_sample_finished(ntotal);
+    uint64_t ntasks = rt_->sample_finished(ntotal);
     presplitter_done_sample(&mr_state.ps);
     uint64_t sample_time = read_tsc() - start;
     dprintf("sampled %" PRIu64 " from %" PRIu64 " tasks,", nsampled, ntotal);
@@ -159,7 +160,7 @@ mr_setup(mr_param_t * param)
     presplitter_init(&mr_state.ps, param->split_func, param->split_arg,
 		     mr_state.mr_fixed.nr_cpus);
     // setup key comparator and keycopy functions
-    kvst_set_util(mr_state.mr_fixed.key_cmp, mr_state.mr_fixed.keycopy);
+    rt_->set_util(mr_state.mr_fixed.key_cmp, mr_state.mr_fixed.keycopy);
     mr_state.skip_reduce_phase = 0;
     if (the_app.atype == atype_maponly)
 	mr_state.skip_reduce_phase = 1;
@@ -175,7 +176,7 @@ mr_setup(mr_param_t * param)
     // fix the number of reduce tasks by sampling, if enabled
     if (mr_state.skip_reduce_phase) {
 	mr_state.merge_nsplits = mr_state.mr_fixed.nr_cpus;
-	kvst_init_map(mr_state.mr_fixed.nr_cpus, 1, mr_state.merge_nsplits);
+	rt_->init_map(mr_state.mr_fixed.nr_cpus, 1, mr_state.merge_nsplits);
     } else {
 	if (the_app.mapgr.tasks == 0) {
 	    the_app.mapgr.tasks = def_sample_reduce_tasks;
@@ -185,7 +186,7 @@ mr_setup(mr_param_t * param)
 		std::max(ntasks, uint64_t(mr_state.mr_fixed.nr_cpus * def_gr_tasks_per_cpu));
 	}
 	mr_state.merge_nsplits = the_app.mapgr.tasks;
-	kvst_init_map(mr_state.mr_fixed.nr_cpus, the_app.mapgr.tasks,
+	rt_->init_map(mr_state.mr_fixed.nr_cpus, the_app.mapgr.tasks,
 		      mr_state.merge_nsplits);
     }
     return 0;
@@ -218,10 +219,9 @@ mr_run_task(task_type_t type)
     prof_phase_end(&st);
 }
 
-int
-mr_run_scheduler(mr_param_t * param)
-{
-    kvst_initialize();
+int mr_run_scheduler(mr_param_t * param) {
+    rt_ = &metis_runtime::instance();
+    rt_->initialize();
     uint64_t real_start = read_tsc();
     uint64_t start_time, map_time = 0, reduce_time = 0, merge_time = 0;
     memset(&mr_state, 0, sizeof(mr_state_t));
@@ -260,9 +260,7 @@ mr_run_scheduler(mr_param_t * param)
     return 0;
 }
 
-void
-mr_print_stats(void)
-{
+void mr_print_stats(void) {
     prof_print(mr_state.mr_fixed.nr_cpus);
     uint64_t sum_time =
 	total_sample_time + total_map_time + total_reduce_time +
@@ -290,21 +288,15 @@ mr_print_stats(void)
     printf("\n");
 }
 
-void
-mr_finalize(void)
-{
+void mr_finalize(void) {
     mthread_finalize();
 }
 
-void
-mr_map_emit(void *key, void *val, int keylen)
-{
+void mr_map_emit(void *key, void *val, int keylen) {
     unsigned hash = mr_state.mr_fixed.part_func(key, keylen);
-    kvst_map_put(cur_lcpu, key, val, keylen, hash);
+    rt_->map_emit(cur_lcpu, key, val, keylen, hash);
 }
 
-void
-mr_reduce_emit(void *key, void *val)
-{
-    kvst_reduce_put(key, val);
+void mr_reduce_emit(void *key, void *val) {
+    rt_->reduce_emit(key, val);
 }
