@@ -13,14 +13,6 @@ struct reduce_bucket_manager {
     }
     void init(int n);
     void destroy();
-    xarray<void *> *get(int p);
-    void set_rb(int p, keyval_t *elems, int n, int bsorted) {
-        assert(the_app.atype == atype_maponly);
-        xarray<keyval_t> *b = as_kvarray(p);
-        b->set_array(elems, n);
-        if (!use_psrs && (!bsorted || the_app.any.outcmp))
-	    b->sort(comparator::final_output_pair_comp);
-    }
     xarray<keyval_t> *as_kvarray(int p) {
         xarray_base *b = get(p);
         return (xarray<keyval_t> *)b;
@@ -48,6 +40,7 @@ struct reduce_bucket_manager {
         spread in rb[0..(ncpus - 1)]. */
     void merge_reduced_buckets(int ncpus, int lcpu);
   private:
+    xarray<void *> *get(int p);
     void shallow_free_buckets() {
         for (size_t i = 0; i < rb_.size(); ++i) {
             get(i)->shallow_free();
