@@ -1,7 +1,6 @@
 #include <math.h>
 #include <assert.h>
 #include "kvstore.hh"
-#include "mbktsmgr.hh"
 #include "reduce.hh"
 #include "bench.hh"
 #include "value_helper.hh"
@@ -16,7 +15,7 @@
 
 enum { index_appendbktmgr, index_btreebktmgr, index_arraybktmgr };
 
-mbkts_mgr_t *create(int index) {
+map_bucket_manager_base *create(int index) {
     switch (index) {
         case index_appendbktmgr:
 #if SINGLE_APPEND_GROUP_MERGE_FIRST
@@ -41,10 +40,8 @@ enum { def_imgr = index_appendbktmgr };
 enum { def_imgr = index_btreebktmgr };
 #endif
 
-static int ncols = 0;
-static int nrows = 0;
-static mbkts_mgr_t *the_bucket_manager = NULL;
-static mbkts_mgr_t *backup_manager = NULL;
+static map_bucket_manager_base *the_bucket_manager = NULL;
+static map_bucket_manager_base *backup_manager = NULL;
 static int bsampling = 0;
 static uint64_t nkeys_per_mapper = 0;
 static uint64_t npairs_per_mapper = 0;
@@ -63,8 +60,6 @@ kvst_sample_init(int rows, int cols)
     backup_manager = NULL;
     kvst_set_bktmgr(def_imgr);
     the_bucket_manager->init(rows, cols);
-    ncols = cols;
-    nrows = rows;
     est_init();
     bsampling = 1;
 }
@@ -80,7 +75,7 @@ uint64_t
 kvst_sample_finished(int ntotal)
 {
     int nvalid = 0;
-    for (int i = 0; i < nrows; i++) {
+    for (int i = 0; i < the_bucket_manager->nrow(); i++) {
 	if (est_get_finished(i)) {
 	    nvalid++;
 	    uint64_t nkeys = 0;
@@ -131,8 +126,6 @@ kvst_map_worker_init(int row)
 void
 kvst_init_map(int rows, int cols, int nsplits)
 {
-    nrows = rows;
-    ncols = cols;
 #ifdef FORCE_APPEND
     kvst_set_bktmgr(index_appendbktmgr);
 #else

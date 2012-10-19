@@ -2,6 +2,20 @@
 #define MAP_BUCKET_MANAGER_HH 1
 
 #include "comparator.hh"
+#include "array.hh"
+
+struct map_bucket_manager_base {
+    virtual void init(int rows, int cols) = 0;
+    virtual void destroy(void) = 0;
+    virtual void rehash(int row, map_bucket_manager_base *backup) = 0;
+    virtual void emit(int row, void *key, void *val, size_t keylen,
+	      unsigned hash) = 0;
+    virtual void prepare_merge(int row) = 0;
+    virtual xarray_base *get_output(int *n, bool *kvs) = 0;
+    virtual void do_reduce_task(int col) = 0;
+    virtual int ncol() const = 0;
+    virtual int nrow() const = 0;
+};
 
 template <typename DT, bool S>
 struct group_analyzer {};
@@ -42,15 +56,21 @@ struct map_insert_analyzer<DT, false> {
 /* @brief: A map bucket manager using DT as the internal data structure,
    and outputs pairs of OPT type. */
 template <bool S, typename DT, typename OPT>
-struct map_bucket_manager : public mbkts_mgr_t {
+struct map_bucket_manager : public map_bucket_manager_base {
     void init(int rows, int cols);
     void destroy(void);
-    void rehash(int row, mbkts_mgr_t *backup);
+    void rehash(int row, map_bucket_manager_base *backup);
     void emit(int row, void *key, void *val, size_t keylen,
 	      unsigned hash);
     void prepare_merge(int row);
     xarray_base *get_output(int *n, bool *kvs);
     void do_reduce_task(int col);
+    int nrow() const {
+        return rows_;
+    }
+    int ncol() const {
+        return cols_;
+    }
 
     typedef xarray<OPT> output_bucket_type;
   private:
@@ -88,7 +108,7 @@ void map_bucket_manager<S, DT, OPT>::destroy() {
 }
 
 template <bool S, typename DT, typename OPT>
-void map_bucket_manager<S, DT, OPT>::rehash(int row, mbkts_mgr_t *a) {
+void map_bucket_manager<S, DT, OPT>::rehash(int row, map_bucket_manager_base *a) {
     typedef map_bucket_manager<S, DT, OPT> manager_type;
     manager_type *am = static_cast<manager_type *>(a);
 
