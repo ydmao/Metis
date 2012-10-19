@@ -13,6 +13,8 @@
 #include "btree.hh"
 #include "map_bucket_manager.hh"
 
+enum { expected_keys_per_bucket = 10 };
+
 enum { index_appendbktmgr, index_btreebktmgr, index_arraybktmgr };
 #ifdef FORCE_APPEND
 // forced to use index_appendbkt
@@ -46,44 +48,38 @@ void metis_runtime::sample_init(int rows, int cols) {
     sample_manager_ = NULL;
     set_map_bucket_manager(def_imgr);
     current_manager_->init(rows, cols);
-    e_.init();
+    bzero(e_, sizeof(e_));
     sampling_ = true;
 }
 
 void metis_runtime::map_task_finished(int row) {
     if (sampling_)
-	e_.task_finished(row);
+	e_[row].task_finished();
 }
 
 uint64_t metis_runtime::sample_finished(int ntotal) {
-    uint64_t nkeys_per_mapper = 0;
-    uint64_t npairs_per_mapper = 0;
-    int nvalid = 0;
+    assert(sampling_);
+    uint64_t nk = 0;
+    uint64_t np = 0;  // # of keys and pairs per mapper
+    int nvalid = 0;  // # of workers that has sampled
     for (int i = 0; i < current_manager_->nrow(); ++i)
-	if (e_.get_finished(i)) {
-	    ++ nvalid;
-	    uint64_t nkeys = 0;
-	    uint64_t npairs = 0;
-	    e_.estimate(nkeys, npairs, i, ntotal);
-	    nkeys_per_mapper += nkeys;
-	    npairs_per_mapper += npairs;
-	}
-    nkeys_per_mapper /= nvalid;
-    npairs_per_mapper /= nvalid;
+	if (e_[i].valid())
+	    ++ nvalid, e_[i].inc_estimate(&nk, &np, ntotal);
+    nk /= nvalid;
+    np /= nvalid;
 
     // Compute the # tasks as the closest prime
-    uint64_t ntasks = nkeys_per_mapper / expected_keys_per_bucket;
+    uint64_t ntasks = nk / expected_keys_per_bucket;
     for (int q = 2; q < sqrt(double(ntasks)); ++q)
         if (ntasks % q == 0)
             ++ntasks, q = 1;  // restart
-    dprintf("Estimated %" PRIu64 " keys, %" PRIu64 " pairs, %"
-	    PRIu64 " reduce tasks, %" PRIu64 " per bucket\n",
-	    nkeys_per_mapper, npairs_per_mapper, ntasks,
-	    nkeys_per_mapper / ntasks);
-
     sample_manager_ = current_manager_;
     current_manager_ = NULL;
     sampling_ = false;
+
+    dprintf("Estimated %" PRIu64 " keys, %" PRIu64 " pairs, %"
+	    PRIu64 " reduce tasks, %" PRIu64 " per bucket\n",
+	    nk, np, ntasks, nk / ntasks);
     return ntasks;
 }
 
@@ -120,7 +116,7 @@ void metis_runtime::map_emit(int row, void *key, void *val,
                              size_t keylen, unsigned hash) {
     bool newkey = current_manager_->emit(row, key, val, keylen, hash);
     if (sampling_)
-        e_.onepair(row, newkey);
+        e_[row].onepair(newkey);
 }
 
 void metis_runtime::set_util(key_cmp_t kcmp, keycopy_t kcp) {

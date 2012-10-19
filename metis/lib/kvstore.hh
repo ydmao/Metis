@@ -40,7 +40,7 @@ struct metis_runtime {
     map_bucket_manager_base *current_manager_;
     map_bucket_manager_base *sample_manager_;
     bool sampling_;
-    estimation e_;
+    estimation e_[JOS_NCPU];
 };
 
 #endif
