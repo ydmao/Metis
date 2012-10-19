@@ -25,7 +25,7 @@ enum { def_imgr = index_btreebktmgr };
 void metis_runtime::set_map_bucket_manager(int index) {
     switch (index) {
         case index_appendbktmgr:
-#if SINGLE_APPEND_GROUP_MERGE_FIRST
+#ifdef SINGLE_APPEND_GROUP_MERGE_FIRST
             current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
 #else
             current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyval_t>;

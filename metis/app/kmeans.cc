@@ -437,7 +437,7 @@ main(int argc, char **argv)
     for (i = 0; i < num_points; i++)
 	kmeans_data.points[i] = &inbuf[i * dim];
     inbuf_start = inbuf;
-    inbuf_end = inbuf_start + sizeof(int) * num_points * dim - 1;
+    inbuf_end = (void *)(intptr_t(inbuf_start) + sizeof(int) * num_points * dim - 1);
 
     generate_points(kmeans_data.points, num_points);
 
@@ -490,7 +490,7 @@ main(int argc, char **argv)
 	    stats = NULL;
 	}
 	assert(mr_run_scheduler(&mr_param) == 0);
-	for (i = 0; i < kmeans_vals.length; i++) {
+	for (i = 0; i < int(kmeans_vals.length); i++) {
 	    int mean_idx = *((int *) (kmeans_vals.data[i].key));
 	    free(kmeans_data.means[mean_idx].val);
 	    kmeans_data.means[mean_idx] = kmeans_vals.data[i];

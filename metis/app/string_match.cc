@@ -362,7 +362,7 @@ main(int argc, char *argv[])
     mr_print_stats();
     if (!quiet) {
 	printf("\nstring match: results:\n");
-	for (int i = 0; i < str_vals.length; i++) {
+	for (int i = 0; i < int(str_vals.length); ++i) {
 	    keyval_t *curr = &((keyval_t *) str_vals.data)[i];
 	    printf("%15s - %d\n", (char *) curr->key,
 		   (unsigned) (size_t) curr->val);

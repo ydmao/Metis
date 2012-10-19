@@ -236,7 +236,7 @@ main(int argc, char *argv[])
     double a, b, xbar, ybar, r2;
     long long SX_ll = 0, SY_ll = 0, SXX_ll = 0, SYY_ll = 0, SXY_ll = 0;
     // ADD UP RESULTS
-    for (i = 0; i < final_vals.length; i++) {
+    for (i = 0; i < int(final_vals.length); ++i) {
 	keyval_t *curr = &final_vals.data[i];
 	switch ((long int) curr->key) {
 	case KEY_SX:

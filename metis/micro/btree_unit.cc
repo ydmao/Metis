@@ -1,16 +1,9 @@
 #include "btree.hh"
+#include "test_util.hh"
 #include "comparator.hh"
 #include <assert.h>
 #include <iostream>
 using namespace std;
-
-template <typename T1, typename T2>
-void CHECK_EQ(const T1 &expected, const T2 &actual) {
-    if (expected != actual) {
-        cerr << "Actual: " << actual << "\nExpected: " << expected << endl;
-        assert(0);
-    }
-}
 
 static int intcmp(const void *k1, const void *k2) {
     int64_t i1 = int64_t(k1);
