@@ -10,20 +10,6 @@
 extern app_arg_t the_app;
 JTLS int reduce_bucket_manager::cur_task_;
 
-void reduce_bucket_manager::init(int n) {
-    rb_.resize(n);
-    for (int i = 0; i < n; ++i)
-        rb_[i].init();
-}
-
-void reduce_bucket_manager::destroy() {
-    rb_.resize(0);
-}
-
-xarray<void *> *reduce_bucket_manager::get(int p) {
-    return &rb_[p];
-}
-
 template <typename T>
 xarray<T> *merge_impl(xarray<xarray<void *> > &rb, size_t subsize, int ncpus, int lcpu) {
     typedef xarray<T> C;
