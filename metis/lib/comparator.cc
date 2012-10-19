@@ -7,18 +7,15 @@ namespace comparator {
 
 static key_cmp_t keycmp_ = NULL;
 
-key_cmp_t keycmp() {
-    return keycmp_;
+template <typename T>
+int generic_pair_compare(const void *p1, const void *p2) {
+    const T *x1 = reinterpret_cast<const T *>(p1);
+    const T *x2 = reinterpret_cast<const T *>(p2);
+    return keycmp_(x1->key, x2->key);
 }
 
-static void *extract_key(const void *p) {
-    if (app_output_pair_type() == vt_keyval) {
-        const keyval_t *x = reinterpret_cast<const keyval_t *>(p);
-        return x->key;
-    } else {
-        const keyvals_len_t *x = reinterpret_cast<const keyvals_len_t *>(p);
-        return x->key;
-    }
+key_cmp_t keycmp() {
+    return keycmp_;
 }
 
 void set_key_compare(key_cmp_t kcmp) {
@@ -26,28 +23,28 @@ void set_key_compare(key_cmp_t kcmp) {
 }
 
 int keyvals_pair_comp(const void *p1, const void *p2) {
-    const keyvals_t *x1 = (const keyvals_t *)p1;
-    const keyvals_t *x2 = (const keyvals_t *)p2;
-    return keycmp_(x1->key, x2->key);
+    return generic_pair_compare<keyvals_t>(p1, p2);
 }
 
 int keyval_pair_comp(const void *p1, const void *p2) {
-    const keyval_t *x1 = (const keyval_t *)p1;
-    const keyval_t *x2 = (const keyval_t *)p2;
-    return keycmp_(x1->key, x2->key);
+    return generic_pair_compare<keyval_t>(p1, p2);
 }
 
 int keyvals_len_pair_comp(const void *p1, const void *p2) {
-    const keyvals_len_t *x1 = (const keyvals_len_t *)p1;
-    const keyvals_len_t *x2 = (const keyvals_len_t *)p2;
-    return keycmp_(x1->key, x2->key);
+    return generic_pair_compare<keyvals_len_t>(p1, p2);
 }
 
 int final_output_pair_comp(const void *p1, const void *p2) {
     if (the_app.any.outcmp)
         return the_app.any.outcmp(p1, p2);
-    else
-        return keycmp_(extract_key(p1), extract_key(p2));
+    switch (app_output_pair_type()) {
+        case vt_keyval: 
+            return generic_pair_compare<keyval_t>(p1, p2);
+        case vt_keyvals_len:
+            return generic_pair_compare<keyvals_len_t>(p1, p2);
+        default:
+            assert(0);
+    };
 }
 
 }

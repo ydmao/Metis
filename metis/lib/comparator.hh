@@ -13,9 +13,7 @@ int keyvals_len_pair_comp(const void *p1, const void *p2);
 int final_output_pair_comp(const void *p1, const void *p2);
 
 template <typename T>
-inline pair_cmp_t pair_comparator() { 
-    assert(0); 
-}
+inline pair_cmp_t pair_comparator();
 
 template <>
 inline pair_cmp_t pair_comparator<keyvals_t>() {
