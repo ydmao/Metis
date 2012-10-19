@@ -7,24 +7,29 @@
 /** @brief: Merge @a[@afirst + @astep * i] (0 <= i < @nmya), and output to @sized_output */
 template <typename C, typename F>
 void mergesort_impl(C *a, int nmya, int afirst, int astep, F &pcmp, C &sized_output) {
-    uint32_t apos[nmya];
-    bzero(apos, sizeof(apos));
+    typedef typename C::iterator iterator_type;
+    xarray<iterator_type> ai;
+    for (int i = 0; i < nmya; ++i) {
+        iterator_type mi = a[afirst + i * astep].begin();
+        if (mi != mi.parent_end())
+            ai.push_back(mi);
+    }
     size_t nsorted = 0;
     while (nsorted < sized_output.size()) {
+        assert(ai.size());
 	int min_idx = 0;
-	typename C::element_type *min_pair = NULL;
-	for (int i = 0; i < nmya; i++) {
-            C &ca = a[afirst + i * astep];
-	    if (apos[i] == ca.size())
-		continue;
-	    if (min_pair == NULL || pcmp(min_pair, &ca[apos[i]]) > 0) {
-		min_pair = &ca[apos[i]];
+	typename C::element_type *min_pair = ai[0].current();
+	for (size_t i = 1; i < ai.size(); ++i)
+	    if (pcmp(min_pair, ai[i].current()) > 0) {
+		min_pair = ai[i].current();
 		min_idx = i;
 	    }
-	}
         sized_output[nsorted ++] = *min_pair;
-	++apos[min_idx];
+        ++ai[min_idx];
+        if (ai[min_idx] == ai[min_idx].parent_end())
+            ai.remove(min_idx);
     }
+    assert(!ai.size());
 }
 
 template <typename C, typename F>
@@ -43,7 +48,7 @@ C *mergesort(C *a, int na, int ncpus, int lcpu, F &pcmp) {
 	return out;
     out->resize(np);
     mergesort_impl(a, nmya, lcpu, ncpus, pcmp, *out);
-    dprintf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
+    printf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
 	    lcpu, ncpus, na, np);
     return out;
 }

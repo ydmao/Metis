@@ -15,6 +15,11 @@ struct xarray {
     ~xarray() {
         clear();
     }
+    void remove(size_t p) {
+        assert(p < n_ && !multiplex());
+        memmove(&a_[p], &a_[p + 1], sizeof(T) * (n_ - p - 1));
+        --n_;
+    }
     void assign(const xarray<T> &a) {
         a_ = a.a_;
         n_ = a.n_;
@@ -202,6 +207,12 @@ struct xarray_iterator {
     }
     T *operator&() {
         return &p_->a_[i_];
+    }
+    T *current() {
+        return &p_->a_[i_];
+    }
+    xarray_iterator<T> parent_end() {
+        return p_->end();
     }
   private:
     xarray<T> *p_;
