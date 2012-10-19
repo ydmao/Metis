@@ -20,7 +20,7 @@ def do_test(prog, args, sanityArgs = None):
     p = subprocess.Popen(c, shell = True)
     p.communicate()
     if p.returncode != 0:
-        raise Exception('%s failed' % prog)
+        print '---------- %s failed ----------' % prog
 
 do_test("wrmem", "", "-s 1");
 do_test("kmeans", "10 16 5000000 40", "10 16 5000 40");
