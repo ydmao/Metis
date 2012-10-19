@@ -12,10 +12,10 @@ struct map_bucket_manager_base {
     virtual void emit(int row, void *key, void *val, size_t keylen,
 	      unsigned hash) = 0;
     virtual void prepare_merge(int row) = 0;
-    virtual xarray_base *get_output(int *n, bool *kvs) = 0;
     virtual void do_reduce_task(int col) = 0;
     virtual int ncol() const = 0;
     virtual int nrow() const = 0;
+    virtual void merge_output_and_reduce(int ncpus, int lcpu) = 0;
 };
 
 template <typename DT, bool S>
@@ -64,7 +64,6 @@ struct map_bucket_manager : public map_bucket_manager_base {
     void emit(int row, void *key, void *val, size_t keylen,
 	      unsigned hash);
     void prepare_merge(int row);
-    xarray_base *get_output(int *n, bool *kvs);
     void do_reduce_task(int col);
     int nrow() const {
         return rows_;
@@ -72,6 +71,7 @@ struct map_bucket_manager : public map_bucket_manager_base {
     int ncol() const {
         return cols_;
     }
+    void merge_output_and_reduce(int ncpus, int lcpu);
 
     typedef xarray<OPT> output_bucket_type;
   private:
@@ -87,6 +87,59 @@ struct map_bucket_manager : public map_bucket_manager_base {
     xarray<DT> mapdt_;  // intermediate ds holding key/value pairs at map phase
     xarray<output_bucket_type> output_;
 };
+
+template <typename T, typename F>
+void psrs_and_reduce_impl(xarray<T> *a, int na, size_t np, int ncpus, int lcpu, F &f) {
+    typedef xarray<T> C;
+    C *xo = NULL;
+    if (psrs<C>::main_cpu(lcpu)) {
+        xo = new C;
+        xo->resize(np);
+        psrs<C>::instance()->init(xo);
+    }
+    // reduce the output of psrs
+    app_reduce_bucket_manager()->set_current_reduce_task(lcpu);
+    if (C *out = psrs<C>::instance()->do_psrs((C *)a, na, ncpus, lcpu, f))
+        group_one_sorted(*out, reduce_emit_functor::instance());
+    // apply a barrier before freeing xo to make sure no
+    // one is accessing xo anymore.
+    psrs<C>::instance()->cpu_barrier(lcpu, ncpus);
+    if (psrs<C>::main_cpu(lcpu)) {
+        xo->shallow_free();
+        delete xo;
+    }
+}
+
+template <bool S, typename DT, typename OPT>
+void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu) {
+    // make sure we are using psrs so that after merge_reduced_buckets,
+    // the final results is already in reduce bucket 0
+    assert(use_psrs);
+    size_t np = 0;
+    for (size_t i = 0; i < output_.size(); ++i)
+        np += output_[i].size();
+    typedef output_bucket_type C;
+    C *xo = NULL;
+    if (psrs<C>::main_cpu(lcpu)) {
+        xo = new C;
+        xo->resize(np);
+        psrs<C>::instance()->init(xo);
+    }
+    // reduce the output of psrs
+    app_reduce_bucket_manager()->set_current_reduce_task(lcpu);
+    if (C *out = psrs<C>::instance()->do_psrs(output_.array(), output_.size(),
+                                              ncpus, lcpu,
+                                              comparator::raw_comp<OPT>::impl))
+        group_one_sorted(*out, reduce_emit_functor::instance());
+    // barrier before freeing xo to make sure no one is accessing xo anymore.
+    psrs<C>::instance()->cpu_barrier(lcpu, ncpus);
+    if (psrs<C>::main_cpu(lcpu)) {
+        xo->shallow_free();
+        delete xo;
+    }
+    for (size_t i = 0; i < output_.size(); ++i)
+        output_[i].shallow_free();
+}
 
 template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::init(int rows, int cols) {
@@ -142,13 +195,6 @@ void map_bucket_manager<S, DT, OPT>::prepare_merge(int row) {
         assert(src->size() == 0);
         transfer(dst, src);
     }
-}
-
-template <bool S, typename DT, typename OPT>
-xarray_base *map_bucket_manager<S, DT, OPT>::get_output(int *n, bool *kvs) {
-    *kvs = OPT::key_values;
-    *n = output_.size();
-    return (xarray_base *)output_.array();
 }
 
 template <bool S, typename DT, typename OPT>

@@ -22,28 +22,6 @@ enum { def_imgr = index_appendbktmgr };
 enum { def_imgr = index_btreebktmgr };
 #endif
 
-template <typename T, typename F>
-void psrs_and_reduce_impl(xarray_base *a, int na, size_t np, int ncpus, int lcpu, F &f) {
-    typedef xarray<T> C;
-    C *xo = NULL;
-    if (psrs<C>::main_cpu(lcpu)) {
-        xo = new C;
-        xo->resize(np);
-        psrs<C>::instance()->init(xo);
-    }
-    // reduce the output of psrs
-    app_reduce_bucket_manager()->set_current_reduce_task(lcpu);
-    if (C *out = psrs<C>::instance()->do_psrs((C *)a, na, ncpus, lcpu, f))
-        group_one_sorted(*out, reduce_emit_functor::instance());
-    // apply a barrier before freeing xo to make sure no
-    // one is accessing xo anymore.
-    psrs<C>::instance()->cpu_barrier(lcpu, ncpus);
-    if (psrs<C>::main_cpu(lcpu)) {
-        xo->shallow_free();
-        delete xo;
-    }
-}
-
 void metis_runtime::set_map_bucket_manager(int index) {
     switch (index) {
         case index_appendbktmgr:
@@ -174,24 +152,7 @@ void metis_runtime::merge(int ncpus, int lcpu, int reduce_skipped) {
     if (the_app.atype == atype_maponly || !reduce_skipped)
 	app_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
     else {
-        // make sure we are using psrs so that after merge_reduced_buckets,
-        // the final results is already in reduce bucket 0
-        assert(use_psrs);  
-	int n;
-        bool kvs = false;
-	xarray_base *a = current_manager_->get_output(&n, &kvs);
-        // merge using psrs, and do the reduce
-        size_t np = 0;
-        for (int i = 0; i < n; ++i)
-            np += a[i].size();
-        if (kvs)
-            psrs_and_reduce_impl<keyvals_t>(a, n, np, ncpus, lcpu,
-                                            comparator::raw_comp<keyvals_t>::impl);
-        else
-            psrs_and_reduce_impl<keyval_t>(a, n, np, ncpus, lcpu,
-                                           comparator::raw_comp<keyval_t>::impl);
-        for (int i = 0; i < n; ++i)
-            a[i].shallow_free();
+        current_manager_->merge_output_and_reduce(ncpus, lcpu);
         // merge reduced bucekts
 	app_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
     }

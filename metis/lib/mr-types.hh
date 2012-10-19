@@ -13,7 +13,6 @@ typedef struct {
 } split_t;
 
 struct keyval_t {
-    static const int key_values = false;
     void *key;
     void *val;
     unsigned hash;
@@ -99,7 +98,6 @@ struct keyvals_len_arr_t: public xarray<keyvals_len_t> {
 };
 
 struct keyvals_t : public xarray<void *> {
-    static const int key_values = true;
     void *key;			/* put key at the same offset with keyval_t */
     unsigned hash;
     keyvals_t() {
