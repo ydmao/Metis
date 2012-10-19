@@ -76,8 +76,8 @@ data_gen: $(DTOP)/lr_10MB.txt
 	bash data_tool/data-gen.sh
 
 data_clean:
-	rm data_tool/gen -rf
-	bash data_tool/clean.sh
+	rm data_tool/gen $(DTOP)/wr/800MB.txt $(DTOP)/wr/500MB.txt $(DTOP)/hist-2.6g.bmp -rf
+	rm $(DTOP)/lr_4GB.txt $(DTOP)/lr_10MB.txt $(DTOP)/sm_1GB.txt $(DTOP)/*~ -rf
 
 clean:
 	@rm -rf $(PROGS) *.o *.a *~ *.tmp *.bak *.log *.orig $(O) $(DEPSDIR)
