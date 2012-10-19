@@ -89,57 +89,26 @@ struct map_bucket_manager : public map_bucket_manager_base {
     xarray<output_bucket_type> output_;
 };
 
-template <typename T, typename F>
-void psrs_and_reduce_impl(xarray<T> *a, int na, size_t np, int ncpus, int lcpu, F &f) {
-    typedef xarray<T> C;
-    C *xo = NULL;
-    if (psrs<C>::main_cpu(lcpu)) {
-        xo = new C;
-        xo->resize(np);
-        psrs<C>::instance()->init(xo);
-    }
-    // reduce the output of psrs
-    app_reduce_bucket_manager()->set_current_reduce_task(lcpu);
-    if (C *out = psrs<C>::instance()->do_psrs((C *)a, na, ncpus, lcpu, f))
-        group_one_sorted(*out, reduce_emit_functor::instance());
-    // apply a barrier before freeing xo to make sure no
-    // one is accessing xo anymore.
-    psrs<C>::instance()->cpu_barrier(lcpu, ncpus);
-    if (psrs<C>::main_cpu(lcpu)) {
-        xo->shallow_free();
-        delete xo;
-    }
-}
-
 template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu) {
     // make sure we are using psrs so that after merge_reduced_buckets,
     // the final results is already in reduce bucket 0
     assert(use_psrs);
-    size_t np = 0;
-    for (size_t i = 0; i < output_.size(); ++i)
-        np += output_[i].size();
     typedef output_bucket_type C;
-    C *xo = NULL;
-    if (psrs<C>::main_cpu(lcpu)) {
-        xo = new C;
-        xo->resize(np);
-        psrs<C>::instance()->init(xo);
-    }
+    psrs<C> *pi = psrs<C>::instance();
+    C *out = initialize_psrs<C>(lcpu, sum_subarray(output_));
     // reduce the output of psrs
     app_reduce_bucket_manager()->set_current_reduce_task(lcpu);
-    if (C *out = psrs<C>::instance()->do_psrs(output_.array(), output_.size(),
-                                              ncpus, lcpu,
-                                              comparator::raw_comp<OPT>::impl))
+    pi->do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
+    if (out)
         group_one_sorted(*out, reduce_emit_functor::instance());
     // barrier before freeing xo to make sure no one is accessing xo anymore.
-    psrs<C>::instance()->cpu_barrier(lcpu, ncpus);
-    if (psrs<C>::main_cpu(lcpu)) {
-        xo->shallow_free();
-        delete xo;
+    pi->cpu_barrier(lcpu, ncpus);
+    if (pi->main_cpu(lcpu)) {
+        out->shallow_free();
+        delete out;
     }
-    for (size_t i = 0; i < output_.size(); ++i)
-        output_[i].shallow_free();
+    shallow_free_subarray(output_);
 }
 
 template <bool S, typename DT, typename OPT>

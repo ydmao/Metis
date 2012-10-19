@@ -7,25 +7,6 @@
 #include "comparator.hh"
 #include "psrs.hh"
 
-template <typename T>
-inline xarray<T> *merge_impl(xarray<xarray<T> > &rb, size_t subsize,
-                             int ncpus, int lcpu) {
-    typedef xarray<T> C;
-    C *a = (C *)rb.array();
-    if (!use_psrs)
-        return mergesort(a, rb.size(), ncpus, lcpu,
-                         comparator::final_output_pair_comp);
-    C *xo = NULL;
-    if (psrs<C>::main_cpu(lcpu)) {
-        xo = new C;
-        xo->resize(subsize);
-        psrs<C>::instance()->init(xo);
-    }
-    psrs<C>::instance()->do_psrs(a, rb.size(), ncpus, lcpu,
-                comparator::final_output_pair_comp);
-    return (psrs<C>::main_cpu(lcpu)) ? xo :NULL;
-}
-
 struct reduce_bucket_manager_base {
     virtual void init(int n) = 0;
     virtual void destroy() = 0;
@@ -65,11 +46,24 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
         For psrs, the result is stored in rb_[0]; for mergesort, the result are
         spread in rb[0..(ncpus - 1)]. */
     void merge_reduced_buckets(int ncpus, int lcpu) {
-        C *xo = merge_impl<T>(rb_, subsize(), ncpus, lcpu);
-        shallow_free_buckets();
-        if (xo) {
-            rb_[lcpu].swap(*xo);
-            delete xo;
+        C *out = NULL;
+        if (!use_psrs) {
+            out = mergesort(rb_, ncpus, lcpu,
+                            comparator::final_output_pair_comp);
+            shallow_free_subarray(rb_, lcpu, ncpus);
+        } else {
+            // only main cpu has output
+            out = initialize_psrs<C>(lcpu, sum_subarray(rb_));
+            psrs<C> *pi = psrs<C>::instance();
+            assert(out || !pi->main_cpu(lcpu));
+            pi->do_psrs(rb_, ncpus, lcpu, comparator::final_output_pair_comp);
+            // Let one CPU free the input buckets
+            if (pi->main_cpu(lcpu))
+                shallow_free_subarray(rb_);
+        }
+        if (out) {
+            rb_[lcpu].swap(*out);
+            delete out;
         }
     }
     template <typename D>
@@ -82,16 +76,6 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
   private:
     int current_task() {
         return intptr_t(pthread_getspecific(current_task_key_));
-    }
-    void shallow_free_buckets() {
-        for (size_t i = 0; i < rb_.size(); ++i)
-            rb_[i].shallow_free();
-    }
-    size_t subsize() {
-        size_t n = 0;
-        for (size_t i = 0; i < rb_.size(); ++i)
-            n += rb_[i].size();
-        return n;
     }
     reduce_bucket_manager() {}
     xarray<C> rb_; // reduce buckets

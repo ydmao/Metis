@@ -23,7 +23,9 @@ struct psrs {
     void mergesort(pair_type **lpairs, int npairs, int *subsize, int lcpu,
                    pair_type *out, int ncpus, pair_cmp_t pcmp);
     C *do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp);
-
+    C *do_psrs(xarray<C> &a, int ncpus, int lcpu, pair_cmp_t pcmp) {
+        return do_psrs(a.array(), a.size(), ncpus, lcpu, pcmp);
+    }
     static bool main_cpu(int lcpu) {
         return lcpu == main_lcpu;
     }
@@ -261,4 +263,15 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp)
         deinit();
     return localpairs;
 }
+
+template <typename C>
+inline C *initialize_psrs(int lcpu, size_t output_size) {
+    if (!psrs<C>::main_cpu(lcpu))
+        return NULL;
+    C *xo = new C;
+    xo->resize(output_size);
+    psrs<C>::instance()->init(xo);
+    return xo;
+}
+
 #endif

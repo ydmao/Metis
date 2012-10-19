@@ -210,4 +210,20 @@ struct xarray_iterator {
 
 typedef xarray<void *> xarray_base;
 
+template <typename T>
+inline size_t sum_subarray(xarray<xarray<T> > &a) {
+    size_t n = 0;
+    for (size_t i = 0; i < a.size(); ++i)
+        n += a[i].size();
+    return n;
+}
+
+template <typename T>
+inline void shallow_free_subarray(xarray<xarray<T> > &a, int first = 0, 
+                                  int step = 1) {
+    for (size_t i = first; i < a.size(); i += step)
+        a[i].shallow_free();
+}
+
+
 #endif

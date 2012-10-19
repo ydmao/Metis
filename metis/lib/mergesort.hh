@@ -5,10 +5,8 @@
 #include "mr-types.hh"
 
 /** @brief: Merge @a[@afirst + @astep * i] (0 <= i < @nmya), and output to @sized_output */
-template <typename C>
-void mergesort_impl(C *a, int nmya, int afirst, int astep, pair_cmp_t pcmp, C &sized_output) {
-    if (!sized_output.size())
-        return;
+template <typename C, typename F>
+void mergesort_impl(C *a, int nmya, int afirst, int astep, F &pcmp, C &sized_output) {
     uint32_t apos[nmya];
     bzero(apos, sizeof(apos));
     size_t nsorted = 0;
@@ -25,23 +23,28 @@ void mergesort_impl(C *a, int nmya, int afirst, int astep, pair_cmp_t pcmp, C &s
 	    }
 	}
         sized_output[nsorted ++] = *min_pair;
-	apos[min_idx]++;
+	++apos[min_idx];
     }
 }
 
-template <typename C>
-C *mergesort(C *a, int na, int ncpus, int lcpu, pair_cmp_t pcmp) {
+template <typename C, typename F>
+C *mergesort(xarray<C> &in, int ncpus, int lcpu, F &pcmp) {
+    return mergesort(in.array(), in.size(), ncpus, lcpu, pcmp);
+}
+
+template <typename C, typename F>
+C *mergesort(C *a, int na, int ncpus, int lcpu, F &pcmp) {
     int nmya = na / ncpus + (lcpu < (na % ncpus));
-    size_t npairs = 0;
+    size_t np = 0;
     for (int i = 0; i < nmya; i++)
-	npairs += a[lcpu + i * ncpus].size();
+	np += a[lcpu + i * ncpus].size();
     C *out = new C;
-    if (npairs == 0)
+    if (np == 0)
 	return out;
-    out->resize(npairs);
+    out->resize(np);
     mergesort_impl(a, nmya, lcpu, ncpus, pcmp, *out);
     dprintf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
-	    lcpu, ncpus, na, npairs);
+	    lcpu, ncpus, na, np);
     return out;
 }
 
