@@ -46,13 +46,13 @@ void metis_runtime::sample_init(int rows, int cols) {
     sample_manager_ = NULL;
     set_map_bucket_manager(def_imgr);
     current_manager_->init(rows, cols);
-    est_init();
+    e_.init();
     sampling_ = true;
 }
 
 void metis_runtime::map_task_finished(int row) {
     if (sampling_)
-	est_task_finished(row);
+	e_.task_finished(row);
 }
 
 uint64_t metis_runtime::sample_finished(int ntotal) {
@@ -60,11 +60,11 @@ uint64_t metis_runtime::sample_finished(int ntotal) {
     uint64_t npairs_per_mapper = 0;
     int nvalid = 0;
     for (int i = 0; i < current_manager_->nrow(); ++i)
-	if (est_get_finished(i)) {
+	if (e_.get_finished(i)) {
 	    ++ nvalid;
 	    uint64_t nkeys = 0;
 	    uint64_t npairs = 0;
-	    est_estimate(&nkeys, &npairs, i, ntotal);
+	    e_.estimate(nkeys, npairs, i, ntotal);
 	    nkeys_per_mapper += nkeys;
 	    npairs_per_mapper += npairs;
 	}
@@ -75,7 +75,7 @@ uint64_t metis_runtime::sample_finished(int ntotal) {
     uint64_t ntasks = nkeys_per_mapper / expected_keys_per_bucket;
     for (int q = 2; q < sqrt(double(ntasks)); ++q)
         if (ntasks % q == 0)
-            ++ntasks, q = 2;  // restart
+            ++ntasks, q = 1;  // restart
     dprintf("Estimated %" PRIu64 " keys, %" PRIu64 " pairs, %"
 	    PRIu64 " reduce tasks, %" PRIu64 " per bucket\n",
 	    nkeys_per_mapper, npairs_per_mapper, ntasks,
@@ -118,7 +118,9 @@ void metis_runtime::initialize(void) {
 
 void metis_runtime::map_emit(int row, void *key, void *val,
                              size_t keylen, unsigned hash) {
-    current_manager_->emit(row, key, val, keylen, hash);
+    bool newkey = current_manager_->emit(row, key, val, keylen, hash);
+    if (sampling_)
+        e_.onepair(row, newkey);
 }
 
 void metis_runtime::set_util(key_cmp_t kcmp, keycopy_t kcp) {

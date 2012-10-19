@@ -2,6 +2,7 @@
 #define KVSTORE_H
 
 #include "mr-types.hh"
+#include "estimation.hh"
 
 struct map_bucket_manager_base;
 
@@ -39,6 +40,7 @@ struct metis_runtime {
     map_bucket_manager_base *current_manager_;
     map_bucket_manager_base *sample_manager_;
     bool sampling_;
+    estimation e_;
 };
 
 #endif

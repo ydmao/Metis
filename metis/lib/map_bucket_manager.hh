@@ -10,8 +10,8 @@ struct map_bucket_manager_base {
     virtual void init(int rows, int cols) = 0;
     virtual void destroy(void) = 0;
     virtual void rehash(int row, map_bucket_manager_base *backup) = 0;
-    virtual void emit(int row, void *key, void *val, size_t keylen,
-	      unsigned hash) = 0;
+    virtual bool emit(int row, void *key, void *val, size_t keylen,
+	              unsigned hash) = 0;
     virtual void prepare_merge(int row) = 0;
     virtual void do_reduce_task(int col) = 0;
     virtual int ncol() const = 0;
@@ -62,7 +62,7 @@ struct map_bucket_manager : public map_bucket_manager_base {
     void init(int rows, int cols);
     void destroy(void);
     void rehash(int row, map_bucket_manager_base *backup);
-    void emit(int row, void *key, void *val, size_t keylen,
+    bool emit(int row, void *key, void *val, size_t keylen,
 	      unsigned hash);
     void prepare_merge(int row);
     void do_reduce_task(int col);
@@ -148,11 +148,10 @@ void map_bucket_manager<S, DT, OPT>::rehash(int row, map_bucket_manager_base *a)
 }
 
 template <bool S, typename DT, typename OPT>
-void map_bucket_manager<S, DT, OPT>::emit(int row, void *key, void *val,
+bool map_bucket_manager<S, DT, OPT>::emit(int row, void *key, void *val,
                                        size_t keylen, unsigned hash) {
     DT *dst = mapdt_bucket(row, hash % cols_);
-    bool newkey = map_insert_analyzer<DT, S>::go(dst, key, val, keylen, hash);
-    est_newpair(row, newkey);
+    return map_insert_analyzer<DT, S>::go(dst, key, val, keylen, hash);
 }
 
 /** @brief: Copy the intermediate DS into an xarray<OPT> */
