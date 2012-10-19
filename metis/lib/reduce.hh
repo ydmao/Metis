@@ -19,15 +19,17 @@ struct reduce_emit_functor {
         if (the_app.atype == atype_mapreduce) {
 	    if (the_app.mapreduce.vm) {
 		assert(kvs.size() == 1);
-		reduce_bucket_manager::instance()->emit(kvs.key, kvs.multiplex_value());
+                const keyval_t p(kvs.key, kvs.multiplex_value());
+		reduce_bucket_manager<keyval_t>::instance()->emit(p);
 		memset(&kvs, 0, sizeof(kvs));
 	    } else {
 		the_app.mapreduce.reduce_func(kvs.key, kvs.array(), kvs.size());
 		// Reuse the values
 		kvs.trim(0);
 	    }
-	} else {		// mapgroup
-	    reduce_bucket_manager::instance()->emit(kvs.key, kvs.array(), kvs.size());
+	} else { // mapgroup
+            const keyvals_len_t p(kvs.key, kvs.array(), kvs.size());
+	    reduce_bucket_manager<keyvals_len_t>::instance()->emit(p);
 	    // kvs.vals is owned by callee
             kvs.reset();
 	}

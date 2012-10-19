@@ -32,7 +32,7 @@ void psrs_and_reduce_impl(xarray_base *a, int na, size_t np, int ncpus, int lcpu
         psrs<C>::instance()->init(xo);
     }
     // reduce the output of psrs
-    reduce_bucket_manager::instance()->set_current_reduce_task(lcpu);
+    app_reduce_bucket_manager()->set_current_reduce_task(lcpu);
     if (C *out = psrs<C>::instance()->do_psrs((C *)a, na, ncpus, lcpu, f))
         group_one_sorted(*out, reduce_emit_functor::instance());
     // apply a barrier before freeing xo to make sure no
@@ -135,11 +135,12 @@ void metis_runtime::init_map(int rows, int cols, int nsplits) {
 	set_map_bucket_manager(def_imgr);
 #endif
     current_manager_->init(rows, cols);
-    reduce_bucket_manager::instance()->init(nsplits);
+    app_reduce_bucket_manager()->init(nsplits);
 }
 
 void metis_runtime::initialize(void) {
-    reduce_bucket_manager::instance()->destroy();
+    reduce_bucket_manager<keyval_t>::instance()->destroy();
+    reduce_bucket_manager<keyvals_len_t>::instance()->destroy();
     if (current_manager_)
         current_manager_->destroy();
     if (sample_manager_)
@@ -158,7 +159,7 @@ void metis_runtime::set_util(key_cmp_t kcmp, keycopy_t kcp) {
 
 void metis_runtime::reduce_do_task(int row, int col) {
     assert(the_app.atype != atype_maponly);
-    reduce_bucket_manager::instance()->set_current_reduce_task(col);
+    app_reduce_bucket_manager()->set_current_reduce_task(col);
     current_manager_->do_reduce_task(col);
 }
 
@@ -171,7 +172,7 @@ void metis_runtime::map_worker_finished(int row, int reduce_skipped) {
 
 void metis_runtime::merge(int ncpus, int lcpu, int reduce_skipped) {
     if (the_app.atype == atype_maponly || !reduce_skipped)
-	reduce_bucket_manager::instance()->merge_reduced_buckets(ncpus, lcpu);
+	app_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
     else {
         // make sure we are using psrs so that after merge_reduced_buckets,
         // the final results is already in reduce bucket 0
@@ -192,10 +193,14 @@ void metis_runtime::merge(int ncpus, int lcpu, int reduce_skipped) {
         for (int i = 0; i < n; ++i)
             a[i].shallow_free();
         // merge reduced bucekts
-	reduce_bucket_manager::instance()->merge_reduced_buckets(ncpus, lcpu);
+	app_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
     }
 }
 
-void metis_runtime::reduce_emit(void *key, void *val) {
-    reduce_bucket_manager::instance()->emit(key, val);
+void metis_runtime::reduce_emit(void *k, void *v) {
+    reduce_bucket_manager_base *rb = app_reduce_bucket_manager();
+    typedef reduce_bucket_manager<keyval_t> expected_type;
+    expected_type *x = static_cast<expected_type *>(rb);
+    assert(x);
+    x->emit(keyval_t(k, v));
 }

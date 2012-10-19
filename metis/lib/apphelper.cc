@@ -43,17 +43,10 @@ void app_set_arg(app_arg_t * app) {
 void app_set_final_results(void) {
     // transfer the ownership of final result from reduce bucket 0 to app.results
     // In this way, the next iterator of MapReduce can safely cleanup internally
-    if (the_app.atype == atype_mapgroup) {
-        xarray<keyvals_len_t> *x = reduce_bucket_manager::instance()->as_kvslen_array(0);
-	the_app.mapgroup.results->data = x->array();
-	the_app.mapgroup.results->length = x->size();
-        x->init();
-    } else {
-        xarray<keyval_t> *x = reduce_bucket_manager::instance()->as_kvarray(0);
-	the_app.mapor.results->data = x->array();
-	the_app.mapor.results->length = x->size();
-        x->init();
-    }
+    if (the_app.atype == atype_mapgroup)
+        reduce_bucket_manager<keyvals_len_t>::instance()->transfer(0, the_app.mapgroup.results);
+    else
+        reduce_bucket_manager<keyval_t>::instance()->transfer(0, the_app.mapor.results);
 }
 
 int app_output_pair_type() {
@@ -61,3 +54,11 @@ int app_output_pair_type() {
         return vt_keyvals_len;
     return vt_keyval;
 }
+
+reduce_bucket_manager_base *app_reduce_bucket_manager() {
+    if (the_app.atype == atype_mapgroup)
+        return reduce_bucket_manager<keyvals_len_t>::instance();
+    else
+        return reduce_bucket_manager<keyval_t>::instance();
+}
+

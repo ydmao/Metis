@@ -13,4 +13,7 @@ void app_set_final_results(void);
 enum { vt_keyval = 0, vt_keyvals_len };
 int app_output_pair_type();
 
+struct reduce_bucket_manager_base;
+reduce_bucket_manager_base *app_reduce_bucket_manager();
+
 #endif

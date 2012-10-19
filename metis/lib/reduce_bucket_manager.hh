@@ -8,7 +8,7 @@
 #include "psrs.hh"
 
 template <typename T>
-inline xarray<T> *merge_impl(xarray<xarray<void *> > &rb, size_t subsize,
+inline xarray<T> *merge_impl(xarray<xarray<T> > &rb, size_t subsize,
                              int ncpus, int lcpu) {
     typedef xarray<T> C;
     C *a = (C *)rb.array();
@@ -26,7 +26,15 @@ inline xarray<T> *merge_impl(xarray<xarray<void *> > &rb, size_t subsize,
     return (psrs<C>::main_cpu(lcpu)) ? xo :NULL;
 }
 
-struct reduce_bucket_manager {
+struct reduce_bucket_manager_base {
+    virtual void init(int n) = 0;
+    virtual void destroy() = 0;
+    virtual void set_current_reduce_task(int i) = 0;
+    virtual void merge_reduced_buckets(int ncpus, int lcpu) = 0;
+};
+
+template <typename T>
+struct reduce_bucket_manager : public reduce_bucket_manager_base {
     static reduce_bucket_manager *instance() {
         static reduce_bucket_manager instance;
         return &instance;
@@ -41,21 +49,12 @@ struct reduce_bucket_manager {
     void destroy() {
         rb_.resize(0);
     }
-    xarray<keyval_t> *as_kvarray(int p) {
-        return (xarray<keyval_t> *)&rb_[p];
+    typedef xarray<T> C;
+    xarray<T> *get(int p) {
+        return &rb_[p];
     }
-    xarray<keyvals_len_t> *as_kvslen_array(int p) {
-        return (xarray<keyvals_len_t> *)&rb_[p];
-    }
-    void emit(void *key, void *val) {
-        xarray<keyval_t> *x = as_kvarray(current_task());
-        keyval_t tmp(key, val);
-        x->push_back(tmp);
-    }
-    void emit(void *key, void **vals, uint64_t len) {
-        xarray<keyvals_len_t> *x = as_kvslen_array(current_task());
-        keyvals_len_t tmp(key, vals, len);
-        x->push_back(tmp);
+    void emit(const T &p) {
+        rb_[current_task()].push_back(p);
     }
     void set_current_reduce_task(int ir) {
         assert(size_t(ir) < rb_.size());
@@ -66,17 +65,19 @@ struct reduce_bucket_manager {
         For psrs, the result is stored in rb_[0]; for mergesort, the result are
         spread in rb[0..(ncpus - 1)]. */
     void merge_reduced_buckets(int ncpus, int lcpu) {
-        if (app_output_pair_type() == vt_keyval) {
-            xarray<keyval_t> *xo = merge_impl<keyval_t>(rb_, subsize(), ncpus, lcpu);
-            shallow_free_buckets();
-            swap(lcpu, xo);
-            delete xo;
-        } else if (app_output_pair_type() == vt_keyvals_len) {
-            xarray<keyvals_len_t> *xo = merge_impl<keyvals_len_t>(rb_, subsize(), ncpus, lcpu);
-            shallow_free_buckets();
-            swap(lcpu, xo);
+        C *xo = merge_impl<T>(rb_, subsize(), ncpus, lcpu);
+        shallow_free_buckets();
+        if (xo) {
+            rb_[lcpu].swap(*xo);
             delete xo;
         }
+    }
+    template <typename D>
+    void transfer(int p, D *dst) {
+        C *x = get(p);
+        dst->data = x->array();
+        dst->length = x->size();
+        x->init();
     }
   private:
     int current_task() {
@@ -92,14 +93,8 @@ struct reduce_bucket_manager {
             n += rb_[i].size();
         return n;
     }
-    template <typename C>
-    void swap(int i, C *x) {
-        if (!x)
-            return;
-        reinterpret_cast<C *>(&rb_[i])->swap(*x);
-    }
     reduce_bucket_manager() {}
-    xarray<xarray_base> rb_; // reduce buckets
+    xarray<C> rb_; // reduce buckets
     pthread_key_t current_task_key_;
 };
 
