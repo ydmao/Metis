@@ -10,7 +10,6 @@ LIB_SRCS := mr-sched.cc		\
 	    ibs.cc			\
 	    platform.cc		\
 	    cpumap.cc		\
-	    reduce_bucket_manager.cc             \
             btree.cc    \
             mr-types.cc \
             comparator.cc
