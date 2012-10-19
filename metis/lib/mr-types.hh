@@ -13,6 +13,7 @@ typedef struct {
 } split_t;
 
 struct keyval_t {
+    static const int key_values = false;
     void *key;
     void *val;
     unsigned hash;
@@ -45,9 +46,12 @@ struct keyval_t {
         val = a.val;
         hash = a.hash;
     }
-    void reset() {
+    void init() {
         key = val = NULL;
         hash = 0;
+    }
+    void reset() {
+        init();
     }
 };
 
@@ -91,14 +95,11 @@ typedef struct {
 } final_data_kvs_len_t;
 
 /* types used internally */
-struct keyval_arr_t : public xarray<keyval_t> {
-    bool map_insert_kv(void *key, void *val, size_t keylen, unsigned hash);
-};
-
 struct keyvals_len_arr_t: public xarray<keyvals_len_t> {
 };
 
 struct keyvals_t : public xarray<void *> {
+    static const int key_values = true;
     void *key;			/* put key at the same offset with keyval_t */
     unsigned hash;
     keyvals_t() {
@@ -133,13 +134,18 @@ struct keyvals_t : public xarray<void *> {
     }
 };
 
-struct keyvals_arr_t : public xarray<keyvals_t> {
-    bool map_insert_kv(void *key, void *val, size_t keylen, unsigned hash);
+struct keyval_arr_t : public xarray<keyval_t> {
+    bool map_append(void *key, void *val, size_t keylen, unsigned hash);
+};
 
-    static void append_kvs(void *a, const keyvals_t *kvs) {
-        keyvals_arr_t *x = (keyvals_arr_t *)a;
-        x->push_back(kvs);
-    }
+void transfer(xarray<keyvals_t> *dst, xarray<keyvals_t> *src);
+void transfer(xarray<keyval_t> *dst, xarray<keyval_t> *src);
+void transfer(xarray<keyvals_t> *dst, xarray<keyval_t> *src);
+struct btree_type;
+void transfer(xarray<keyvals_t> *dst, btree_type *src);
+
+struct keyvals_arr_t : public xarray<keyvals_t> {
+    bool map_insert_sorted(void *key, void *val, size_t keylen, unsigned hash);
 };
 
 typedef enum {

@@ -32,9 +32,8 @@ void check_tree(btree_type &bt) {
 }
 
 void check_tree_copy(btree_type &bt) {
-    keyvals_t *dst = new keyvals_t[bt.size()];
-    memset(dst, 0, sizeof(keyvals_t) * bt.size());
-    bt.copy_kvs(dst);
+    xarray<keyvals_t> dst;
+    bt.copy(&dst);
     for (int64_t i = 1; i <= int64_t(bt.size()); ++i) {
         CHECK_EQ(i, int64_t(dst[i - 1].key));
         CHECK_EQ(1, int64_t(dst[i - 1].size()));
@@ -44,9 +43,8 @@ void check_tree_copy(btree_type &bt) {
 }
 
 void check_tree_copy_and_free(btree_type &bt) {
-    keyvals_t *dst = new keyvals_t[bt.size()];
-    memset(dst, 0, sizeof(keyvals_t) * bt.size());
-    bt.copy_kvs(dst);
+    xarray<keyvals_t> dst;
+    bt.copy(&dst);
     bt.shallow_free();
     for (int64_t i = 1; i <= int64_t(bt.size()); ++i) {
         CHECK_EQ(i, int64_t(dst[i - 1].key));
@@ -63,7 +61,7 @@ void test1() {
     check_tree(bt);
     check_tree_copy(bt);
     for (int64_t i = 1; i < 1000; ++i) {
-        bt.insert_kv((void *)i, (void *)(i + 1), 4, 0);
+        bt.map_insert_sorted((void *)i, (void *)(i + 1), 4, 0);
         check_tree(bt);
         check_tree_copy(bt);
     }

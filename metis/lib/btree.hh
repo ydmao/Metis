@@ -2,6 +2,7 @@
 #define XBTREE_HH_
 
 #include "bsearch.hh"
+#include "comparator.hh"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -117,16 +118,24 @@ struct btnode_internal : public btnode_base {
 
 struct btree_type {
     static void set_key_compare(key_cmp_t kcmp);
+    typedef keyvals_t element_type;
 
     void init();
     /* @brief: free the tree, but not the values */
     void shallow_free();
-    void insert_kvs(const keyvals_t *kvs);
+    bool insert_kvs(keyvals_t *kvs);
+
+    template <typename F>
+    void insert_new(keyvals_t *kvs, F &f) {
+        assert(insert_kvs(kvs) && f == comparator::keyvals_pair_comp);
+    }
+
     /* @brief: insert key/val pair into the tree
        @return true if it is a new key */
-    int insert_kv(void *key, void *val, size_t keylen, unsigned hash);
+    int map_insert_sorted(void *key, void *val, size_t keylen, unsigned hash);
     size_t size() const;
-    uint64_t copy_kvs(keyvals_t *dst);
+    uint64_t copy(xarray<keyvals_t> *dst);
+    uint64_t transfer(xarray<keyvals_t> *dst);
 
     /* @brief: return the number of values in the tree */
     uint64_t test_get_nvalue() {

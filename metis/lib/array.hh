@@ -131,6 +131,11 @@ struct xarray {
         memcpy(dst, a_, n_ * sizeof(T));
         return n_;
     }
+    size_t transfer(xarray<T> *dst) {
+        assert(dst->size() == 0);
+        swap(*dst);
+        return dst->size();
+    }
     void swap(xarray<T> &dst) {
         std::swap(a_, dst.a_);
         std::swap(n_, dst.n_);

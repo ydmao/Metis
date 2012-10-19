@@ -1,7 +1,4 @@
 LIB_SRCS := mr-sched.cc		\
-	    appendbktmgr.cc		\
-	    btreebktmgr.cc		\
-	    arraybktmgr.cc		\
 	    kvstore.cc		\
 	    defsplitter.cc		\
 	    presplitter.cc		\

@@ -68,7 +68,7 @@ btnode_leaf *btree_type::get_leaf(void *key)
 }
 
 // left < splitkey <= right. Right is the new sibling
-int btree_type::insert_kv(void *key, void *val, size_t keylen, unsigned hash)
+int btree_type::map_insert_sorted(void *key, void *val, size_t keylen, unsigned hash)
 {
     btnode_leaf *leaf = get_leaf(key);
     bool bfound = false;
@@ -86,7 +86,7 @@ int btree_type::insert_kv(void *key, void *val, size_t keylen, unsigned hash)
     return !bfound;
 }
 
-void btree_type::insert_kvs(const keyvals_t *k)
+bool btree_type::insert_kvs(keyvals_t *k)
 {
     btnode_leaf *leaf = get_leaf(k->key);
     bool bfound = false;
@@ -99,6 +99,7 @@ void btree_type::insert_kvs(const keyvals_t *k)
         btnode_leaf *right = leaf->split();
         insert_internal(right->e_[0].key, leaf, right);
     }
+    return true;
 }
 
 size_t btree_type::size() const {
@@ -129,19 +130,28 @@ btree_type::iterator btree_type::end() {
     return btree_type::iterator(NULL);
 }
 
-uint64_t btree_type::copy_kvs(keyvals_t *dst)
+uint64_t btree_type::copy(xarray<keyvals_t> *dst)
 {
+    assert(dst->size() == 0);
     if (!nlevel_)
 	return 0;
+    dst->resize(size());
     btnode_leaf *leaf = first_leaf();
     uint64_t n = 0;
     while (leaf) {
-	memcpy(&dst[n], leaf->e_, sizeof(keyvals_t) * leaf->nk_);
+	memcpy(&dst->at(n), leaf->e_, sizeof(keyvals_t) * leaf->nk_);
 	n += leaf->nk_;
         leaf = leaf->next_;
     }
     assert(n == nk_);
     return n;
+}
+
+uint64_t btree_type::transfer(xarray<keyvals_t> *dst)
+{
+    copy(dst);
+    shallow_free();
+    return dst->size();
 }
 
 btnode_leaf *btree_type::first_leaf() const {

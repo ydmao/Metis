@@ -9,29 +9,29 @@
 #include "estimation.hh"
 #include "mr-conf.hh"
 #include "rbktsmgr.hh"
-#include "arraybktmgr.hh"
-#include "btreebktmgr.hh"
-#include "appendbktmgr.hh"
 #include "comparator.hh"
 #include "psrs.hh"
+#include "map_bucket_manager.hh"
+#include "btree.hh"
 
 enum { index_appendbktmgr, index_btreebktmgr, index_arraybktmgr };
 
 mbkts_mgr_t *create(int index) {
     switch (index) {
         case index_appendbktmgr:
-            return new appendbktmgr;
+#if SINGLE_APPEND_GROUP_MERGE_FIRST
+            return new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
+#else
+            return new map_bucket_manager<false, keyval_arr_t, keyval_t>;
+#endif
         case index_btreebktmgr:
-            //Each bucket (partition) is a b+tree sorted by key
-            return new btreebktmgr;
+            return new map_bucket_manager<true, btree_type, keyvals_t>;
         case index_arraybktmgr:
-            return new arraybktmgr;
+            return new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;
         default:
             assert(0);
     }
 };
-
-mbkts_mgr_t *the_bucket_manager;
 
 #ifdef FORCE_APPEND
 // forced to use index_appendbkt
@@ -43,7 +43,8 @@ enum { def_imgr = index_btreebktmgr };
 
 static int ncols = 0;
 static int nrows = 0;
-static int has_backup = 0;
+static mbkts_mgr_t *the_bucket_manager = NULL;
+static mbkts_mgr_t *backup_manager = NULL;
 static int bsampling = 0;
 static uint64_t nkeys_per_mapper = 0;
 static uint64_t npairs_per_mapper = 0;
@@ -59,9 +60,9 @@ kvst_set_bktmgr(int idx)
 void
 kvst_sample_init(int rows, int cols)
 {
-    has_backup = 0;
+    backup_manager = NULL;
     kvst_set_bktmgr(def_imgr);
-    the_bucket_manager->mbm_mbks_init(rows, cols);
+    the_bucket_manager->init(rows, cols);
     ncols = cols;
     nrows = rows;
     est_init();
@@ -91,8 +92,7 @@ kvst_sample_finished(int ntotal)
     }
     nkeys_per_mapper /= nvalid;
     npairs_per_mapper /= nvalid;
-    the_bucket_manager->mbm_mbks_bak();
-    has_backup = 1;
+    backup_manager = the_bucket_manager;
 
     // Compute the estimated tasks
     uint64_t ntasks = nkeys_per_mapper / nkeys_per_bkt;
@@ -122,9 +122,9 @@ kvst_sample_finished(int ntotal)
 void
 kvst_map_worker_init(int row)
 {
-    if (has_backup) {
+    if (backup_manager) {
 	assert(the_app.atype != atype_maponly);
-	the_bucket_manager->mbm_rehash_bak(row);
+	the_bucket_manager->rehash(row, backup_manager);
     }
 }
 
@@ -141,7 +141,7 @@ kvst_init_map(int rows, int cols, int nsplits)
     else
 	kvst_set_bktmgr(def_imgr);
 #endif
-    the_bucket_manager->mbm_mbks_init(rows, cols);
+    the_bucket_manager->init(rows, cols);
     reduce_bucket_manager::instance()->init(nsplits);
 }
 
@@ -150,13 +150,15 @@ kvst_initialize(void)
 {
     reduce_bucket_manager::instance()->destroy();
     if (the_bucket_manager)
-        the_bucket_manager->mbm_mbks_destroy();
+        the_bucket_manager->destroy();
+    if (backup_manager)
+        backup_manager->destroy();
 }
 
 void
 kvst_map_put(int row, void *key, void *val, size_t keylen, unsigned hash)
 {
-    the_bucket_manager->mbm_map_put(row, key, val, keylen, hash);
+    the_bucket_manager->emit(row, key, val, keylen, hash);
 }
 
 void
@@ -171,7 +173,7 @@ kvst_reduce_do_task(int row, int col)
 {
     assert(the_app.atype != atype_maponly);
     reduce_bucket_manager::instance()->set_current_reduce_task(col);
-    the_bucket_manager->mbm_do_reduce_task(col);
+    the_bucket_manager->do_reduce_task(col);
 }
 
 void
@@ -179,7 +181,7 @@ kvst_map_worker_finished(int row, int reduce_skipped)
 {
     if (reduce_skipped) {
 	assert(!bsampling);
-	the_bucket_manager->mbm_map_prepare_merge(row);
+	the_bucket_manager->prepare_merge(row);
     }
 }
 
@@ -216,7 +218,7 @@ kvst_merge(int ncpus, int lcpu, int reduce_skipped)
         assert(use_psrs);  
 	int n;
         bool kvs = false;
-	xarray_base *a = the_bucket_manager->mbm_map_get_output(&n, &kvs);
+	xarray_base *a = the_bucket_manager->get_output(&n, &kvs);
         // merge using psrs, and do the reduce
         size_t np = 0;
         for (int i = 0; i < n; ++i)
