@@ -4,6 +4,7 @@
 #include "comparator.hh"
 #include "array.hh"
 #include "reduce.hh"
+#include "test_util.hh"
 
 struct map_bucket_manager_base {
     virtual void init(int rows, int cols) = 0;
@@ -189,12 +190,10 @@ void map_bucket_manager<S, DT, OPT>::emit(int row, void *key, void *val,
 template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::prepare_merge(int row) {
     assert(cols_ == 1);
-    for (int i = 0; i < cols_; ++i) {
-        DT *src = mapdt_bucket(row, i);
-        output_bucket_type *dst = &output_[i];
-        assert(src->size() == 0);
-        transfer(dst, src);
-    }
+    DT *src = mapdt_bucket(row, 0);
+    output_bucket_type *dst = &output_[row];
+    CHECK_EQ(size_t(0), dst->size());
+    transfer(dst, src);
 }
 
 template <bool S, typename DT, typename OPT>
