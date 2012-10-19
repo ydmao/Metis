@@ -1,7 +1,6 @@
 .deps
 obj
 data_tool/gen
-configure
 GNUmakefile
 config.h
 *.swp
