@@ -19,9 +19,7 @@ void *app_make_new_key(void *key, size_t keylen) {
     return key;
 }
 
-void
-app_set_arg(app_arg_t * app)
-{
+void app_set_arg(app_arg_t * app) {
     the_app = *app;
     if (app->atype == atype_mapreduce) {
 	if (app->mapreduce.vm) {
@@ -42,9 +40,7 @@ app_set_arg(app_arg_t * app)
     }
 }
 
-void
-app_set_final_results(void)
-{
+void app_set_final_results(void) {
     // transfer the ownership of final result from reduce bucket 0 to app.results
     // In this way, the next iterator of MapReduce can safely cleanup internally
     if (the_app.atype == atype_mapgroup) {

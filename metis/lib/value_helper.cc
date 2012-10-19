@@ -25,8 +25,7 @@ void map_values_insert(keyvals_t * kvs, void *val) {
     }
 }
 
-void map_values_mv(keyvals_t *dst, keyval_t *src)
-{
+void map_values_mv(keyvals_t *dst, keyval_t *src) {
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm)
         assert(0 && "Not supported yet");
     else
@@ -34,8 +33,7 @@ void map_values_mv(keyvals_t *dst, keyval_t *src)
     src->reset();
 }
 
-void map_values_mv(keyvals_t *dst, keyvals_t *src)
-{
+void map_values_mv(keyvals_t *dst, keyvals_t *src) {
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm) {
 	assert(src->multiplex());
 	if (dst->size() == 0)
@@ -50,10 +48,8 @@ void map_values_mv(keyvals_t *dst, keyvals_t *src)
     }
 }
 
-void map_values_mv(keyvals_t *dst, keyvals_len_t *src)
-{
+void map_values_mv(keyvals_t *dst, keyvals_len_t *src) {
     assert(the_app.atype == atype_mapgroup);  // must be mapgroup
     dst->append(src->vals, src->len);
-    fprintf(stderr, "key is %p\n", dst->key);
     src->reset();
 }
