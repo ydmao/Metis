@@ -32,11 +32,11 @@ struct reduce_bucket_manager {
         return &instance;
     }
     void init(int n) {
-        assert(pthread_key_create(&current_task_key_, NULL) == 0);
-        set_current_reduce_task(0);
         rb_.resize(n);
         for (int i = 0; i < n; ++i)
             rb_[i].init();
+        assert(pthread_key_create(&current_task_key_, NULL) == 0);
+        set_current_reduce_task(0);
     }
     void destroy() {
         rb_.resize(0);
