@@ -1,21 +1,16 @@
 #!/bin/bash
 
-pushd data_tool
-bash clean.sh
-g++ gen.cc -o gen
-popd
-
 TOP=./data
 
-if test ! -d ./data ; then
+if test ! -d $TOP ; then
   echo "Please download data.tar.gz and decompress it"
   echo "You can download it from the pdos.csail.mit.edu/metis, or \
         am.csail.mit.edu:~/metis_data_release.git"
   exit -1
 fi
-exit
+
 # Generate wr input with many keys and many duplicates
-dd if=$TOP/100MB_1M_Keys.txt of=$TOP/wr/5MB.txt~ count=1 bs=5000000
+dd if=$TOP/wr/100MB_1M_Keys.txt of=$TOP/wr/5MB.txt~ count=1 bs=5000000
 i=0
 cp $TOP/wr/5MB.txt~ $TOP/wr/800MB.txt
 while [ "$i" -lt "160" ]; do
@@ -35,13 +30,11 @@ while [ "$i" -lt "887" ]; do
 done
 
 # Generate linear regression input
-dd if=/dev/urandom of=$TOP/lr_10MB.txt~ count=1024 bs=10240
 i=0
 while [ "$i" -lt "400" ]; do
-  cat $TOP/lr_10MB.txt~ >> $TOP/lr_4GB.txt
+  cat $TOP/lr_10MB.txt >> $TOP/lr_4GB.txt
   i=$((i+1))
 done
-rm $TOP/lr_10MB.txt~
 
 # Generate string match input
 i=0

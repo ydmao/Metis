@@ -67,6 +67,18 @@ $(DEPSDIR)/stamp:
 	@mkdir -p $(@D)
 	@touch $@ 
 
+DTOP = ./data
+sanity_data:
+	dd if=/dev/urandom of=$(DTOP)/lr_10MB.txt count=1024 bs=10240
+
+data_gen: $(DTOP)/lr_10MB.txt
+	cd data_tool && g++ gen.cc -o gen
+	bash data_tool/data-gen.sh
+
+data_clean:
+	rm data_tool/gen -rf
+	bash data_tool/clean.sh
+
 clean:
 	@rm -rf $(PROGS) *.o *.a *~ *.tmp *.bak *.log *.orig $(O) $(DEPSDIR)
 
