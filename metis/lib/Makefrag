@@ -1,5 +1,5 @@
 LIB_SRCS := mr-sched.cc		\
-	    kvstore.cc		\
+	    metis_runtime.cc		\
 	    defsplitter.cc		\
 	    presplitter.cc		\
 	    pthreadpool.cc		\

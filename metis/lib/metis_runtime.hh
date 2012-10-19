@@ -35,7 +35,7 @@ struct metis_runtime {
     }
   private:
     metis_runtime() {}
-    void set_map_bucket_manager(int index);
+    void create_map_bucket_manager();
 
     map_bucket_manager_base *current_manager_;
     map_bucket_manager_base *sample_manager_;

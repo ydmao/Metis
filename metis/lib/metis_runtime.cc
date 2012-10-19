@@ -1,6 +1,6 @@
 #include <math.h>
 #include <assert.h>
-#include "kvstore.hh"
+#include "metis_runtime.hh"
 #include "reduce.hh"
 #include "bench.hh"
 #include "value_helper.hh"
@@ -15,12 +15,13 @@
 
 enum { expected_keys_per_bucket = 10 };
 
-enum { index_append, index_btree, index_array };
-#ifndef FORCE_APPEND
-enum { default_map_manager = index_btree };
+void metis_runtime::create_map_bucket_manager() {
+    enum { index_append, index_btree, index_array };
+#ifdef FORCE_APPEND
+    int index = index_append;
+#else
+    int index = (the_app.atype == atype_maponly) ? index_append : index_btree;
 #endif
-
-void metis_runtime::set_map_bucket_manager(int index) {
     switch (index) {
     case index_append:
 #ifdef SINGLE_APPEND_GROUP_MERGE_FIRST
@@ -42,11 +43,7 @@ void metis_runtime::set_map_bucket_manager(int index) {
 
 void metis_runtime::sample_init(int rows, int cols) {
     sample_manager_ = NULL;
-#if FORCE_APPEND
-    set_map_bucket_manager(index_append);
-#else
-    set_map_bucket_manager(default_map_manager);
-#endif
+    create_map_bucket_manager();
     current_manager_->init(rows, cols);
     bzero(e_, sizeof(e_));
     sampling_ = true;
@@ -91,14 +88,7 @@ void metis_runtime::map_worker_init(int row) {
 }
 
 void metis_runtime::init_map(int rows, int cols, int nsplits) {
-#ifdef FORCE_APPEND
-    set_map_bucket_manager(index_append);
-#else
-    if (the_app.atype == atype_maponly)
-	set_map_bucket_manager(index_append);
-    else
-	set_map_bucket_manager(default_map_manager);
-#endif
+    create_map_bucket_manager();
     current_manager_->init(rows, cols);
     app_reduce_bucket_manager()->init(nsplits);
 }

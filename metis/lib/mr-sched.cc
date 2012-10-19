@@ -8,7 +8,7 @@
 
 #include "mr-conf.hh"
 #include "mr-sched.hh"
-#include "kvstore.hh"
+#include "metis_runtime.hh"
 #include "bench.hh"
 #include "thread.hh"
 #include "presplitter.hh"
