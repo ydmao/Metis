@@ -127,7 +127,7 @@ struct btree_type {
 
     template <typename F>
     void insert_new(keyvals_t *kvs, F &f) {
-        assert(insert_kvs(kvs) && f == comparator::keyvals_pair_comp);
+        assert(insert_kvs(kvs) && f == comparator::raw_comp<keyvals_t>::impl);
     }
 
     /* @brief: insert key/val pair into the tree

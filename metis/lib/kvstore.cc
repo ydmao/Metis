@@ -185,10 +185,10 @@ void metis_runtime::merge(int ncpus, int lcpu, int reduce_skipped) {
             np += a[i].size();
         if (kvs)
             psrs_and_reduce_impl<keyvals_t>(a, n, np, ncpus, lcpu,
-                                            comparator::keyvals_pair_comp);
+                                            comparator::raw_comp<keyvals_t>::impl);
         else
             psrs_and_reduce_impl<keyval_t>(a, n, np, ncpus, lcpu,
-                                           comparator::keyval_pair_comp);
+                                           comparator::raw_comp<keyval_t>::impl);
         for (int i = 0; i < n; ++i)
             a[i].shallow_free();
         // merge reduced bucekts

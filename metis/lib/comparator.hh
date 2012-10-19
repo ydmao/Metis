@@ -7,28 +7,21 @@ namespace comparator {
 
 key_cmp_t keycmp();
 void set_key_compare(key_cmp_t kcmp);
-int keyvals_pair_comp(const void *p1, const void *p2);
-int keyval_pair_comp(const void *p1, const void *p2);
-int keyvals_len_pair_comp(const void *p1, const void *p2);
 int final_output_pair_comp(const void *p1, const void *p2);
 
 template <typename T>
-inline pair_cmp_t pair_comparator();
-
-template <>
-inline pair_cmp_t pair_comparator<keyvals_t>() {
-    return keyvals_pair_comp;
+inline int generic_pair_compare(const void *p1, const void *p2) {
+    const T *x1 = reinterpret_cast<const T *>(p1);
+    const T *x2 = reinterpret_cast<const T *>(p2);
+    return keycmp()(x1->key, x2->key);
 }
 
-template <>
-inline pair_cmp_t pair_comparator<keyval_t>() {
-    return keyval_pair_comp;
-}
-
-template <>
-inline pair_cmp_t pair_comparator<keyvals_len_t>() {
-    return keyvals_len_pair_comp;
-}
+template <typename T>
+struct raw_comp {
+    static int impl(const void *p1, const void *p2) {
+        return generic_pair_compare<T>(p1, p2);
+    }
+};
 
 };
 

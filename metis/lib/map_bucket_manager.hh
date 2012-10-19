@@ -32,7 +32,7 @@ template <typename DT>
 struct group_analyzer<DT, false> {
     static void go(DT **a, int na) {
         group_unsorted(a, na, reduce_emit_functor::instance(),
-                       comparator::pair_comparator<typename DT::element_type>());
+                       comparator::raw_comp<typename DT::element_type>::impl);
     }
 };
 
@@ -113,7 +113,7 @@ void map_bucket_manager<S, DT, OPT>::rehash(int row, map_bucket_manager_base *a)
     typedef map_bucket_manager<S, DT, OPT> manager_type;
     manager_type *am = static_cast<manager_type *>(a);
 
-    const pair_cmp_t f = comparator::pair_comparator<typename DT::element_type>();
+    const pair_cmp_t f = comparator::raw_comp<typename DT::element_type>::impl;
     for (int i = 0; i < am->cols_; ++i) {
         DT *src = am->mapdt_bucket(row, i);
         for (auto it = src->begin(); it != src->end(); ++it) {
