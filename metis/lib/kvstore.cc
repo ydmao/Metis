@@ -15,38 +15,38 @@
 
 enum { expected_keys_per_bucket = 10 };
 
-enum { index_appendbktmgr, index_btreebktmgr, index_arraybktmgr };
-#ifdef FORCE_APPEND
-// forced to use index_appendbkt
-enum { def_imgr = index_appendbktmgr };
-#else
-// available options are index_arraybkt, index_appendbkt, index_btreebkt
-enum { def_imgr = index_btreebktmgr };
+enum { index_append, index_btree, index_array };
+#ifndef FORCE_APPEND
+enum { default_map_manager = index_btree };
 #endif
 
 void metis_runtime::set_map_bucket_manager(int index) {
     switch (index) {
-        case index_appendbktmgr:
+    case index_append:
 #ifdef SINGLE_APPEND_GROUP_MERGE_FIRST
-            current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
+        current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
 #else
-            current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyval_t>;
+        current_manager_ = new map_bucket_manager<false, keyval_arr_t, keyval_t>;
 #endif
-            break;
-        case index_btreebktmgr:
-            current_manager_ = new map_bucket_manager<true, btree_type, keyvals_t>;
-            break;
-        case index_arraybktmgr:
-            current_manager_ = new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;
-            break;
-        default:
-            assert(0);
+        break;
+    case index_btree:
+        current_manager_ = new map_bucket_manager<true, btree_type, keyvals_t>;
+        break;
+    case index_array:
+        current_manager_ = new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;
+        break;
+    default:
+        assert(0);
     }
 };
 
 void metis_runtime::sample_init(int rows, int cols) {
     sample_manager_ = NULL;
-    set_map_bucket_manager(def_imgr);
+#if FORCE_APPEND
+    set_map_bucket_manager(index_append);
+#else
+    set_map_bucket_manager(default_map_manager);
+#endif
     current_manager_->init(rows, cols);
     bzero(e_, sizeof(e_));
     sampling_ = true;
@@ -92,12 +92,12 @@ void metis_runtime::map_worker_init(int row) {
 
 void metis_runtime::init_map(int rows, int cols, int nsplits) {
 #ifdef FORCE_APPEND
-    set_map_bucket_manager(index_appendbktmgr);
+    set_map_bucket_manager(index_append);
 #else
     if (the_app.atype == atype_maponly)
-	set_map_bucket_manager(index_appendbktmgr);
+	set_map_bucket_manager(index_append);
     else
-	set_map_bucket_manager(def_imgr);
+	set_map_bucket_manager(default_map_manager);
 #endif
     current_manager_->init(rows, cols);
     app_reduce_bucket_manager()->init(nsplits);
