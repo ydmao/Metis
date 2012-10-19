@@ -4,7 +4,7 @@
 #include "mr-types.hh"
 #include "value_helper.hh"
 #include "apphelper.hh"
-#include "rbktsmgr.hh"
+#include "reduce_bucket_manager.hh"
 #include "mr-sched.hh"
 #include "bench.hh"
 #include "compiler.hh"

@@ -4,7 +4,7 @@
 #include "bench.hh"
 #include "mr-conf.hh"
 #include "mergesort.hh"
-#include "rbktsmgr.hh"
+#include "reduce_bucket_manager.hh"
 #include "reduce.hh"
 
 extern app_arg_t the_app;

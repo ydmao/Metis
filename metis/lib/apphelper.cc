@@ -4,7 +4,7 @@
 #include "psrs.hh"
 #include "bench.hh"
 #include "mergesort.hh"
-#include "rbktsmgr.hh"
+#include "reduce_bucket_manager.hh"
 
 app_arg_t the_app;
 static keycopy_t mrkeycopy_;

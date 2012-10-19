@@ -7,7 +7,7 @@
 #include "apphelper.hh"
 #include "estimation.hh"
 #include "mr-conf.hh"
-#include "rbktsmgr.hh"
+#include "reduce_bucket_manager.hh"
 #include "comparator.hh"
 #include "psrs.hh"
 #include "btree.hh"
