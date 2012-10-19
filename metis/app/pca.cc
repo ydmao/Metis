@@ -500,7 +500,7 @@ main(int argc, char **argv)
     nsplits = map_tasks;
     assert(mr_run_scheduler(&mr_param) == 0);
     mr_print_stats();
-    assert(pca_cov_vals.length ==
+    assert(int(pca_cov_vals.length) ==
 	   ((((num_rows * num_rows) - num_rows) / 2) + num_rows));
     // Free the allocated structures
     int cnt = 0;
