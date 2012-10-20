@@ -18,8 +18,9 @@ void map_values_insert(keyvals_t * kvs, void *val) {
     kvs->push_back(val);
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.combiner
 	&& kvs->size() >= combiner_threshold) {
-        size_t n = 0;
-        void **inout = kvs->pull_array(n);
+        size_t n = kvs->size();
+        void **inout = kvs->array();
+        kvs->init();
 	size_t newn = the_app.mapreduce.combiner(kvs->key, inout, n);
         kvs->set_array(inout, newn);
     }

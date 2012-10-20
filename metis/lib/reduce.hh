@@ -123,7 +123,7 @@ inline void group_sorted(C **nodes, int n, F &f) {
 	    if (marks[i] != m)
 		continue;
 	    do {
-		map_values_mv(&dst, &it[i]);
+		map_values_mv(&dst, &(*it[i]));
                 ++it[i];
 	    } while (it[i] != nodes[i]->end() &&
                      comparator::keycmp()(dst.key, it[i]->key) == 0);

@@ -48,8 +48,8 @@ C *mergesort(C *a, int na, int ncpus, int lcpu, F &pcmp) {
 	return out;
     out->resize(np);
     mergesort_impl(a, nmya, lcpu, ncpus, pcmp, *out);
-    printf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
-	    lcpu, ncpus, na, np);
+    dprintf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
+ 	    lcpu, ncpus, na, np);
     return out;
 }
 

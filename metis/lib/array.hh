@@ -17,7 +17,9 @@ struct xarray {
     }
     void remove(size_t p) {
         assert(p < n_ && !multiplex());
-        memmove(&a_[p], &a_[p + 1], sizeof(T) * (n_ - p - 1));
+        // Don't use &a_[p] to get the address of the @p-th element!
+        // T may overload the & operator!
+        memmove(a_ + p, a_ + (p + 1), sizeof(T) * (n_ - p - 1));
         --n_;
     }
     void assign(const xarray<T> &a) {
@@ -57,10 +59,6 @@ struct xarray {
     void push_back(const T &e) {
         make_room();
         a_[n_++] = e;
-    }
-    void push_back(const T *e) {
-        make_room();
-        a_[n_++] = *e;
     }
     typedef xarray_iterator<T> iterator;
     typedef T element_type;
@@ -146,19 +144,12 @@ struct xarray {
         std::swap(n_, dst.n_);
         std::swap(capacity_, dst.capacity_);
     }
-    T *pull_array(size_t &n) {
-        T *olda = a_;
-        n = n_;
-        a_ = NULL;
-        n_ = capacity_ = 0;
-        return olda;
-    }
     void append(xarray<T> &src) {
         append(src.array(), src.size());
     }
     void append(T *x, size_t n) {
         set_capacity(n_ + n);
-        memcpy(&a_[n_], x, n * sizeof(T));
+        memcpy(a_ + n_, x, n * sizeof(T));
         n_ += n;
     }
     template <typename F>
@@ -187,10 +178,11 @@ struct xarray_iterator {
     xarray_iterator(xarray<T> *p) : p_(p), i_(0) {}
     xarray_iterator() : p_(NULL), i_(0) {}
     xarray_iterator(const xarray_iterator &a) : p_(a.p_), i_(a.i_) {}
-    bool operator==(const xarray_iterator &a) {
+    bool operator==(const xarray_iterator &a) const {
+        assert(p_ == a.p_);
         return p_ == a.p_ && i_ == a.i_;
     }
-    bool operator!=(const xarray_iterator &a) {
+    bool operator!=(const xarray_iterator &a) const {
         return !(*this == a);
     }
     void operator++(int) {
@@ -205,9 +197,6 @@ struct xarray_iterator {
     T *operator->() {
         return &p_->a_[i_];
     }
-    T *operator&() {
-        return &p_->a_[i_];
-    }
     T *current() {
         return &p_->a_[i_];
     }
@@ -216,7 +205,7 @@ struct xarray_iterator {
     }
   private:
     xarray<T> *p_;
-    int i_;
+    size_t i_;
 };
 
 typedef xarray<void *> xarray_base;
@@ -230,8 +219,8 @@ inline size_t sum_subarray(xarray<xarray<T> > &a) {
 }
 
 template <typename T>
-inline void shallow_free_subarray(xarray<xarray<T> > &a, int first = 0, 
-                                  int step = 1) {
+inline void shallow_free_subarray(xarray<xarray<T> > &a,
+                                  int first = 0, int step = 1) {
     for (size_t i = first; i < a.size(); i += step)
         a[i].shallow_free();
 }

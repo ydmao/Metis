@@ -142,7 +142,7 @@ void map_bucket_manager<S, DT, OPT>::rehash(int row, map_bucket_manager_base *a)
         DT *src = am->mapdt_bucket(row, i);
         for (auto it = src->begin(); it != src->end(); ++it) {
             DT *dst = mapdt_bucket(row, it->hash % cols_);
-            dst->insert_new(&it, f);
+            dst->insert_new(&(*it), f);
             it->init();
         }
     }
