@@ -21,7 +21,7 @@ struct reduce_emit_functor {
 		assert(kvs.size() == 1);
                 const keyval_t p(kvs.key, kvs.multiplex_value());
 		reduce_bucket_manager<keyval_t>::instance()->emit(p);
-		memset(&kvs, 0, sizeof(kvs));
+                kvs.init();
 	    } else {
 		the_app.mapreduce.reduce_func(kvs.key, kvs.array(), kvs.size());
 		// Reuse the values

@@ -182,21 +182,17 @@ static void
 pca_mean_map(split_t * args)
 {
     prof_enterapp();
-    int sum;
-    int *mean;
-    int j;
     pca_map_data_t *data = (pca_map_data_t *) args->data;
     int **matrix = data->matrix;
-    int *curr_row;
 
     /* Compute the mean for the allocated rows to the map task */
     for (uint32_t i = 0; i < args->length; i++) {
-	mean = (int *) malloc(sizeof(int));
-	sum = 0;
-	for (j = 0; j < num_cols; j++)
+	int *mean = (int *) malloc(sizeof(int));
+	int sum = 0;
+	for (int j = 0; j < num_cols; j++)
 	    sum += matrix[i][j];
 	*mean = sum / num_cols;
-	curr_row = (int *) malloc(sizeof(int));
+	int *curr_row = (int *) malloc(sizeof(int));
 	*curr_row = data->start_row;
 	prof_leaveapp();
 	mr_map_emit((void *) curr_row, (void *) mean, sizeof(int *));
@@ -365,8 +361,7 @@ pca_cov_map(split_t * args)
 }
 
 #ifndef MAPONLY
-static void
-ident_reduce(void *key, void **vals, size_t len)
+static void ident_reduce(void *key, void **vals, size_t len)
 {
     assert(len == 1);
     mr_reduce_emit(key, vals[0]);
