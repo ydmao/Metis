@@ -74,7 +74,7 @@ struct xarray {
         *bfound = false;
         if (!a_)
             return 0;
-        return bsearch_eq(key, a_, n_, sizeof(T), cmp, bfound);
+        return xsearch::lower_bound(key, a_, n_, cmp, bfound);
     }
     void insert(size_t pos, const T *e) {
         make_room();

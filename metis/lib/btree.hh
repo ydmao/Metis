@@ -42,7 +42,7 @@ struct btnode_leaf : public btnode_base {
     int lower_bound(void *key, bool *bfound) {
         keyvals_t tmp;
         tmp.key = key;
-        return bsearch_eq(&tmp, e_, nk_, sizeof(e_[0]),
+        return xsearch::lower_bound(&tmp, e_, nk_,
                           comparator::raw_comp<keyvals_t>::impl, bfound);
     }
 
@@ -94,7 +94,7 @@ struct btnode_internal : public btnode_base {
     int upper_bound_pos(void *key) {
         xpair<void *, btnode_base *> tmp;
         tmp.k_ = key;
-        return bsearch_lar(&tmp, e_, nk_, sizeof(tmp), xpair_compare);
+        return xsearch::upper_bound(&tmp, e_, nk_, xpair_compare);
     }
 };
 

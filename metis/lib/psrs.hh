@@ -106,7 +106,7 @@ void psrs<C>::sublists(pair_type *base, int start, int end, int *subsize, const 
     int mid = (fp + lp) / 2;
     const pair_type *pv = &pivots[mid];
     // Find first element that is > pv
-    int pos = bsearch_lar(pv, &base[start], end - start - 1, C::elem_size(), pcmp);
+    int pos = xsearch::upper_bound(pv, &base[start], end - start - 1, pcmp);
     pos += start;
     subsize[mid] = pos;
     if (fp < mid) {
