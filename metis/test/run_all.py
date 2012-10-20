@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import subprocess, sys, os
+import subprocess, sys, os, multiprocessing
 
 commonArgs = '-q'
 sanityRun = True
@@ -73,7 +73,8 @@ def test_all():
 def rebuild_and_test(configure):
     execute("./configure %s" % configure, True)
     execute("make clean", True)
-    execute("make -j4", True)
+    ncore = multiprocessing.cpu_count()
+    execute("make -j%d" % ncore, True)
     test_all()
 
 rebuild_and_test("")
