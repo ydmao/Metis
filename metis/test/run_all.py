@@ -46,7 +46,7 @@ def test_path(path):
 def test_all():
     do_test("wrmem", "", "-s 1")
     do_test("kmeans", "10 16 5000000 40", "10 16 5000 40")
-    do_test("pca", "-R 2048 -C 2048", "-R 100 -C 100")
+    do_test("pca", "-R 2048 -C 2048", "-R %d -C 100" % (32 * multiprocessing.cpu_count()))
     do_test("matrix_mult", "-l 2048", "-l 100")
     do_test("hist", "data/hist-2.6g.bmp", test_path("data/3MB.bmp"))
 
