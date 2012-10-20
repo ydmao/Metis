@@ -10,26 +10,27 @@ inline T set_true(bool *x, const T &t) {
 }
 
 template <typename F, typename T>
-int lower_bound(const T *key, const T *a, int n, const F &f, bool *bfound) {
-    *bfound = false;
+int lower_bound(const T *k, const T *a, int n, const F &f, bool *found) {
+    *found = false;
     if (!n) return 0;
-    // invariants: the lower_bound is >= left
-    int left = 0;
-    int right = n - 1;
-    while (left < right) {
-	int mid = (left + right) / 2;
-	int r = f(key, &a[mid]);
-	if (!r)
-	    return set_true(bfound, mid);
-	else if (r < 0)
-	    right = mid - 1;
+    int l = 0, r = n - 1;
+    // invariant: the lower_bound is >= l
+    while (l < r) {
+	const int m = (l + r) / 2;
+	const int c = f(k, &a[m]);
+	if (!c)
+	    return set_true(found, m);
+	if (c < 0)
+	    r = m - 1;
 	else
-	    left = mid + 1;
+	    l = m + 1;
     }
-    int r = f(key, &a[left]);
-    if (!r)
-	return set_true(bfound, left);
-    return left + (r > 0);
+    if (l > r)
+        return l;
+    const int c = f(k, &a[l]);
+    if (!c)
+	return set_true(found, l);
+    return l + (c > 0);
 }
 
 template <typename F, typename T>
@@ -38,7 +39,6 @@ int upper_bound(const T *key, const T *a, int n, const F &f) {
     int p = lower_bound(key, a, n, f, &found);
     return p + found;
 }
-
 
 };
 #endif

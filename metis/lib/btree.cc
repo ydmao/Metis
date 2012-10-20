@@ -18,8 +18,7 @@ void btree_type::init() {
 }
 
 // left < key <= right. Right is the new sibling
-void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *right)
-{
+void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *right) {
     btnode_internal *parent = left->parent_;
     if (!parent) {
 	btnode_internal *newroot = new btnode_internal;
@@ -54,8 +53,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
     }
 }
 
-btnode_leaf *btree_type::get_leaf(void *key)
-{
+btnode_leaf *btree_type::get_leaf(void *key) {
     if (!nlevel_) {
 	root_ = new btnode_leaf;
 	nlevel_ = 1;
@@ -87,12 +85,11 @@ int btree_type::map_insert_sorted(void *key, void *val, size_t keylen, unsigned 
     return !bfound;
 }
 
-bool btree_type::insert_kvs(keyvals_t *k)
-{
+bool btree_type::insert_kvs(keyvals_t *k) {
     btnode_leaf *leaf = get_leaf(k->key);
-    bool bfound = false;
-    int pos = leaf->lower_bound(k->key, &bfound);
-    assert(!bfound);
+    bool found = false;
+    int pos = leaf->lower_bound(k->key, &found);
+    assert(!found);
     leaf->insert(pos, k->key, 0);  // do not copy key
     ++ nk_;
     leaf->e_[pos] = *k;
@@ -107,20 +104,17 @@ size_t btree_type::size() const {
     return nk_;
 }
 
-void btree_type::delete_level(btnode_base *node, int level)
-{
+void btree_type::delete_level(btnode_base *node, int level) {
     for (int i = 0; level > 1 && i < node->nk_; ++i)
         delete_level(static_cast<btnode_internal *>(node)->e_[i].v_, level - 1);
     delete node;
 }
 
-void btree_type::shallow_free()
-{
-    if (nlevel_) {
-	delete_level(root_, nlevel_);
-	nlevel_ = 0;
-        root_ = NULL;
-    }
+void btree_type::shallow_free() {
+    if (!nlevel_)
+        return;
+    delete_level(root_, nlevel_);
+    init();
 }
 
 btree_type::iterator btree_type::begin() {
@@ -131,8 +125,7 @@ btree_type::iterator btree_type::end() {
     return btree_type::iterator(NULL);
 }
 
-uint64_t btree_type::copy(xarray<keyvals_t> *dst)
-{
+uint64_t btree_type::copy(xarray<keyvals_t> *dst) {
     assert(dst->size() == 0);
     if (!nlevel_)
 	return 0;
@@ -148,8 +141,7 @@ uint64_t btree_type::copy(xarray<keyvals_t> *dst)
     return n;
 }
 
-uint64_t btree_type::transfer(xarray<keyvals_t> *dst)
-{
+uint64_t btree_type::transfer(xarray<keyvals_t> *dst) {
     copy(dst);
     shallow_free();
     return dst->size();
