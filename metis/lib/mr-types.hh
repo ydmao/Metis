@@ -188,13 +188,13 @@ int defsplitter(void *arg, split_t * ma, int ncores);
 void defsplitter_init(struct defsplitter_state *ds, void *data,
 		      size_t data_size, uint64_t nsplits, size_t align);
 
-typedef enum {
+enum app_type_t {
     atype_maponly = 0,
     atype_mapgroup,
     atype_mapreduce
-} app_type_t;
+};
 
-typedef union {
+union app_arg_t {
     app_type_t atype;
     struct {
 	app_type_t atype;
@@ -234,6 +234,6 @@ typedef union {
 	pair_cmp_t outcmp;
 	int tasks;
     } any;			/* mapgroup + mapreduce + maponly */
-} app_arg_t;
+};
 
 #endif
