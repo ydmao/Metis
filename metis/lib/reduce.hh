@@ -7,7 +7,6 @@
 #include "reduce_bucket_manager.hh"
 #include "mr-sched.hh"
 #include "bench.hh"
-#include "compiler.hh"
 #include <assert.h>
 #include <string.h>
 #ifdef JOS_USER
