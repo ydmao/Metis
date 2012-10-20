@@ -3,9 +3,7 @@
 #include "mr-types.hh"
 #include "bench.hh"
 
-int
-defsplitter(void *arg, split_t * ma, int ncores)
-{
+int defsplitter(void *arg, split_t * ma, int ncores) {
     defsplitter_state *ds = (defsplitter_state *)arg;
     pthread_mutex_lock(&ds->mu);
 
@@ -30,11 +28,9 @@ defsplitter(void *arg, split_t * ma, int ncores)
     return 1;
 }
 
-void
-defsplitter_init(struct defsplitter_state *ds, void *data,
-		 size_t data_size, uint64_t nsplits, size_t align)
-{
-    memset(ds, 0, sizeof(*ds));
+void defsplitter_init(struct defsplitter_state *ds, void *data,
+		      size_t data_size, uint64_t nsplits, size_t align) {
+    bzero(ds, sizeof(*ds));
     assert(data_size % align == 0);
     ds->data_size = data_size;
     ds->data = data;

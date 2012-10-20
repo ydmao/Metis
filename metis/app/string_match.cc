@@ -295,7 +295,7 @@ main(int argc, char *argv[])
 
     srand((unsigned) time(NULL));
 
-    mr_print(!quiet, "String Match: Running...\n");
+    cond_printf(!quiet, "String Match: Running...\n");
     /*// Read in the file
        echeck((fd_encrypt = open(fname_encrypt,O_RDONLY)) < 0);
        // Get the file info (for file length)
@@ -316,7 +316,7 @@ main(int argc, char *argv[])
     // Setup splitter args
 
     //dprintf("Encrypted Size is %ld\n",finfo_encrypt.st_size);
-    mr_print(!quiet, "Keys Size is %ld\n", finfo_keys.st_size);
+    cond_printf(!quiet, "Keys Size is %ld\n", finfo_keys.st_size);
 
     str_data_t str_data;
 
@@ -346,7 +346,7 @@ main(int argc, char *argv[])
     mr_params.nr_cpus = nprocs;
     nsplits = map_tasks;
 
-    mr_print(!quiet, "String Match: Calling String Match\n");
+    cond_printf(!quiet, "String Match: Calling String Match\n");
 
     key1_final = (char *)malloc(strlen(key1));
     key2_final = (char *)malloc(strlen(key2));

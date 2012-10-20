@@ -18,6 +18,7 @@
 #include "platform.hh"
 
 #define JOS_PAGESIZE    4096
+enum { debug_print = 0 };
 
 template <typename T, typename M>
 inline T round_down(T n, M b) {
@@ -32,11 +33,16 @@ inline T round_up(T n, M b) {
 }
 
 template <typename... Args>
-inline void dprint(bool yes, Args&&... args) {
+inline void cond_printf(bool yes, Args&&... args) {
     if (!yes)
         return;
     printf("[debug]:)");
     printf(std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+inline void dprintf(Args&&... args) {
+    cond_printf(debug_print, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -74,6 +80,10 @@ inline uint64_t read_pmc(uint32_t ecx) {
 
 inline void mfence(void) {
     __asm __volatile("mfence");
+}
+
+inline void compiler_barrier() {
+    __asm__ __volatile__("": : :"memory");
 }
 
 inline void nop_pause(void) {
@@ -117,12 +127,6 @@ inline int fill_core_array(uint32_t *cid, uint32_t n) {
     for (uint32_t i = 0; i < z; ++i)
 	cid[i] = i;
     return z;
-}
-
-inline pthread_t pthread_start(void *(*fn) (void *), uintptr_t arg) {
-    pthread_t th;
-    assert(pthread_create(&th, 0, fn, (void *) arg) == 0);
-    return th;
 }
 
 inline void lfence(void) {

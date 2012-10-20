@@ -30,14 +30,14 @@ static worker_t worker_pool[] = {
     mr_merge_worker,
 };
 
-typedef struct {
+struct mr_state_t {
     mr_param_t mr_fixed;
     struct presplitter_state ps;
     uint64_t nsampled_splits;
     int merge_ncpus;
     int merge_nsplits;
     int skip_reduce_phase;
-} mr_state_t;
+};
 
 static mr_state_t mr_state;
 static uint64_t total_sample_time;
@@ -45,12 +45,10 @@ static uint64_t total_map_time;
 static uint64_t total_reduce_time;
 static uint64_t total_merge_time;
 static uint64_t total_real_time;
-extern TLS int cur_lcpu;	// defined in lib/pthreadpool.c
+extern JTLS int cur_lcpu;	// defined in lib/pthreadpool.c
 metis_runtime *rt_;
 
-static unsigned
-default_hasher(void *key, int key_size)
-{
+static unsigned default_hasher(void *key, int key_size) {
     size_t hash = 5381;
     char *str = (char *) key;
 
@@ -59,9 +57,7 @@ default_hasher(void *key, int key_size)
     return hash % ((unsigned) (-1));
 }
 
-static void *
-mr_map_worker(void *arg)
-{
+static void *mr_map_worker(void *arg) {
     prof_worker_start(MAP, cur_lcpu);
     int num_tasks = 0;
     rt_->map_worker_init(cur_lcpu);
@@ -82,9 +78,7 @@ mr_map_worker(void *arg)
     return 0;
 }
 
-static void *
-mr_reduce_worker(void *arg)
-{
+static void *mr_reduce_worker(void *arg) {
     prof_worker_start(REDUCE, cur_lcpu);
     int *task_idx = (int *) arg;
     int num_tasks = 0;
@@ -103,9 +97,7 @@ mr_reduce_worker(void *arg)
     return 0;
 }
 
-static void *
-mr_merge_worker(void * __attribute__ ((unused)) arg)
-{
+static void *mr_merge_worker(void *) {
     prof_worker_start(MERGE, cur_lcpu);
     int lcpu = cur_lcpu;
     rt_->merge(mr_state.merge_ncpus, lcpu, mr_state.skip_reduce_phase);
@@ -113,9 +105,7 @@ mr_merge_worker(void * __attribute__ ((unused)) arg)
     return 0;
 }
 
-static uint64_t
-mr_sample()
-{
+static uint64_t mr_sample() {
     uint64_t start = read_tsc();
     uint64_t ntotal = presplitter_nsplits(&mr_state.ps);
     uint64_t nsampled = sample_percent * ntotal / 100;
@@ -136,9 +126,7 @@ mr_sample()
     return ntasks;
 }
 
-static int
-mr_setup(mr_param_t * param)
-{
+static int mr_setup(mr_param_t * param) {
     assert(param->split_func);
     // set app type specific arguments
     app_set_arg(&param->app_arg);
@@ -192,9 +180,7 @@ mr_setup(mr_param_t * param)
     return 0;
 }
 
-static void
-mr_run_task(task_type_t type)
-{
+static void mr_run_task(task_type_t type) {
     int ncpus = (type == MERGE) ? mr_state.merge_ncpus :
 	mr_state.mr_fixed.nr_cpus;
     prof_phase_stat st;

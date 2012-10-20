@@ -236,7 +236,7 @@ main(int argc, char *argv[])
 	    break;
 	}
     }
-    mr_print(!quiet, "Histogram: Running... file %s\n", fname);
+    cond_printf(!quiet, "Histogram: Running... file %s\n", fname);
     // Read in the file
     assert((fd = open(fname, O_RDONLY)) >= 0);
     // Get the file info (for file length)
@@ -270,8 +270,8 @@ main(int argc, char *argv[])
 
     size_t imgdata_bytes = (size_t) finfo.st_size - (size_t) (*(data_pos));
     imgdata_bytes = round_down(imgdata_bytes, 3);
-    mr_print(!quiet, "File stat: %ld bytes, %ld pixels\n", imgdata_bytes,
-	     imgdata_bytes / 3);
+    cond_printf(!quiet, "File stat: %ld bytes, %ld pixels\n", imgdata_bytes,
+	        imgdata_bytes / 3);
 
 //#define PREFETCH_DATA
 #ifdef PREFETCH_DATA
@@ -313,8 +313,8 @@ main(int argc, char *argv[])
     short pix_val;
     long freq;
     short prev = 0;
-    mr_print(!quiet, "\n\nBlue\n");
-    mr_print(!quiet, "----------\n\n");
+    cond_printf(!quiet, "\n\nBlue\n");
+    cond_printf(!quiet, "----------\n\n");
     for (i = 0; i < int(hist_vals.length); i++) {
 	keyval_t *curr = &((keyval_t *) hist_vals.data)[i];
 	pix_val = *((short *) curr->key);
@@ -322,14 +322,14 @@ main(int argc, char *argv[])
 
 	if (pix_val - prev > 700) {
 	    if (pix_val >= 2000) {
-		mr_print(!quiet, "\n\nRed\n");
-		mr_print(!quiet, "----------\n\n");
+	        cond_printf(!quiet, "\n\nRed\n");
+		cond_printf(!quiet, "----------\n\n");
 	    } else if (pix_val >= 1000) {
-		mr_print(!quiet, "\n\nGreen\n");
-		mr_print(!quiet, "----------\n\n");
+		cond_printf(!quiet, "\n\nGreen\n");
+		cond_printf(!quiet, "----------\n\n");
 	    }
 	}
-	mr_print(!quiet, "%hd - %ld\n", pix_val, freq);
+	cond_printf(!quiet, "%hd - %ld\n", pix_val, freq);
 	prev = pix_val;
     }
     free(hist_vals.data);

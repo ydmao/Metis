@@ -228,7 +228,7 @@ main(int argc, char *argv[])
     }
     printf("ignore this %d\n", sum);
 #endif
-    mr_print(!quiet, "Linear regression: running...\n");
+    cond_printf(!quiet, "Linear regression: running...\n");
     assert(mr_run_scheduler(&mr_param) == 0);
     mr_print_stats();
 

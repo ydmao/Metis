@@ -5,7 +5,7 @@
 #include "profile.hh"
 
 /* Metis parameters  */
-typedef struct {
+struct mr_param_t {
     app_arg_t app_arg;		/* application type specific argument. See lib/apphelper.h */
     map_t map_func;		/* map function */
     key_cmp_t key_cmp;		/* key comparison function */
@@ -15,7 +15,7 @@ typedef struct {
     partition_t part_func;	/* partition func. */
     keycopy_t keycopy;		/* invoked by Metis library for each new key exactly once */
     int nr_cpus;		/* # of cpus to use (use all cores by default) */
-} mr_param_t;
+};
 
 /* public functions for use by applications. */
 extern void mr_print_stats(void);

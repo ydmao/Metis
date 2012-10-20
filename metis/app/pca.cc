@@ -491,12 +491,12 @@ main(int argc, char **argv)
     // Free the allocated structures
     int cnt = 0;
     int rows = num_rows;
-    mr_print(!quiet, "\n\nCovariance matrix:\n");
+    cond_printf(!quiet, "\n\nCovariance matrix:\n");
     for (i = 0; i < int(pca_cov_vals.length); i++) {
-	mr_print(!quiet, "%5d ", *((int *) (pca_cov_vals.data[i].val)));
+	cond_printf(!quiet, "%5d ", *((int *) (pca_cov_vals.data[i].val)));
 	cnt++;
 	if (cnt == num_rows) {
-	    mr_print(!quiet, "\n");
+	    cond_printf(!quiet, "\n");
 	    num_rows--;
 	    cnt = 0;
 	}

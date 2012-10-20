@@ -41,18 +41,14 @@ struct urecord {
 static __thread uint64_t nsamples = 0;
 static __thread uint64_t latency = 0;
 
-static void
-writefile(const char *path, const char *str)
-{
+static void writefile(const char *path, const char *str) {
     int fd = open(path, O_WRONLY);
     assert(fd >= 0);
     assert(write(fd, str, strlen(str)) == ssize_t(strlen(str)));
     close(fd);
 }
 
-static void
-readsamples(const char *path)
-{
+static void readsamples(const char *path) {
     int fd = open(path, O_RDONLY);
     assert(fd >= 0);
     struct urecord *ur =
@@ -66,9 +62,7 @@ readsamples(const char *path)
     munmap(ur, NUREC_SIZE);
 }
 
-void
-ibs_start(int cid)
-{
+void ibs_start(int cid) {
     if (!ibs_enabled)
 	return;
     cid = lcpu_to_pcpu[cid];
@@ -97,9 +91,7 @@ ibs_start(int cid)
     writefile(path, value);
 }
 
-void
-ibs_stop(int cid)
-{
+void ibs_stop(int cid) {
     if (!ibs_enabled)
 	return;
     cid = lcpu_to_pcpu[cid];
@@ -111,14 +103,10 @@ ibs_stop(int cid)
     readsamples(path);
 }
 
-uint64_t
-ibs_read_count(int cid)
-{
+uint64_t ibs_read_count(int cid) {
     return nsamples;
 }
 
-uint64_t
-ibs_read_latency(int cid)
-{
+uint64_t ibs_read_latency(int cid) {
     return latency;
 }
