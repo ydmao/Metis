@@ -17,40 +17,37 @@ struct keyval_t {
     void *val;
     unsigned hash;
     keyval_t() {
-        memset(this, 0, sizeof(*this));
+        init();
+    }
+    ~keyval_t() {
+        reset();
     }
     explicit keyval_t(void *k) {
-        memset(this, 0, sizeof(*this));
-        key = k;
+        set(k, NULL, 0);
     }
     keyval_t(void *k, unsigned h) {
-        memset(this, 0, sizeof(*this));
-        key = k;
-        hash = h;
+        set(k, NULL, h);
     }
     keyval_t(void *k, void *v, unsigned h) {
-        memset(this, 0, sizeof(*this));
-        key = k;
-        val = v;
-        hash = h;
+        set(k, v, h);
     }
     keyval_t(void *k, void *v) {
-        memset(this, 0, sizeof(*this));
-        key = k;
-        val = v;
-        hash = 0;
+        set(k, v, 0);
     }
     void assign(const keyval_t &a) {
-        key = a.key;
-        val = a.val;
-        hash = a.hash;
+        set(a.key, a.val, a.hash);
     }
     void init() {
-        key = val = NULL;
-        hash = 0;
+        set(NULL, NULL, 0);
     }
     void reset() {
         init();
+    }
+  private:
+    void set(void *k, void *v, unsigned h) {
+        key = k;
+        val = v;
+        h = h;
     }
 };
 
@@ -63,28 +60,35 @@ struct keyvals_len_t {
     void *key;
     void **vals;
     uint64_t len;
-    keyvals_len_t() {
-        memset(this, 0, sizeof(*this));
+    ~keyvals_len_t() {
+        reset();
     }
-    keyvals_len_t(void *k) {
-        memset(this, 0, sizeof(*this));
-        key = k;
+    keyvals_len_t() {
+        init();
+    }
+    explicit keyvals_len_t(void *k) {
+        set(k, NULL, 0);
     }
     keyvals_len_t(void *k, void **v, uint64_t l) {
-        memset(this, 0, sizeof(*this));
+        set(k, v, l);
+    }
+    void assign(const keyvals_len_t &a) {
+        set(a.key, a.vals, a.len);
+    }
+    void init() {
+        set(NULL, NULL, 0);
+    }
+    /* @brief: may need to free memory */
+    void reset() {
+        if (vals)
+            free(vals);
+        init();
+    }
+  private:
+    void set(void *k, void **v, uint64_t l) {
         key = k;
         vals = v;
         len = l;
-    }
-    void assign(const keyvals_len_t &a) {
-        key = a.key;
-        vals = a.vals;
-        len = a.len;
-    }
-    void reset() {
-        key = NULL;
-        vals = NULL;
-        len = 0;
     }
 };
 
@@ -101,34 +105,35 @@ struct keyvals_t : public xarray<void *> {
     void *key;			/* put key at the same offset with keyval_t */
     unsigned hash;
     keyvals_t() {
-        reset();
+        init();
     }
     ~keyvals_t() {
         reset();
     }
     void init() {
-        key = NULL;
-        hash = 0;
+        set(NULL, 0);
         xarray<void *>::init();
     }
     void reset() {
-        key = NULL;
-        hash = 0;
+        set(0, 0);
         xarray<void *>::clear();
     }
     explicit keyvals_t(void *k) {
-        reset();
-        key = k;
+        init();
+        set(k, 0);
     }
     keyvals_t(void *k, unsigned h) {
         reset();
-        key = k;
-        hash = h;
+        set(k, h);
     }
     void assign(const keyvals_t &a) {
-        key = a.key;
-        hash = a.hash;
+        set(a.key, a.hash);
         xarray<void *>::assign(a);
+    }
+  private:
+    void set(void *k, unsigned h) {
+        key = k;
+        hash = h;
     }
 };
 
