@@ -28,7 +28,7 @@ enum { nmallocs = 1000000 };
 void *
 worker(void *arg)
 {
-    int c = PTR2INT(arg);
+    int c = ptr2int<int>(arg);
     affinity_set(c);
     if (c) {
 	gstate->state[c].v.ready = 1;
@@ -79,10 +79,10 @@ main(int argc, char **argv)
     }
     for (uint64_t i = 1; i < ncores; i++) {
 	pthread_t tid;
-	pthread_create(&tid, NULL, worker, INT2PTR(i));
+	pthread_create(&tid, NULL, worker, int2ptr(i));
     }
     uint64_t start = read_tsc();
-    worker(INT2PTR(0));
+    worker(int2ptr(0));
     uint64_t end = read_tsc();
     printf("Total time %ld million cycles\n", (end - start) / 1000000);
     munmap(gstate, sizeof(*gstate));

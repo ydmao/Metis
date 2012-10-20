@@ -19,7 +19,7 @@ defsplitter(void *arg, split_t * ma, int ncores)
     if (ds->nsplits == 0)
 	ds->nsplits = ncores * def_nsplits_per_core;
     uint64_t split_size = ds->data_size / ds->nsplits;
-    split_size = ROUNDDOWN(split_size, ds->align);
+    split_size = round_down(split_size, ds->align);
     ma->data = (void *) &mr_data[split_pos];
     if (split_pos + split_size > data_size)
 	ma->length = data_size - split_pos;

@@ -219,7 +219,7 @@ string_match_combine(void *key_in, void **vals_in, size_t vals_len)
     assert(key && vals);
     for (size_t i = 0; i < vals_len; i++)
 	sum += vals[i];
-    vals_in[0] = INT2PTR(sum);
+    vals_in[0] = int2ptr(sum);
     prof_leaveapp();
     return 1;
 }

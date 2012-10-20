@@ -52,7 +52,7 @@ void mthread_join(pthread_t tid, int lid, void **exitcode)
 
 static void *mthread_entry(void *args)
 {
-    cur_lcpu = PTR2INT(args);
+    cur_lcpu = ptr2int<int>(args);
     assert(affinity_set(lcpu_to_pcpu[cur_lcpu]) == 0);
     while (true) {
 	while (!(thread_pool[cur_lcpu].ready))
@@ -81,7 +81,7 @@ void mthread_init(int nlcpus, int mlcpu)
 	    thread_pool[i].tid = getself();
 	    continue;
 	}
-	thread_pool[i].tid = create_thread(mthread_entry, INT2PTR(i));
+	thread_pool[i].tid = create_thread(mthread_entry, int2ptr(i));
     }
 }
 

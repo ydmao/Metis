@@ -269,7 +269,7 @@ main(int argc, char *argv[])
 	swap_bytes((char *) (data_pos), sizeof(*data_pos));
 
     size_t imgdata_bytes = (size_t) finfo.st_size - (size_t) (*(data_pos));
-    imgdata_bytes = ROUNDDOWN(imgdata_bytes, 3);
+    imgdata_bytes = round_down(imgdata_bytes, 3);
     mr_print(!quiet, "File stat: %ld bytes, %ld pixels\n", imgdata_bytes,
 	     imgdata_bytes / 3);
 

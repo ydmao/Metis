@@ -19,176 +19,117 @@
 
 #define JOS_PAGESIZE    4096
 
-#define INLINE_ATTR static __inline __attribute__((always_inline, no_instrument_function))
+template <typename T, typename M>
+inline T round_down(T n, M b) {
+    uintptr_t r = uintptr_t(n);
+    return (T)(r - r % b);
+}
 
-#define ARRELEM(p, s, index) (((char *)(p)) + (s) * (index))
+template <typename T, typename M>
+inline T round_up(T n, M b) {
+    uintptr_t r = uintptr_t(n);
+    return round_down(r + b - 1, b);
+}
 
-/*
- * Rounding operations (efficient when n is a power of 2)
- * Round down to the nearest multiple of n
- */
-#define ROUNDDOWN(a, n) \
-( \
-{ \
-    uintptr_t __ra = (uintptr_t) (a); \
-    (__typeof__(a)) (__ra - __ra % (n)); \
-})
+template <typename... Args>
+inline void dprint(bool yes, Args&&... args) {
+    if (!yes)
+        return;
+    printf("[debug]:)");
+    printf(std::forward<Args>(args)...);
+}
 
-/*
- * Round up to the nearest multiple of n
- */
-#define ROUNDUP(a, n) \
-( \
-{ \
-    uintptr_t __n = (uintptr_t) (n); \
-    (__typeof__(a)) (ROUNDDOWN((uintptr_t) (a) + __n - 1, __n)); \
-})
+template <typename... Args>
+inline void eprint(Args&&... args) {
+    fprintf(stderr, std::forward<Args>(args)...);
+    exit(EXIT_FAILURE);
+}
 
-#define dprint(__exp, __frmt, __args...) \
-do \
-{ \
-    if (__exp) \
-    printf("(debug) %s: " __frmt "\n", __FUNCTION__, ##__args); \
-} while (0)
+template <typename T>
+inline void *int2ptr(T i) {
+    return (void *)(intptr_t(i));
+}
 
-#define eprint(__frmt, __args...) \
-do \
-{ \
-    fprintf(stderr, __frmt, ##__args); \
-    exit(EXIT_FAILURE); \
-} while (0)
+template <typename T>
+inline T ptr2int(void *p) {
+    return (T)(intptr_t(p));
+}
 
-#define INT2PTR(i)  ((void *)(intptr_t)i)
-#define PTR2INT(p)      ((int)((intptr_t)(p)))
-
-#define array_size(arr) (sizeof(arr) / sizeof((arr)[0]))
-#define array_end(arr) ((arr) + array_size(arr))
-
-INLINE_ATTR uint32_t rnd(uint32_t * seed);
-INLINE_ATTR uint64_t read_tsc(void);
-INLINE_ATTR uint64_t read_pmc(uint32_t i);
-INLINE_ATTR void nop_pause(void);
-INLINE_ATTR uint64_t usec(void);
-INLINE_ATTR uint64_t get_cpu_freq(void);
-INLINE_ATTR uint32_t get_core_count(void);
-INLINE_ATTR int fill_core_array(uint32_t * cid, uint32_t n);
-INLINE_ATTR pthread_t pthread_start(void *(*fn) (void *), uintptr_t arg);
-INLINE_ATTR void lfence(void);
-INLINE_ATTR void mfence(void);
-
-uint32_t
-rnd(uint32_t * seed)
-{
+inline uint32_t rnd(uint32_t *seed) {
     *seed = *seed * 1103515245 + 12345;
     return *seed & 0x7fffffff;
 }
 
-uint64_t
-read_tsc(void)
-{
+inline uint64_t read_tsc(void) {
     uint32_t a, d;
     __asm __volatile("rdtsc":"=a"(a), "=d"(d));
     return ((uint64_t) a) | (((uint64_t) d) << 32);
 }
 
-uint64_t
-read_pmc(uint32_t ecx)
-{
+inline uint64_t read_pmc(uint32_t ecx) {
     uint32_t a, d;
     __asm __volatile("rdpmc":"=a"(a), "=d"(d):"c"(ecx));
     return ((uint64_t) a) | (((uint64_t) d) << 32);
 }
 
-void
-mfence(void)
-{
+inline void mfence(void) {
     __asm __volatile("mfence");
 }
 
-void
-nop_pause(void)
-{
+inline void nop_pause(void) {
     __asm __volatile("pause"::);
 }
 
-uint64_t
-usec(void)
-{
+inline uint64_t usec(void) {
     struct timeval tv;
     gettimeofday(&tv, 0);
-    return (uint64_t) tv.tv_sec * 1000000 + tv.tv_usec;
+    return uint64_t(tv.tv_sec) * 1000000 + tv.tv_usec;
 }
 
-uint64_t
-get_cpu_freq(void)
-{
+inline uint64_t get_cpu_freq(void) {
 #ifdef JOS_USER
     return 2000 * 1024 * 1024;
 #else
-    FILE *fd;
-    uint64_t freq = 0;
+    FILE *f = fopen("/proc/cpuinfo", "r");
+    assert(f != NULL);
     float freqf = 0;
     char *line = NULL;
     size_t len = 0;
-
-    fd = fopen("/proc/cpuinfo", "r");
-    if (!fd) {
-	fprintf(stderr, "failed to get cpu frequecy\n");
-	perror(NULL);
-	return freq;
-    }
-
-    while (getline(&line, &len, fd) != EOF) {
-	if (sscanf(line, "cpu MHz\t: %f", &freqf) == 1) {
-	    freqf = freqf * 1000000UL;
-	    freq = (uint64_t) freqf;
-	    break;
-	}
-    }
-
-    fclose(fd);
-    return freq;
+    while (getline(&line, &len, f) != EOF &&
+           sscanf(line, "cpu MHz\t: %f", &freqf) != 1);
+    fclose(f);
+    return uint64_t(freqf * (1 << 20));
 #endif
 }
 
-uint32_t
-get_core_count(void)
-{
+inline uint32_t get_core_count(void) {
     int r = sysconf(_SC_NPROCESSORS_ONLN);
     if (r < 0)
 	eprint("get_core_count: error: %s\n", strerror(errno));
     return r;
 }
 
-int
-fill_core_array(uint32_t * cid, uint32_t n)
-{
+inline int fill_core_array(uint32_t *cid, uint32_t n) {
     uint32_t z = get_core_count();
     if (n < z)
 	return -1;
 
-    for (uint32_t i = 0; i < z; i++)
+    for (uint32_t i = 0; i < z; ++i)
 	cid[i] = i;
     return z;
 }
 
-pthread_t
-pthread_start(void *(*fn) (void *), uintptr_t arg)
-{
+inline pthread_t pthread_start(void *(*fn) (void *), uintptr_t arg) {
     pthread_t th;
     assert(pthread_create(&th, 0, fn, (void *) arg) == 0);
     return th;
 }
 
-void
-lfence(void)
-{
+inline void lfence(void) {
     __asm __volatile("lfence");
 }
 
-static inline int
-atomic_add32_ret(int *cnt)
-{
+inline int atomic_add32_ret(int *cnt) {
     int __c = 1;
     __asm__ __volatile("lock; xadd %0,%1":"+r"(__c), "+m"(*cnt)::"memory");
     return __c;
