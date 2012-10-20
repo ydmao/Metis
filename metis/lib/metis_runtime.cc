@@ -5,7 +5,6 @@
 #include "bench.hh"
 #include "value_helper.hh"
 #include "apphelper.hh"
-#include "estimation.hh"
 #include "reduce_bucket_manager.hh"
 #include "comparator.hh"
 #include "psrs.hh"
@@ -60,7 +59,7 @@ uint64_t metis_runtime::sample_finished(int ntotal) {
     int nvalid = 0;  // # of workers that has sampled
     for (int i = 0; i < current_manager_->nrow(); ++i)
 	if (e_[i].valid())
-	    ++ nvalid, e_[i].inc_estimate(&nk, &np, ntotal);
+	    ++ nvalid, e_[i].inc_predict(&nk, &np, ntotal);
     nk /= nvalid;
     np /= nvalid;
 
