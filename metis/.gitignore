@@ -7,3 +7,5 @@ config.h
 config.log
 config.status
 autom4te.cache
+data
+*.tar.gz
