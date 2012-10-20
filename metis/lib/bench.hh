@@ -32,24 +32,19 @@ inline T round_up(T n, M b) {
     return round_down(r + b - 1, b);
 }
 
-template <typename... Args>
-inline void cond_printf(bool yes, Args&&... args) {
-    if (!yes)
-        return;
-    printf("[debug]:)");
-    printf(std::forward<Args>(args)...);
-}
+#define cond_printf(__exp, __fmt, __args...) \
+do { \
+    if (__exp) \
+        printf(__fmt, ##__args); \
+} while (0)
 
-template <typename... Args>
-inline void dprintf(Args&&... args) {
-    cond_printf(debug_print, std::forward<Args>(args)...);
-}
+#define dprintf(__fmt, __args...) cond_printf(debug_print, __fmt, ##__args)
 
-template <typename... Args>
-inline void eprint(Args&&... args) {
-    fprintf(stderr, std::forward<Args>(args)...);
-    exit(EXIT_FAILURE);
-}
+#define eprint(__fmt, __args...) \
+do { \
+    fprintf(stderr, __fmt, ##__args); \
+    exit(EXIT_FAILURE); \
+} while (0)
 
 template <typename T>
 inline void *int2ptr(T i) {
