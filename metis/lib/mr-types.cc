@@ -10,7 +10,7 @@ extern keycopy_t mrkeycopy;
 bool keyval_arr_t::map_append(void *key, void *val, size_t keylen, unsigned hash) {
     void *ik = app_make_new_key(key, keylen);
     keyval_t tmp(ik, val, hash);
-    push_back(&tmp);
+    push_back(tmp);
     return true;
 }
 

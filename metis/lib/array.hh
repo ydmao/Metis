@@ -76,10 +76,10 @@ struct xarray {
             return 0;
         return bsearch_eq(key, a_, n_, sizeof(T), cmp, bfound);
     }
-    void insert(int pos, const T *e) {
+    void insert(size_t pos, const T *e) {
         make_room();
-        if (size_t(pos) < n_)
-            memmove(&a_[pos + 1], &a_[pos], sizeof(T) * (n_ - pos));
+        if (pos < n_)
+            memmove(a_ + (pos + 1), a_ + pos, sizeof(T) * (n_ - pos));
         a_[pos] = *e;
         ++n_;
     }

@@ -113,20 +113,11 @@ generate_points(int **pts, int rows, int cols)
 /** mymeancmp()
  *  Comparison Function for computing the mean
  */
-static int
-mymeancmp(const void *v1, const void *v2)
+static int mymeancmp(const void *v1, const void *v2)
 {
     prof_enterkcmp();
-    int res = 0;
-    int *k1 = (int *) v1;
-    int *k2 = (int *) v2;
-
-    if (*k1 < *k2)
-	res = -1;
-    else if (*k1 > *k2)
-	res = 1;
-    else
-	res = 0;
+    int res = (*(int *)v1) - (*(int *)v2);
+    assert(res);
     prof_leavekcmp();
     return res;
 }

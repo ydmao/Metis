@@ -97,8 +97,12 @@ void metis_runtime::initialize(void) {
     reduce_bucket_manager<keyvals_len_t>::instance()->destroy();
     if (current_manager_)
         current_manager_->destroy();
-    if (sample_manager_)
+    if (sample_manager_) {
         sample_manager_->destroy();
+        sample_manager_ = NULL;
+        sampling_ = false;
+    }
+    set_util(NULL, NULL);
 }
 
 void metis_runtime::map_emit(int row, void *key, void *val,

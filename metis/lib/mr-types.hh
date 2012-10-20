@@ -19,7 +19,7 @@ struct keyval_t {
     keyval_t() {
         memset(this, 0, sizeof(*this));
     }
-    keyval_t(void *k) {
+    explicit keyval_t(void *k) {
         memset(this, 0, sizeof(*this));
         key = k;
     }
@@ -116,7 +116,7 @@ struct keyvals_t : public xarray<void *> {
         hash = 0;
         xarray<void *>::clear();
     }
-    keyvals_t(void *k) {
+    explicit keyvals_t(void *k) {
         reset();
         key = k;
     }
