@@ -32,7 +32,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
 	right->parent_ = newroot;
 	nlevel_++;
     } else {
-	int ikey = parent->upper_bound_pos(key, comparator::keycmp());
+	int ikey = parent->upper_bound_pos(key);
 	// insert newkey at ikey, values at ikey + 1
 	for (int i = parent->nk_ - 1; i >= ikey; i--)
 	    parent->e_[i + 1].k_ = parent->e_[i].k_;
@@ -64,7 +64,7 @@ btnode_leaf *btree_type::get_leaf(void *key)
     }
     btnode_base *node = root_;
     for (int i = 0; i < nlevel_ - 1; ++i)
-        node = static_cast<btnode_internal *>(node)->upper_bound(key, comparator::keycmp());
+        node = static_cast<btnode_internal *>(node)->upper_bound(key);
     return static_cast<btnode_leaf *>(node);
 }
 
@@ -73,7 +73,7 @@ int btree_type::map_insert_sorted(void *key, void *val, size_t keylen, unsigned 
 {
     btnode_leaf *leaf = get_leaf(key);
     bool bfound = false;
-    int pos = leaf->lower_bound(key, comparator::keycmp(), &bfound);
+    int pos = leaf->lower_bound(key, &bfound);
     if (!bfound) {
         void *ik = app_make_new_key(key, keylen);
         leaf->insert(pos, ik, hash);
@@ -91,7 +91,7 @@ bool btree_type::insert_kvs(keyvals_t *k)
 {
     btnode_leaf *leaf = get_leaf(k->key);
     bool bfound = false;
-    int pos = leaf->lower_bound(k->key, comparator::keycmp(), &bfound);
+    int pos = leaf->lower_bound(k->key, &bfound);
     assert(!bfound);
     leaf->insert(pos, k->key, 0);  // do not copy key
     ++ nk_;

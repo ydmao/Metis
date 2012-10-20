@@ -175,7 +175,7 @@ struct xarray {
 template <typename T>
 struct xarray_iterator {
     xarray_iterator(xarray<T> *p, int i) : p_(p), i_(i) {}
-    xarray_iterator(xarray<T> *p) : p_(p), i_(0) {}
+    explicit xarray_iterator(xarray<T> *p) : p_(p), i_(0) {}
     xarray_iterator() : p_(NULL), i_(0) {}
     xarray_iterator(const xarray_iterator &a) : p_(a.p_), i_(a.i_) {}
     bool operator==(const xarray_iterator &a) const {

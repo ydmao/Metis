@@ -19,31 +19,13 @@ struct btnode_base {
     virtual ~btnode_base() {}
 };
 
-template <typename K, typename V>
-struct xpair {
-    K k_;
-    V v_;
-};
-
-struct keyvals_compare_functor {
-    keyvals_compare_functor(key_cmp_t cmp) : cmp_(cmp) {}
-
-    int operator()(const void *k1, const void *k2) const {
-        keyvals_t *p1 = (keyvals_t *) k1;
-        keyvals_t *p2 = (keyvals_t *) k2;
-        return cmp_(p1->key, p2->key);
-    }
-  private:
-    key_cmp_t cmp_;
-};
-
 struct btnode_leaf : public btnode_base {
     keyvals_t e_[2 * order + 2];
     btnode_leaf *next_;
     virtual ~btnode_leaf() {}
 
     btnode_leaf() : btnode_base(), next_(NULL) {
-        memset(e_, 0, sizeof(e_));
+        bzero(e_, sizeof(e_));
     }
 
     btnode_leaf *split() {
@@ -57,11 +39,11 @@ struct btnode_leaf : public btnode_base {
         return right;
     }
 
-    int lower_bound(void *key, key_cmp_t cmp, bool *bfound) {
+    int lower_bound(void *key, bool *bfound) {
         keyvals_t tmp;
         tmp.key = key;
         return bsearch_eq(&tmp, e_, nk_, sizeof(e_[0]),
-                          keyvals_compare_functor(cmp), bfound);
+                          comparator::raw_comp<keyvals_t>::impl, bfound);
     }
 
     void insert(int pos, void *key, unsigned hash) {
@@ -78,20 +60,15 @@ struct btnode_leaf : public btnode_base {
     }
 };
 
-struct xpair_compare_functor {
-    xpair_compare_functor(key_cmp_t cmp) : cmp_(cmp) {}
-
-    int operator()(const void *k1, const void *k2) const {
-        xpair<void *, btnode_base *> *p1 = (xpair<void *, btnode_base *> *) k1;
-        xpair<void *, btnode_base *> *p2 = (xpair<void *, btnode_base *> *) k2;
-        return cmp_(p1->k_, p2->k_);
-    }
-  private:
-    key_cmp_t cmp_;
+template <typename K, typename V>
+struct xpair {
+    K k_;
+    V v_;
 };
 
 struct btnode_internal : public btnode_base {
-    xpair<void *, btnode_base *> e_[2 * order + 2];
+    typedef xpair<void *, btnode_base *> xpair_type;
+    xpair_type e_[2 * order + 2];
     btnode_internal() : btnode_base() {
         memset(e_, 0, sizeof(e_));
     }
@@ -105,14 +82,19 @@ struct btnode_internal : public btnode_base {
         return nn;
     }
 
-    btnode_base *upper_bound(void *key, key_cmp_t cmp) {
-        int pos = upper_bound_pos(key, cmp);
+    btnode_base *upper_bound(void *key) {
+        int pos = upper_bound_pos(key);
         return e_[pos].v_;
     }
-    int upper_bound_pos(void *key, key_cmp_t cmp) {
+    static int xpair_compare(const void *p1, const void *p2) {
+        const xpair_type *x1 = (const xpair_type *)p1;
+        const xpair_type *x2 = (const xpair_type *)p2;
+        return comparator::keycmp()(x1->k_, x2->k_);
+    }
+    int upper_bound_pos(void *key) {
         xpair<void *, btnode_base *> tmp;
         tmp.k_ = key;
-        return bsearch_lar(&tmp, e_, nk_, sizeof(tmp), xpair_compare_functor(cmp));
+        return bsearch_lar(&tmp, e_, nk_, sizeof(tmp), xpair_compare);
     }
 };
 
@@ -151,9 +133,10 @@ struct btree_type {
     struct iterator {
         iterator() : c_(NULL), i_(0) {}
         explicit iterator(btnode_leaf *c) : c_(c), i_(0) {}
-        iterator(const iterator &a) {
+        iterator &operator=(const iterator &a) {
             c_ = a.c_;
             i_ = a.i_;
+            return *this;
         }
         void operator++() {
             if (c_ && i_ + 1 == c_->nk_) {
