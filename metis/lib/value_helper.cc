@@ -18,19 +18,14 @@ void map_values_insert(keyvals_t * kvs, void *val) {
     kvs->push_back(val);
     if (the_app.atype == atype_mapreduce && the_app.mapreduce.combiner
 	&& kvs->size() >= combiner_threshold) {
-        size_t n = kvs->size();
-        void **inout = kvs->array();
-        kvs->init();
-	size_t newn = the_app.mapreduce.combiner(kvs->key, inout, n);
-        kvs->set_array(inout, newn);
+	size_t newn = the_app.mapreduce.combiner(kvs->key, kvs->array(), kvs->size());
+        assert(newn <= kvs->size());
+        kvs->trim(newn);
     }
 }
 
 void map_values_mv(keyvals_t *dst, keyval_t *src) {
-    if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm)
-        assert(0 && "Not supported yet");
-    else
-        dst->push_back(src->val);
+    map_values_insert(dst, src->val);
     src->reset();
 }
 
