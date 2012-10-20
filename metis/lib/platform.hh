@@ -11,9 +11,10 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-int affinity_set(int cpu);
-#define threadid_t pthread_t
+typedef pthread_t threadid_t;
 typedef void *(*thread_entry_t) (void *);
+
+int affinity_set(int cpu);
 threadid_t getself();
 threadid_t create_thread(thread_entry_t, void *arg);
 

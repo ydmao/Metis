@@ -6,9 +6,7 @@
 /*
  * split input during init, lock-free at runtime
  */
-int
-presplitter(void *arg, split_t * ma)
-{
+int presplitter(void *arg, split_t * ma) {
     presplitter_state *ps = (presplitter_state *)arg;
     int i = atomic_add32_ret(&ps->idx);
     if (i >= int(ps->nsplits))
@@ -17,17 +15,13 @@ presplitter(void *arg, split_t * ma)
     return 1;
 }
 
-uint64_t
-presplitter_nsplits(void *arg)
-{
+uint64_t presplitter_nsplits(void *arg) {
     presplitter_state *ps = (presplitter_state *)arg;
     return ps->nsplits;
 }
 
-void
-presplitter_init(struct presplitter_state *ps,
-		 splitter_t split, void *arg, int ncores)
-{
+void presplitter_init(struct presplitter_state *ps,
+		 splitter_t split, void *arg, int ncores) {
     memset(ps, 0, sizeof(*ps));
     uint64_t nalloc = 1;
     ps->ma = (split_t *)malloc(nalloc * sizeof(split_t));
@@ -43,24 +37,18 @@ presplitter_init(struct presplitter_state *ps,
     ps->idx = 0;
 }
 
-void
-presplitter_reset(void *arg)
-{
+void presplitter_reset(void *arg) {
     struct presplitter_state *ps = (presplitter_state *)arg;
     ps->idx = 0;
     ps->nsplits = ps->nsplits_bak;
     ps->ma = ps->ma_bak;
 }
 
-void
-presplitter_free(struct presplitter_state *ps)
-{
+void presplitter_free(struct presplitter_state *ps) {
     free(ps->ma);
 }
 
-void
-presplitter_prep_sample(void *arg, uint64_t ntasks)
-{
+void presplitter_prep_sample(void *arg, uint64_t ntasks) {
     struct presplitter_state *ps = (struct presplitter_state *) arg;
     assert(ntasks <= ps->nsplits);
     split_t *splits;
@@ -71,9 +59,7 @@ presplitter_prep_sample(void *arg, uint64_t ntasks)
     ps->nsplits = ntasks;
 }
 
-void
-presplitter_done_sample(struct presplitter_state *ps)
-{
+void presplitter_done_sample(struct presplitter_state *ps) {
     ps->idx = ps->nsplits;
     ps->nsplits = ps->nsplits_bak;
 }

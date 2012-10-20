@@ -20,14 +20,12 @@ __thread int cur_lcpu = 0;
 static int main_lcpu = 0;
 static int used_nlcpus = 0;
 
-int mthread_is_mainlcpu(int lcpu)
-{
+int mthread_is_mainlcpu(int lcpu) {
     return lcpu == main_lcpu;
 }
 
 void mthread_create(pthread_t * tid, int lid, void *(*start_routine) (void *),
-	       void *arg)
-{
+  	            void *arg) {
     assert(mthread_inited);
     if (lid == main_lcpu)
 	start_routine(arg);
@@ -42,16 +40,14 @@ void mthread_create(pthread_t * tid, int lid, void *(*start_routine) (void *),
     }
 }
 
-void mthread_join(pthread_t tid, int lid, void **exitcode)
-{
+void mthread_join(pthread_t tid, int lid, void **exitcode) {
     while (thread_pool[lid].running)
 	nop_pause();
     if (exitcode)
 	*exitcode = 0;
 }
 
-static void *mthread_entry(void *args)
-{
+static void *mthread_entry(void *args) {
     cur_lcpu = ptr2int<int>(args);
     assert(affinity_set(lcpu_to_pcpu[cur_lcpu]) == 0);
     while (true) {
@@ -65,8 +61,7 @@ static void *mthread_entry(void *args)
     }
 }
 
-void mthread_init(int nlcpus, int mlcpu)
-{
+void mthread_init(int nlcpus, int mlcpu) {
     if (mthread_inited)
 	return;
     cpumap_init();
@@ -90,12 +85,12 @@ static void *mthread_exit(void *) {
 }
 
 void mthread_finalize(void) {
-    for (int i = 0; i < used_nlcpus; i++) {
+    for (int i = 0; i < used_nlcpus; ++i) {
 	if (i == main_lcpu)
 	    continue;
 	mthread_create(NULL, i, mthread_exit, NULL);
     }
-    for (int i = 0; i < used_nlcpus; i++)
+    for (int i = 0; i < used_nlcpus; ++i)
 	if (i != main_lcpu)
 	    pthread_join(thread_pool[i].tid, NULL);
     memset(&thread_pool, 0, sizeof(thread_pool));

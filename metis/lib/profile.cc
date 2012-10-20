@@ -50,29 +50,21 @@ __read_pmc(int ecx)
 	return 0;
 }
 
-void
-prof_enterkcmp()
-{
+void prof_enterkcmp() {
     stats[MAP][cur_lcpu].v[app_kcmp]++;
 }
 
-void
-prof_leavekcmp()
-{
+void prof_leavekcmp() {
 }
 
-void
-prof_enterapp()
-{
+void prof_enterapp() {
     if (profile_app) {
 	pmcs_start.v[app_tsc] = read_tsc();
 	pmcs_start.v[app_pmc1] = __read_pmc(1);
     }
 }
 
-void
-prof_leaveapp()
-{
+void prof_leaveapp() {
     if (profile_app) {
 	stats[curphase][cur_lcpu].v[app_tsc] +=
 	    (read_tsc() - pmcs_start.v[app_tsc]);
@@ -81,9 +73,7 @@ prof_leaveapp()
     }
 }
 
-void
-prof_worker_start(int phase, int cid)
-{
+void prof_worker_start(int phase, int cid) {
     curphase = phase;
     stats[phase][cid].v[app_tsc] = 0;
     stats[phase][cid].v[app_kcmp] = 0;
@@ -100,9 +90,7 @@ prof_worker_start(int phase, int cid)
     pmcs_start.v[tsc] = read_tsc();
 }
 
-void
-prof_worker_end(int phase, int cid)
-{
+void prof_worker_end(int phase, int cid) {
     stats[phase][cid].v[pmc0] = __read_pmc(0) - pmcs_start.v[pmc0];
     stats[phase][cid].v[pmc1] = __read_pmc(1) - pmcs_start.v[pmc1];
     stats[phase][cid].v[pmc2] = __read_pmc(2) - pmcs_start.v[pmc2];
@@ -114,9 +102,7 @@ prof_worker_end(int phase, int cid)
     stats[phase][cid].v[tsc] = read_tsc() - pmcs_start.v[tsc];
 }
 
-static void
-prof_print_phase(int phase, int ncores, uint64_t scale)
-{
+static void prof_print_phase(int phase, int ncores, uint64_t scale) {
     uint64_t tots[statcnt];
     memset(tots, 0, sizeof(tots));
     printf("core\t");
@@ -142,9 +128,7 @@ prof_print_phase(int phase, int ncores, uint64_t scale)
 	 (double) tots[pmc0] / (double) tots[pmc1]);
 }
 
-void
-prof_print(int ncores)
-{
+void prof_print(int ncores) {
     if (profile_kcmp) {
 	uint64_t tot = 0;
 	uint64_t tot_cmp = 0;
@@ -168,9 +152,7 @@ prof_print(int ncores)
     }
 }
 
-void
-prof_phase_init(prof_phase_stat * st)
-{
+void prof_phase_init(prof_phase_stat * st) {
     if (!profile_phases)
 	return;
     FILE *fd = fopen("/proc/stat", "r");
@@ -180,9 +162,7 @@ prof_phase_init(prof_phase_stat * st)
     fclose(fd);
 }
 
-void
-prof_phase_end(prof_phase_stat * st)
-{
+void prof_phase_end(prof_phase_stat * st) {
     if (!profile_phases)
 	return;
     FILE *fd = fopen("/proc/stat", "r");
@@ -198,4 +178,5 @@ prof_phase_end(prof_phase_stat * st)
     printf("time(ticks) user: %ld, user_low: %ld, system: %ld, idle: %ld\n",
 	   st->user, st->user_low, st->system, st->idle);
 }
+
 #endif
