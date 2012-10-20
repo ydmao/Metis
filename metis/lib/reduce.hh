@@ -52,8 +52,7 @@ struct append_functor {
 };
 
 template <typename C, typename F>
-inline void 
-group_one_sorted(C &a, F &f) {
+inline void group_one_sorted(C &a, F &f) {
     // group and apply functor
     size_t n = a.size();
     keyvals_t kvs;
@@ -68,8 +67,7 @@ group_one_sorted(C &a, F &f) {
 }
 
 template <typename C, typename F, typename PC>
-inline void
-group_unsorted(C **a, int na, F &f, PC pc) {
+inline void group_unsorted(C **a, int na, F &f, PC pc) {
     if (na == 1) {
         a[0]->sort(pc);
         group_one_sorted(*a[0], f);
