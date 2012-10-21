@@ -29,7 +29,7 @@ void cprint(const char *key, uint64_t v, const char *delim) {
 int mapreduce_appbase::map_worker() {
     int n, next;
     rt_->map_worker_init(cur_lcpu);
-    for (n = 0; (next = next_task()) < ma_.size(); ++n) {
+    for (n = 0; (next = next_task()) < int(ma_.size()); ++n) {
 	map_function(&ma_.at(next));
 	rt_->map_task_finished(cur_lcpu);
     }
