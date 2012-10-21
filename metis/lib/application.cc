@@ -78,14 +78,14 @@ void *mapreduce_appbase::base_worker(void *x) {
     return 0;
 }
 
-void mapreduce_appbase::run_phase(int phase, int ncore, uint64_t &t) {
+void mapreduce_appbase::run_phase(int phase, int ncore, uint64_t &t, int first_task) {
     uint64_t t0 = read_tsc();
     prof_phase_stat st;
     bzero(&st, sizeof(st));
     prof_phase_init(&st);
     pthread_t tid[JOS_NCPU];
     phase_ = phase;
-    next_task_ = 0;
+    next_task_ = first_task;
     for (int i = 0; i < ncore; ++i) {
 	if (mthread_is_mainlcpu(i))
 	    continue;
@@ -136,6 +136,7 @@ int mapreduce_appbase::sched_run() {
     while (split(&ma, ncore_))
         ma_.push_back(ma);
 
+    nsampled_splits_ = 0;
     // get the number of reduce tasks by sampling if needed
     if (skip_reduce_or_group_phase()) {
 	merge_nsplits_ = ncore_;
@@ -151,7 +152,7 @@ int mapreduce_appbase::sched_run() {
     uint64_t real_start = read_tsc();
     uint64_t map_time = 0, reduce_time = 0, merge_time = 0;
     // map phase
-    run_phase(MAP, ncore_, map_time);
+    run_phase(MAP, ncore_, map_time, nsampled_splits_);
     // reduce phase
     if (!skip_reduce_or_group_phase())
 	run_phase(REDUCE, ncore_, reduce_time);

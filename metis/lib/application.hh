@@ -60,7 +60,7 @@ struct mapreduce_appbase {
     int reduce_worker();
     int merge_worker();
     static void *base_worker(void *arg);
-    void run_phase(int phase, int ncore, uint64_t &t);
+    void run_phase(int phase, int ncore, uint64_t &t, int first_task = 0);
 
     int nreduce_or_group_task_;
     enum { main_lcpu = 0 };
