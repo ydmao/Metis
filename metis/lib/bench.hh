@@ -107,6 +107,10 @@ inline uint64_t get_cpu_freq(void) {
 #endif
 }
 
+inline uint64_t cycle_to_ms(uint64_t x) {
+    return (x * 1000) / get_cpu_freq();
+}
+
 inline uint32_t get_core_count(void) {
     int r = sysconf(_SC_NPROCESSORS_ONLN);
     if (r < 0)
