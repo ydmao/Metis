@@ -38,7 +38,8 @@
 #include <sys/time.h>
 #include <sched.h>
 #define TCHAR char
-#include "lib/mr-sched.hh"
+#include "application.hh"
+#include "defsplitter.hh"
 #include "bench.hh"
 #ifdef JOS_USER
 #include "wc-datafile.h"
@@ -54,60 +55,74 @@
 enum { with_vm = 1 };
 enum { max_key_len = 256 };
 
-static int nsplits = 0;
-
-typedef struct {
-    uint64_t fpos;
-    uint64_t flen;
-    char *fdata;
-    pthread_mutex_t mu;
-} wc_data_t;
-
 static int alphanumeric;
-FILE *fout = NULL;
 
-/* Comparison function to compare 2 words */
-static int
-mystrcmp(const void *s1, const void *s2)
-{
-    return strcmp((const char *) s1, (const char *) s2);
-}
-
-/* divide input on a word border i.e. a space. */
-static int
-wordcount_splitter(void *arg, split_t * out, int ncores)
-{
-    wc_data_t *data = (wc_data_t *) arg;
-    assert(arg && out && data->fdata);
-    if (nsplits == 0)
-	nsplits = ncores * def_nsplits_per_core;
-    uint64_t split_size = data->flen / nsplits;
-    pthread_mutex_lock(&data->mu);
-    /* EOF, return FALSE for no more data */
-    if (data->fpos >= data->flen) {
-	pthread_mutex_unlock(&data->mu);
-	return 0;
+struct wc : public map_reduce {
+    wc(const char *f, int nsplit) : s_(f, nsplit) {}
+    bool split(split_t *ma, int ncores) {
+        return s_.split(ma, ncores, " \t\r\n\0");
     }
-    out->data = (void *) &data->fdata[data->fpos];
-    out->length = split_size;
-    if ((unsigned long) (data->fpos + out->length) > data->flen)
-	out->length = data->flen - data->fpos;
+    int key_compare(const void *s1, const void *s2) {
+        return strcmp((const char *) s1, (const char *) s2);
+    }
+    void map_function(split_t *ma);
+    /* Add up the partial sums for each word */
+    void reduce_function(void *key_in, void **vals_in, size_t vals_len) {
+        long sum = 0;
+        long *vals = (long *) vals_in;
+        for (uint32_t i = 0; i < vals_len; i++)
+	    sum += vals[i];
+        reduce_emit(key_in, (void *) sum);
+    }
 
-    /* set the length to end at a space */
-    for (data->fpos += (long) out->length;
-	 data->fpos < data->flen &&
-	 data->fdata[data->fpos] != ' ' && data->fdata[data->fpos] != '\t' &&
-	 data->fdata[data->fpos] != '\r' && data->fdata[data->fpos] != '\n' &&
-	 data->fdata[data->fpos] != 0; data->fpos++, out->length++) ;
+    /* write back the sums */
+    int combine_function(void *key_in, void **vals_in, size_t vals_len) {
+        assert(vals_in);
+        long *vals = (long *) vals_in;
+        for (uint32_t i = 1; i < vals_len; i++)
+	    vals[0] += vals[i];
+        return 1;
+    }
 
-    pthread_mutex_unlock(&data->mu);
-    return 1;
-}
+    void *modify_function(void *oldv, void *newv) {
+        uint64_t v = (uint64_t) oldv;
+        uint64_t nv = (uint64_t) newv;
+        return (void *) (v + nv);
+    }
+
+    void *key_copy(void *src, size_t s) {
+        char *key;
+        assert(key = (char *)malloc(s + 1));
+        memcpy(key, src, s);
+        key[s] = 0;
+        return key;
+    }
+    int final_output_compare(const void *p1, const void *p2) {
+        const keyval_t *kv1 = (const keyval_t *)p1;
+        const keyval_t *kv2 = (const keyval_t *)p2;
+#ifdef HADOOP
+	return strcmp((char *) kv1->key, (char *) kv2->key);
+#else
+        if (alphanumeric)
+	    return strcmp((char *) kv1->key, (char *) kv2->key);
+        size_t i1 = (size_t) kv1->val;
+        size_t i2 = (size_t) kv2->val;
+        if (i1 != i2)
+	    return i2 - i1;
+        else
+	    return strcmp((char *) kv1->key, (char *) kv2->key);
+#endif
+    }
+    bool has_value_modifier() const {
+        return with_vm;
+    }
+  private:
+    defsplitter s_;
+};
+
 
 /* Go through the allocated portion of the file and count the words. */
-static void
-wordcount_map(split_t * args)
-{
+void wc::map_function(split_t * args) {
     enum { IN_WORD, NOT_IN_WORD };
     char curr_ltr;
     int state = NOT_IN_WORD;
@@ -122,7 +137,7 @@ wordcount_map(split_t * args)
 	case IN_WORD:
 	    if ((curr_ltr < 'A' || curr_ltr > 'Z') && curr_ltr != '\'') {
 		tmp_key[ilen] = 0;
-		mr_map_emit(tmp_key, (void *) 1, ilen);
+		map_emit(tmp_key, (void *) 1, ilen);
 		state = NOT_IN_WORD;
 	    } else {
 		tmp_key[ilen++] = curr_ltr;
@@ -142,71 +157,11 @@ wordcount_map(split_t * args)
     /* add the last word */
     if (state == IN_WORD) {
 	tmp_key[ilen] = 0;
-	mr_map_emit(tmp_key, (void *) 1, ilen);
+	map_emit(tmp_key, (void *)1, ilen);
     }
 }
 
-/* Add up the partial sums for each word */
-static void
-wordcount_reduce(void *key_in, void **vals_in, size_t vals_len)
-{
-    long sum = 0;
-    long *vals = (long *) vals_in;
-    for (uint32_t i = 0; i < vals_len; i++)
-	sum += vals[i];
-    mr_reduce_emit(key_in, (void *) sum);
-}
-
-/* write back the sums */
-static int
-wordcount_combine(void *key_in, void **vals_in, size_t vals_len)
-{
-    assert(vals_in);
-    long *vals = (long *) vals_in;
-    for (uint32_t i = 1; i < vals_len; i++)
-	vals[0] += vals[i];
-    return 1;
-}
-
-static void *
-wordcount_vm(void *oldv, void *newv, int isnew)
-{
-    if (isnew)
-	return newv;
-    uint64_t v = (uint64_t) oldv;
-    uint64_t nv = (uint64_t) newv;
-    return (void *) (v + nv);
-}
-
-static void *
-keycopy(void *src, size_t s)
-{
-    char *key;
-    assert(key = (char *)malloc(s + 1));
-    memcpy(key, src, s);
-    key[s] = 0;
-    return key;
-}
-
-static int
-out_cmp(const keyval_t * kv1, const keyval_t * kv2)
-{
-    size_t i1 = (size_t) kv1->val;
-    size_t i2 = (size_t) kv2->val;
-
-    int res;
-    if (i1 < i2)
-	res = 1;
-    else if (i1 > i2)
-	res = -1;
-    else
-	res = strcmp((char *) kv1->key, (char *) kv2->key);
-    return res;
-}
-
-static void
-print_top(final_data_kv_t * wc_vals, int ndisp)
-{
+static void print_top(final_data_kv_t * wc_vals, int ndisp) {
     uint64_t occurs = 0;
     for (uint32_t i = 0; i < wc_vals->length; i++) {
 	keyval_t *curr = &((keyval_t *) wc_vals->data)[i];
@@ -225,9 +180,7 @@ print_top(final_data_kv_t * wc_vals, int ndisp)
     }
 }
 
-static void
-output_all(final_data_kv_t * wc_vals)
-{
+static void output_all(final_data_kv_t * wc_vals, FILE *fout) {
     for (uint32_t i = 0; i < wc_vals->length; i++) {
 	keyval_t *curr = &((keyval_t *) wc_vals->data)[i];
 	fprintf(fout, "%18s - %lu\n", (char *) curr->key,
@@ -235,49 +188,7 @@ output_all(final_data_kv_t * wc_vals)
     }
 }
 
-static void
-do_mapreduce(int nprocs, int map_tasks, int reduce_tasks,
-	     void *fdata, size_t len, final_data_kv_t * wc_vals)
-{
-    mr_param_t mr_param;
-    wc_data_t wc_data;
-    /* average word length is 5 */
-    wc_data.fpos = 0;
-    wc_data.flen = len;
-    wc_data.fdata = (char *)fdata;
-    nsplits = map_tasks;
-    pthread_mutex_init(&wc_data.mu, 0);
-
-    memset(&mr_param, 0, sizeof(mr_param_t));
-    memset(wc_vals, 0, sizeof(*wc_vals));
-    mr_param.nr_cpus = nprocs;
-
-    mr_param.app_arg.atype = atype_mapreduce;
-    mr_param.app_arg.mapreduce.results = wc_vals;
-    mr_param.app_arg.mapreduce.reduce_tasks = reduce_tasks;
-    mr_param.app_arg.mapreduce.vm = with_vm ? wordcount_vm : NULL;
-    // value modifier conflicts with reduce_func or combiner
-    if (!mr_param.app_arg.mapreduce.vm) {
-	mr_param.app_arg.mapreduce.reduce_func = wordcount_reduce;
-	mr_param.app_arg.mapreduce.combiner = wordcount_combine;
-    }
-    mr_param.keycopy = keycopy;
-    mr_param.map_func = wordcount_map;
-#ifdef HADOOP
-    mr_param.app_arg.mapreduce.outcmp = NULL;
-#else
-    mr_param.app_arg.mapreduce.outcmp = alphanumeric ? NULL : out_cmp;
-#endif
-    mr_param.part_func = NULL;
-    mr_param.key_cmp = mystrcmp;
-    mr_param.split_func = wordcount_splitter;
-    mr_param.split_arg = &wc_data;
-    assert(mr_run_scheduler(&mr_param) == 0);
-}
-
-static inline void
-wc_usage(char *prog)
-{
+static void usage(char *prog) {
     printf("usage: %s <filename> [options]\n", prog);
     printf("options:\n");
     printf("  -p #procs : # of processors to use\n");
@@ -293,15 +204,13 @@ wc_usage(char *prog)
 int
 main(int argc, TCHAR * argv[])
 {
-    char *fn;
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0;
     int quiet = 0;
     int c;
-
     if (argc < 2)
-	wc_usage(argv[0]);
-
-    fn = argv[1];
+	usage(argv[0]);
+    char *fn = argv[1];
+    FILE *fout = NULL;
 
     while ((c = getopt(argc - 1, argv + 1, "p:s:l:m:r:qao:")) != -1) {
 	switch (c) {
@@ -332,36 +241,26 @@ main(int argc, TCHAR * argv[])
 	    }
 	    break;
 	default:
-	    wc_usage(argv[0]);
+	    usage(argv[0]);
 	    exit(EXIT_FAILURE);
 	    break;
 	}
     }
 
     /* get input file */
-    int fd;
-    struct stat finfo;
-    char *fdata;
-    assert((fd = open(fn, O_RDONLY)) >= 0);
-    assert(fstat(fd, &finfo) == 0);
-    assert((fdata = (char *)mmap(0, finfo.st_size + 1,
-			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,
-			 0)) != MAP_FAILED);
-    final_data_kv_t wc_vals;
-    do_mapreduce(nprocs, map_tasks, reduce_tasks, fdata, finfo.st_size,
-		 &wc_vals);
-    mr_print_stats();
+    wc app(fn, map_tasks);
+    app.set_ncore(nprocs);
+    app.set_reduce_task(reduce_tasks);
+    app.sched_run();
+    app.print_stats();
     /* get the number of results to display */
-    if (!quiet) {
-	print_top(&wc_vals, ndisp);
-    }
+    if (!quiet)
+	print_top(&app.results_, ndisp);
     if (fout) {
-	output_all(&wc_vals);
+	output_all(&app.results_, fout);
 	fclose(fout);
     }
-    free(wc_vals.data);
-    assert(munmap(fdata, finfo.st_size + 1) == 0);
-    assert(close(fd) == 0);
-    mr_finalize();
+    free(app.results_.data);
+    app.join();
     return 0;
 }

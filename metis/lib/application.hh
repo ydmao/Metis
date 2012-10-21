@@ -128,7 +128,7 @@ struct map_reduce : public map_reduce_or_group_base {
     /* @brief: called for each key/value pair to update the value.
        @return: the updated value */
     virtual void *modify_function(void *oldv, void *newv) {
-        assert(0);
+        assert(0 && "Please overload modify_function");
     }
     virtual bool has_value_modifier() const {
         return false;

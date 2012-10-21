@@ -7,10 +7,10 @@
 #include <string.h>
 #include "array.hh"
 
-typedef struct {
+struct split_t {
     void *data;
     size_t length;
-} split_t;
+};
 
 struct keyval_t {
     void *key;

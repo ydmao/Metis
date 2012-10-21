@@ -31,7 +31,8 @@ PROGS := obj/kmeans 			    \
          obj/search_unit              \
          obj/misc
 
-PROGS := obj/wrmem
+PROGS := obj/wrmem \
+         obj/wc
 
 all: $(PROGS)
 
