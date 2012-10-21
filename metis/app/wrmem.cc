@@ -12,41 +12,10 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sched.h>
-#include "application.hh"
 #include "bench.hh"
-#include "defsplitter.hh"
+#include "wr.hh"
 
 #define DEFAULT_NDISP 10
-
-struct wr : public map_group {
-    wr(char *d, size_t size, int nsplit) : s_(d, size, nsplit) {
-    }
-
-    void map_function(split_t *ma) {
-        char k[1024];
-        size_t klen;
-        split_word sw(ma);
-        while (char *index = sw.fill(k, sizeof(k), klen))
-            map_emit(k, index, klen);
-    }
-
-    bool split(split_t *ma, int ncore) {
-        return s_.split(ma, ncore, " \t\n\r\0");
-    }
-
-    int key_compare(const void *k1, const void *k2) {
-        return strcmp((const char *)k1, (const char *)k2);
-    }
-    void *key_copy(void *src, size_t s) {
-        char *key;
-        assert(key = (char *)malloc(s + 1));
-        memcpy(key, src, s);
-        key[s] = 0;
-        return key;
-    }
-  private:
-    defsplitter s_;
-};
 
 static void print_top(final_data_kvs_len_t * wc_vals, int ndisp) {
     uint64_t occurs = 0;
