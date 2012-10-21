@@ -34,7 +34,9 @@ PROGS := obj/kmeans 			    \
 PROGS := obj/wrmem \
          obj/wc \
          obj/wr \
-         obj/hist
+         obj/hist \
+         obj/matrix_mult \
+         obj/matrix_mult2
 
 all: $(PROGS)
 
