@@ -89,7 +89,7 @@ struct btnode_internal : public btnode_base {
     static int xpair_compare(const void *p1, const void *p2) {
         const xpair_type *x1 = (const xpair_type *)p1;
         const xpair_type *x2 = (const xpair_type *)p2;
-        return comparator::keycmp()(x1->k_, x2->k_);
+        return comparator::key_compare(x1->k_, x2->k_);
     }
     int upper_bound_pos(void *key) {
         xpair<void *, btnode_base *> tmp;
@@ -99,7 +99,6 @@ struct btnode_internal : public btnode_base {
 };
 
 struct btree_type {
-    static void set_key_compare(key_cmp_t kcmp);
     typedef keyvals_t element_type;
 
     void init();

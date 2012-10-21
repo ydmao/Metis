@@ -1,17 +1,14 @@
-LIB_SRCS := mr-sched.cc		\
-	    metis_runtime.cc		\
-	    defsplitter.cc		\
-	    presplitter.cc		\
+LIB_SRCS := metis_runtime.cc		\
 	    pthreadpool.cc		\
 	    profile.cc		\
 	    value_helper.cc		\
-	    apphelper.cc		\
 	    ibs.cc			\
 	    platform.cc		\
 	    cpumap.cc		\
             btree.cc    \
             mr-types.cc \
-            comparator.cc
+            comparator.cc \
+            application.cc
 
 LIB_OBJS := $(patsubst %.cc, $(O)/%.o, $(LIB_SRCS))
 LIB_OBJS := $(patsubst %.S, $(O)/%.o, $(LIB_OBJS))

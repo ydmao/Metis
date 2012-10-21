@@ -1,15 +1,13 @@
 #include "value_helper.hh"
 #include "btree.hh"
 #include "comparator.hh"
-#include "apphelper.hh"
+#include "application.hh"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #ifdef JOS_USER
 #include <inc/compiler.h>
 #endif
-
-extern keycopy_t mrkeycopy;
 
 void btree_type::init() {
     nk_ = 0;
@@ -73,7 +71,7 @@ int btree_type::map_insert_sorted(void *key, void *val, size_t keylen, unsigned 
     bool bfound = false;
     int pos = leaf->lower_bound(key, &bfound);
     if (!bfound) {
-        void *ik = app_make_new_key(key, keylen);
+        void *ik = the_app_->key_copy(key, keylen);
         leaf->insert(pos, ik, hash);
         ++ nk_;
     }

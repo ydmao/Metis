@@ -40,8 +40,8 @@ struct xarray {
         return n_;
     }
     /* @brief: resize without resizing the underlying array */
-    void trim(size_t n) {
-        assert(n <= n_);
+    void trim(size_t n, bool hard = false) {
+        assert(hard || n <= n_);
         n_ = n;
     }
     void resize(size_t n) {

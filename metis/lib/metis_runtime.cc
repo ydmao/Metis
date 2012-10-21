@@ -4,12 +4,12 @@
 #include "reduce.hh"
 #include "bench.hh"
 #include "value_helper.hh"
-#include "apphelper.hh"
 #include "reduce_bucket_manager.hh"
 #include "comparator.hh"
 #include "psrs.hh"
 #include "btree.hh"
 #include "map_bucket_manager.hh"
+#include "application.hh"
 
 enum { expected_keys_per_bucket = 10 };
 
@@ -18,7 +18,7 @@ void metis_runtime::create_map_bucket_manager() {
 #ifdef FORCE_APPEND
     int index = index_append;
 #else
-    int index = (the_app.atype == atype_maponly) ? index_append : index_btree;
+    int index = (the_app_->application_type() == atype_maponly) ? index_append : index_btree;
 #endif
     switch (index) {
     case index_append:
@@ -80,7 +80,7 @@ uint64_t metis_runtime::sample_finished(int ntotal) {
 
 void metis_runtime::map_worker_init(int row) {
     if (sample_manager_) {
-	assert(the_app.atype != atype_maponly);
+	assert(the_app_->application_type() != atype_maponly);
 	current_manager_->rehash(row, sample_manager_);
     }
 }
@@ -88,7 +88,6 @@ void metis_runtime::map_worker_init(int row) {
 void metis_runtime::init_map(int rows, int cols, int nsplits) {
     create_map_bucket_manager();
     current_manager_->init(rows, cols);
-    app_reduce_bucket_manager()->init(nsplits);
 }
 
 void metis_runtime::initialize(void) {
@@ -101,7 +100,6 @@ void metis_runtime::initialize(void) {
         sample_manager_ = NULL;
         sampling_ = false;
     }
-    set_util(NULL, NULL);
 }
 
 void metis_runtime::map_emit(int row, void *key, void *val,
@@ -111,14 +109,7 @@ void metis_runtime::map_emit(int row, void *key, void *val,
         e_[row].onepair(newkey);
 }
 
-void metis_runtime::set_util(key_cmp_t kcmp, keycopy_t kcp) {
-    comparator::set_key_compare(kcmp);
-    app_set_util(kcp);
-}
-
 void metis_runtime::reduce_do_task(int row, int col) {
-    assert(the_app.atype != atype_maponly);
-    app_reduce_bucket_manager()->set_current_reduce_task(col);
     current_manager_->do_reduce_task(col);
 }
 
@@ -130,19 +121,12 @@ void metis_runtime::map_worker_finished(int row, int reduce_skipped) {
 }
 
 void metis_runtime::merge(int ncpus, int lcpu, int reduce_skipped) {
-    if (the_app.atype == atype_maponly || !reduce_skipped)
-	app_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
+    if (the_app_->application_type() == atype_maponly || !reduce_skipped)
+	the_app_->get_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
     else {
         current_manager_->merge_output_and_reduce(ncpus, lcpu);
         // merge reduced bucekts
-	app_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
+	the_app_->get_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
     }
 }
 
-void metis_runtime::reduce_emit(void *k, void *v) {
-    reduce_bucket_manager_base *rb = app_reduce_bucket_manager();
-    typedef reduce_bucket_manager<keyval_t> expected_type;
-    expected_type *x = static_cast<expected_type *>(rb);
-    assert(x);
-    x->emit(keyval_t(k, v));
-}

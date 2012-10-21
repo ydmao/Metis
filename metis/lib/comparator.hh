@@ -3,17 +3,19 @@
 
 #include "mr-types.hh"
 
+struct mapreduce_appbase;
+extern mapreduce_appbase *the_app_;
+
 namespace comparator {
 
-key_cmp_t keycmp();
-void set_key_compare(key_cmp_t kcmp);
+int key_compare(const void *k1, const void *k2);
 int final_output_pair_comp(const void *p1, const void *p2);
 
 template <typename T>
 inline int generic_pair_compare(const void *p1, const void *p2) {
     const T *x1 = reinterpret_cast<const T *>(p1);
     const T *x2 = reinterpret_cast<const T *>(p2);
-    return keycmp()(x1->key, x2->key);
+    return key_compare(x1->key, x2->key);
 }
 
 template <typename T>

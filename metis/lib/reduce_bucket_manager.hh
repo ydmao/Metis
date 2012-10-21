@@ -2,7 +2,6 @@
 #define RBKTSMGR_H
 
 #include "mr-types.hh"
-#include "apphelper.hh"
 #include "comparator.hh"
 #include "psrs.hh"
 

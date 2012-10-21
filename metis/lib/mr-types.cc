@@ -3,12 +3,11 @@
 #include "value_helper.hh"
 #include "reduce.hh"
 #include "btree.hh"
-#include "apphelper.hh"
 
-extern keycopy_t mrkeycopy;
+extern mapreduce_appbase *the_app_;
 
 bool keyval_arr_t::map_append(void *key, void *val, size_t keylen, unsigned hash) {
-    void *ik = app_make_new_key(key, keylen);
+    void *ik = the_app_->key_copy(key, keylen);
     keyval_t tmp(ik, val, hash);
     push_back(tmp);
     return true;
@@ -19,7 +18,7 @@ bool keyvals_arr_t::map_insert_sorted(void *key, void *val, size_t keylen, unsig
     int pos = 0;
     bool newkey = insert_new(&tmp, comparator::raw_comp<keyvals_t>::impl, &pos);
     if (newkey)
-        at(pos).key = app_make_new_key(key, keylen);
+        at(pos).key = the_app_->key_copy(key, keylen);
     map_values_insert(&at(pos), val);
     return newkey;
 }

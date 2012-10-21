@@ -31,6 +31,8 @@ PROGS := obj/kmeans 			    \
          obj/search_unit              \
          obj/misc
 
+PROGS := obj/wrmem
+
 all: $(PROGS)
 
 include lib/Makefrag

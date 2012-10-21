@@ -5,6 +5,9 @@
 #include "array.hh"
 #include "reduce.hh"
 #include "test_util.hh"
+#include "application.hh"
+
+extern mapreduce_appbase *the_app_;
 
 struct map_bucket_manager_base {
     virtual void init(int rows, int cols) = 0;
@@ -99,7 +102,7 @@ void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu
     psrs<C> *pi = psrs<C>::instance();
     C *out = initialize_psrs<C>(lcpu, sum_subarray(output_));
     // reduce the output of psrs
-    app_reduce_bucket_manager()->set_current_reduce_task(lcpu);
+    the_app_->get_reduce_bucket_manager()->set_current_reduce_task(lcpu);
     pi->do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
     if (out)
         group_one_sorted(*out, reduce_emit_functor::instance());

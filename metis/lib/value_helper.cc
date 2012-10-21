@@ -6,22 +6,12 @@
 #include <inc/compiler.h>
 #endif
 #include "value_helper.hh"
-#include "apphelper.hh"
+#include "application.hh"
 
-enum { combiner_threshold = 8 };
+extern mapreduce_appbase *the_app_;
 
-void map_values_insert(keyvals_t * kvs, void *val) {
-    if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm) {
-	kvs->set_multiplex_value(the_app.mapreduce.vm(kvs->multiplex_value(), val, 0));
-	return;
-    }
-    kvs->push_back(val);
-    if (the_app.atype == atype_mapreduce && the_app.mapreduce.combiner
-	&& kvs->size() >= combiner_threshold) {
-	size_t newn = the_app.mapreduce.combiner(kvs->key, kvs->array(), kvs->size());
-        assert(newn <= kvs->size());
-        kvs->trim(newn);
-    }
+void map_values_insert(keyvals_t *kvs, void *v) {
+    the_app_->map_values_insert(kvs, v);
 }
 
 void map_values_mv(keyvals_t *dst, keyval_t *src) {
@@ -30,22 +20,11 @@ void map_values_mv(keyvals_t *dst, keyval_t *src) {
 }
 
 void map_values_mv(keyvals_t *dst, keyvals_t *src) {
-    if (the_app.atype == atype_mapreduce && the_app.mapreduce.vm) {
-	assert(src->multiplex());
-	if (dst->size() == 0)
-            dst->set_multiplex_value(src->multiplex_value());
-	else
-	    dst->set_multiplex_value(the_app.mapreduce.vm(dst->multiplex_value(),
-                                                          src->multiplex_value(), 0));
-        src->reset();
-    } else {
-        dst->append(*src);
-        src->reset();
-    }
+    the_app_->map_values_move(dst, src);
 }
 
 void map_values_mv(keyvals_t *dst, keyvals_len_t *src) {
-    assert(the_app.atype == atype_mapgroup);  // must be mapgroup
+    assert(the_app_->application_type() == atype_mapgroup);  // must be mapgroup
     dst->append(src->vals, src->len);
     src->reset();
 }

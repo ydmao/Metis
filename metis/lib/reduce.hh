@@ -3,10 +3,9 @@
 
 #include "mr-types.hh"
 #include "value_helper.hh"
-#include "apphelper.hh"
 #include "reduce_bucket_manager.hh"
-#include "mr-sched.hh"
 #include "bench.hh"
+#include "application.hh"
 #include <assert.h>
 #include <string.h>
 #ifdef JOS_USER
@@ -14,24 +13,11 @@
 #endif
 
 struct reduce_emit_functor {
-    void operator()(keyvals_t &kvs) const {
-        if (the_app.atype == atype_mapreduce) {
-	    if (the_app.mapreduce.vm) {
-		assert(kvs.size() == 1);
-                const keyval_t p(kvs.key, kvs.multiplex_value());
-		reduce_bucket_manager<keyval_t>::instance()->emit(p);
-                kvs.init();
-	    } else {
-		the_app.mapreduce.reduce_func(kvs.key, kvs.array(), kvs.size());
-		// Reuse the values
-		kvs.trim(0);
-	    }
-	} else { // mapgroup
-            const keyvals_len_t p(kvs.key, kvs.array(), kvs.size());
-	    reduce_bucket_manager<keyvals_len_t>::instance()->emit(p);
-	    // kvs.vals is owned by callee
-            kvs.reset();
-	}
+    void operator()(keyvals_t &p) const {
+        if (the_app_->application_type() == atype_mapreduce)
+            static_cast<map_reduce *>(the_app_)->internal_reduce_emit(p);
+	else
+            static_cast<map_group *>(the_app_)->internal_reduce_emit(p);
     }
     static reduce_emit_functor &instance() {
         static reduce_emit_functor in;
@@ -59,7 +45,7 @@ inline void group_one_sorted(C &a, F &f) {
 	kvs.key = a[i].key;
         map_values_mv(&kvs, &a[i]);
         ++i;
-        for (; i < n && !comparator::keycmp()(kvs.key, a[i].key); ++i)
+        for (; i < n && !comparator::key_compare(kvs.key, a[i].key); ++i)
 	    map_values_mv(&kvs, &a[i]);
         f(kvs);
     }
@@ -104,7 +90,7 @@ inline void group_sorted(C **nodes, int n, F &f) {
 		continue;
 	    int cmp = 0;
 	    if (min_idx >= 0)
-		cmp = comparator::keycmp()(it[min_idx]->key, it[i]->key);
+		cmp = comparator::key_compare(it[min_idx]->key, it[i]->key);
 	    if (min_idx < 0 || cmp > 0) {
 		++ m;
 		marks[i] = m;
@@ -123,7 +109,7 @@ inline void group_sorted(C **nodes, int n, F &f) {
 		map_values_mv(&dst, &(*it[i]));
                 ++it[i];
 	    } while (it[i] != nodes[i]->end() &&
-                     comparator::keycmp()(dst.key, it[i]->key) == 0);
+                     comparator::key_compare(dst.key, it[i]->key) == 0);
 	}
         f(dst);
     }

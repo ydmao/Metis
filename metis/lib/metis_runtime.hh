@@ -7,8 +7,6 @@
 struct map_bucket_manager_base;
 
 struct metis_runtime {
-    void set_util(key_cmp_t fn, keycopy_t keycopy);
-
     /* Initialize the data structure for sampling, which involves
        the Map phase only. */
     void sample_init(int rows, int cols);
@@ -26,8 +24,6 @@ struct metis_runtime {
     void map_worker_finished(int row, int reduce_skipped);
     /* reduce phase */
     void reduce_do_task(int row, int col);
-    void reduce_emit(void *key, void *val);
-
     void merge(int ncpus, int lcpu, int reduce_skipped);
     static metis_runtime &instance() {
         static metis_runtime instance_;
