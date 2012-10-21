@@ -33,7 +33,8 @@ PROGS := obj/kmeans 			    \
 
 PROGS := obj/wrmem \
          obj/wc \
-         obj/wr
+         obj/wr \
+         obj/hist
 
 all: $(PROGS)
 

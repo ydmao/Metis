@@ -37,7 +37,8 @@
 #include <time.h>
 #include <sys/time.h>
 
-#include "mr-sched.hh"
+#include "application.hh"
+#include "defsplitter.hh"
 #include "bench.hh"
 
 #define IMG_DATA_OFFSET_POS 10
@@ -49,9 +50,7 @@ short green_keys[256];
 short blue_keys[256];
 
 /* test_endianess */
-void
-test_endianess()
-{
+static void test_endianess() {
     unsigned int num = 0x12345678;
     char *low = (char *) (&(num));
     if (*low == 0x78) {
@@ -67,10 +66,8 @@ test_endianess()
 }
 
 /* swap_bytes */
-void
-swap_bytes(char *bytes, int nbytes)
-{
-    for (int i = 0; i < nbytes / 2; i++) {
+static void swap_bytes(char *bytes, int nbytes) {
+    for (int i = 0; i < nbytes / 2; ++i) {
 	dprintf("Swapping %d and %d\n", bytes[i], bytes[nbytes - 1 - i]);
 	char tmp = bytes[i];
 	bytes[i] = bytes[nbytes - 1 - i];
@@ -78,31 +75,30 @@ swap_bytes(char *bytes, int nbytes)
     }
 }
 
-/* Comparison function */
-int
-myshortcmp(const void *s1, const void *s2)
-{
-    prof_enterapp();
-    int res;
-    short val1 = *((short *) s1);
-    short val2 = *((short *) s2);
-    if (val1 < val2) {
-	res = -1;
-    } else if (val1 > val2) {
-	res = 1;
-    } else {
-	res = 0;
+struct hist : public map_reduce {
+    hist(char *d, size_t length, int nsplit) : s_(d, length, nsplit) {}
+
+    bool split(split_t *ma, int ncore) {
+        return s_.split(ma, ncore, NULL, 3);
     }
-    prof_leaveapp();
-    return res;
-}
+    /* Comparison function */
+    int key_compare(const void *s1, const void *s2) {
+        prof_enterapp();
+        int r = (*(short *)s1) - (*(short *)s2);
+        prof_leaveapp();
+        return r;
+    }
+    void map_function(split_t *ma);
+    void reduce_function(void *key_in, void **vals_in, size_t vals_len);
+    int combine_function(void *key_in, void **vals_in, size_t vals_len);
+  private:
+    defsplitter s_;
+};
 
 /* Map function that computes the histogram values for the portion
  * of the image assigned to the map task 
  */
-void
-hist_map(split_t * args)
-{
+void hist::map_function(split_t * args) {
     assert(args);
     short *key;
     unsigned char *val;
@@ -129,24 +125,21 @@ hist_map(split_t * args)
 	if (blue[i] > 0) {
 	    key = &(blue_keys[i]);
 	    prof_leaveapp();
-	    mr_map_emit((void *) key, (void *) (size_t) blue[i],
-			sizeof(short));
+	    map_emit((void *)key, int2ptr(blue[i]), sizeof(short));
 	    prof_enterapp();
 	}
 
 	if (green[i] > 0) {
 	    key = &(green_keys[i]);
 	    prof_leaveapp();
-	    mr_map_emit((void *) key, (void *) (size_t) green[i],
-			sizeof(short));
+	    map_emit((void *)key, int2ptr(green[i]), sizeof(short));
 	    prof_enterapp();
 	}
 
 	if (red[i] > 0) {
 	    key = &(red_keys[i]);
 	    prof_leaveapp();
-	    mr_map_emit((void *) key, (void *) (size_t) red[i],
-			sizeof(short));
+	    map_emit((void *) key, int2ptr(red[i]), sizeof(short));
 	    prof_enterapp();
 	}
     }
@@ -154,29 +147,22 @@ hist_map(split_t * args)
 }
 
 /* Reduce function that adds up the values for each location in the array */
-void
-hist_reduce(void *key_in, void **vals_in, size_t vals_len)
-{
+void hist::reduce_function(void *key_in, void **vals_in, size_t vals_len) {
     short *key = (short *) key_in;
     long *vals = (long *) vals_in;
     long sum = 0;
-
-    assert(key);
-    assert(vals);
+    assert(key && vals);
     prof_enterapp();
     dprintf("For key %hd, there are %ld vals\n", *key, vals_len);
 
-    for (size_t i = 0; i < vals_len; i++) {
+    for (size_t i = 0; i < vals_len; i++)
 	sum += vals[i];
-    }
     prof_leaveapp();
-    mr_reduce_emit(key, (void *) sum);
+    reduce_emit(key, (void *) sum);
 }
 
 /* Merge the intermediate date, return the length of data after merge */
-int
-hist_local_reduce(void *key_in, void **vals_in, size_t vals_len)
-{
+int hist::combine_function(void *key_in, void **vals_in, size_t vals_len) {
     short *key = (short *) key_in;
     size_t *vals = (size_t *) vals_in;
     unsigned long sum = 0;
@@ -190,9 +176,7 @@ hist_local_reduce(void *key_in, void **vals_in, size_t vals_len)
     return 1;
 }
 
-static inline void
-hist_usage(char *prog)
-{
+static void usage(char *prog) {
     printf("usage: %s <filename> [options]\n", prog);
     printf("options:\n");
     printf("  -p #procs : # of processors to use\n");
@@ -203,18 +187,10 @@ hist_usage(char *prog)
     exit(EXIT_FAILURE);
 }
 
-int
-main(int argc, char *argv[])
-{
-    final_data_kv_t hist_vals;
-    int i, fd;
-    char *fdata;
-    struct stat finfo;
-    char *fname;
+int main(int argc, char *argv[]) {
     int nprocs = 0, map_tasks = 0, reduce_tasks = 0, quiet = 0;
     if (argc < 2)
-	hist_usage(argv[0]);
-    fname = argv[1];
+	usage(argv[0]);
     int c;
     while ((c = getopt(argc - 1, argv + 1, "p:m:r:q")) != -1) {
 	switch (c) {
@@ -231,44 +207,31 @@ main(int argc, char *argv[])
 	    quiet = 1;
 	    break;
 	default:
-	    hist_usage(argv[0]);
+	    usage(argv[0]);
 	    exit(EXIT_FAILURE);
 	    break;
 	}
     }
-    cond_printf(!quiet, "Histogram: Running... file %s\n", fname);
-    // Read in the file
-    assert((fd = open(fname, O_RDONLY)) >= 0);
-    // Get the file info (for file length)
-    assert(fstat(fd, &finfo) == 0);
-    // Memory map the file
-    assert((fdata = (char *)mmap(0, finfo.st_size + 1,
-			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,
-			 0)) != MAP_FAILED);
-
-    if ((fdata[0] != 'B') || (fdata[1] != 'M')) {
+    cond_printf(!quiet, "Histogram: Running... file %s\n", argv[1]);
+    mmap_file mf(argv[1]);
+    if ((mf[0] != 'B') || (mf[1] != 'M')) {
 	printf("File is not a valid bitmap file. Exiting\n");
 	exit(1);
     }
 
     test_endianess();		// will set the variable "swap"
-
-    unsigned short *bitsperpixel =
-	(unsigned short *) (&(fdata[BITS_PER_PIXEL_POS]));
-    if (swap) {
+    unsigned short *bitsperpixel = (unsigned short *)(&mf[BITS_PER_PIXEL_POS]);
+    if (swap)
 	swap_bytes((char *) (bitsperpixel), sizeof(*bitsperpixel));
-    }
     if (*bitsperpixel != 24) {	// ensure its 3 bytes per pixel
 	printf("Error: Invalid bitmap format - ");
 	printf("This application only accepts 24-bit pictures. Exiting\n");
 	exit(1);
     }
-    unsigned short *data_pos =
-	(unsigned short *) (&(fdata[IMG_DATA_OFFSET_POS]));
+    uint16_t *data_pos = (uint16_t *)(&mf[IMG_DATA_OFFSET_POS]);
     if (swap)
-	swap_bytes((char *) (data_pos), sizeof(*data_pos));
-
-    size_t imgdata_bytes = (size_t) finfo.st_size - (size_t) (*(data_pos));
+	swap_bytes((char *)data_pos, sizeof(*data_pos));
+    size_t imgdata_bytes = mf.size_ - *data_pos;
     imgdata_bytes = round_down(imgdata_bytes, 3);
     cond_printf(!quiet, "File stat: %ld bytes, %ld pixels\n", imgdata_bytes,
 	        imgdata_bytes / 3);
@@ -276,47 +239,31 @@ main(int argc, char *argv[])
 //#define PREFETCH_DATA
 #ifdef PREFETCH_DATA
     size_t sum = 0;
-    for (i = 0; i < imgdata_bytes; i += 4096) {
-	sum += fdata[i];
-    }
+    for (int i = 0; i < imgdata_bytes; i += 4096)
+	sum += mf[i];
 #endif
 
     // We use this global variable arrays to store the "key" for each histogram
     // bucket. This is to prevent memory leaks in the mapreduce scheduler
-    for (i = 0; i < 256; i++) {
+    for (int i = 0; i < 256; ++i) {
 	blue_keys[i] = 1000 + i;
 	green_keys[i] = 2000 + i;
 	red_keys[i] = 3000 + i;
     }
 
-    // Setup scheduler args
-    mr_param_t mr_param;
-    memset(&mr_param, 0, sizeof(mr_param_t));
-    struct defsplitter_state ps;
-    defsplitter_init(&ps, &fdata[*data_pos], imgdata_bytes, map_tasks, 3);
-    mr_param.map_func = hist_map;
-    mr_param.app_arg.atype = atype_mapreduce;
-    mr_param.app_arg.mapreduce.reduce_func = hist_reduce;
-    mr_param.app_arg.mapreduce.combiner = hist_local_reduce;
-    mr_param.app_arg.mapreduce.reduce_tasks = reduce_tasks;
-    memset(&hist_vals, 0, sizeof(hist_vals));
-    mr_param.app_arg.mapreduce.results = &hist_vals;
-
-    mr_param.split_func = defsplitter;
-    mr_param.split_arg = &ps;
-    mr_param.key_cmp = myshortcmp;
-    mr_param.part_func = NULL;	// use default
-    mr_param.nr_cpus = nprocs;
-    assert(mr_run_scheduler(&mr_param) == 0);
-    mr_print_stats();
+    hist app(&mf[*data_pos], imgdata_bytes, map_tasks);
+    app.set_reduce_task(reduce_tasks);
+    app.set_ncore(nprocs);
+    app.sched_run();
+    app.print_stats();
 
     short pix_val;
     long freq;
     short prev = 0;
     cond_printf(!quiet, "\n\nBlue\n");
     cond_printf(!quiet, "----------\n\n");
-    for (i = 0; i < int(hist_vals.length); i++) {
-	keyval_t *curr = &((keyval_t *) hist_vals.data)[i];
+    for (size_t i = 0; i < app.results_.length; ++i) {
+	keyval_t *curr = &app.results_.data[i];
 	pix_val = *((short *) curr->key);
 	freq = (long) curr->val;
 
@@ -332,9 +279,6 @@ main(int argc, char *argv[])
 	cond_printf(!quiet, "%hd - %ld\n", pix_val, freq);
 	prev = pix_val;
     }
-    free(hist_vals.data);
-
-    assert(munmap(fdata, finfo.st_size + 1) == 0);
-    assert(close(fd) == 0);
+    free(app.results_.data);
     return 0;
 }

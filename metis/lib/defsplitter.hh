@@ -5,18 +5,8 @@
 #include <algorithm>
 #include <ctype.h>
 
-struct defsplitter {
-    defsplitter(char *d, size_t size, size_t nsplit)
-        : d_(d), size_(size), nsplit_(nsplit), pos_(0), fd_(-1) {
-        pthread_mutex_init(&mu_, 0);
-    }
-    virtual ~defsplitter() {
-        if (fd_ >= 0) {
-            assert(munmap(d_, size_ + 1) == 0);
-            assert(close(fd_) == 0);
-        }
-    }
-    defsplitter(const char *f, size_t nsplit) : nsplit_(nsplit), pos_(0) {
+struct mmap_file {
+    mmap_file(const char *f) {
         assert((fd_ = open(f, O_RDONLY)) >= 0);
         struct stat fst;
         assert(fstat(fd_, &fst) == 0);
@@ -24,18 +14,43 @@ struct defsplitter {
         d_ = (char *)mmap(0, size_ + 1, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd_, 0);
         assert(d_);
     }
+    mmap_file() : fd_(-1) {}
+    virtual ~mmap_file() {
+        if (fd_ >= 0) {
+            assert(munmap(d_, size_ + 1) == 0);
+            assert(close(fd_) == 0);
+        }
+    }
+    char &operator[](int i) {
+        return d_[i];
+    }
+    size_t size_;
+    char *d_;
+  private:
+    int fd_;
+};
 
-    bool split(split_t *ma, int ncore, const char *stop);
+struct defsplitter {
+    defsplitter(char *d, size_t size, size_t nsplit)
+        : d_(d), size_(size), nsplit_(nsplit), pos_(0) {
+        pthread_mutex_init(&mu_, 0);
+    }
+    defsplitter(const char *f, size_t nsplit) : nsplit_(nsplit), pos_(0), mf_(f) {
+        size_ = mf_.size_;
+        d_ = mf_.d_;
+    }
+
+    bool split(split_t *ma, int ncore, const char *stop, size_t align = 0);
   private:
     char *d_;
     size_t size_;
     size_t nsplit_;
     size_t pos_;
-    int fd_;
+    mmap_file mf_;
     pthread_mutex_t mu_;
 };
 
-bool defsplitter::split(split_t *ma, int ncores, const char *stop) {
+bool defsplitter::split(split_t *ma, int ncores, const char *stop, size_t align) {
     pthread_mutex_lock(&mu_);
     if (pos_ >= size_) {
 	pthread_mutex_unlock(&mu_);
@@ -46,8 +61,13 @@ bool defsplitter::split(split_t *ma, int ncores, const char *stop) {
 
     ma->data = (void *) &d_[pos_];
     ma->length = std::min(size_ - pos_, size_ / nsplit_);
+    if (align) {
+        ma->length = round_down(ma->length, align);
+        assert(ma->length);
+    }
     pos_ += ma->length;
     for (; pos_ < size_ && stop && !strchr(stop, d_[pos_]); ++pos_, ++ma->length);
+        
     pthread_mutex_unlock(&mu_);
     return true;
 }
