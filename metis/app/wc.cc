@@ -52,8 +52,7 @@
  * enables wordcount to print all pairs for fair comparison. */
 //#define HADOOP
 
-enum { with_vm = 1 };
-enum { max_key_len = 256 };
+enum { with_value_modifier = 1 };
 
 static int alphanumeric;
 
@@ -65,7 +64,13 @@ struct wc : public map_reduce {
     int key_compare(const void *s1, const void *s2) {
         return strcmp((const char *) s1, (const char *) s2);
     }
-    void map_function(split_t *ma);
+    void map_function(split_t *ma) {
+        char k[1024];
+        size_t klen;
+        split_word sw(ma);
+        while (sw.fill(k, sizeof(k), klen))
+            map_emit(k, (void *)1, klen);
+    }
     /* Add up the partial sums for each word */
     void reduce_function(void *key_in, void **vals_in, size_t vals_len) {
         long sum = 0;
@@ -114,52 +119,11 @@ struct wc : public map_reduce {
 #endif
     }
     bool has_value_modifier() const {
-        return with_vm;
+        return with_value_modifier;
     }
   private:
     defsplitter s_;
 };
-
-
-/* Go through the allocated portion of the file and count the words. */
-void wc::map_function(split_t * args) {
-    enum { IN_WORD, NOT_IN_WORD };
-    char curr_ltr;
-    int state = NOT_IN_WORD;
-    assert(args);
-    char *data = (char *) args->data;
-    assert(data);
-    char tmp_key[max_key_len];
-    int ilen = 0;
-    for (uint32_t i = 0; i < args->length; i++) {
-	curr_ltr = toupper(data[i]);
-	switch (state) {
-	case IN_WORD:
-	    if ((curr_ltr < 'A' || curr_ltr > 'Z') && curr_ltr != '\'') {
-		tmp_key[ilen] = 0;
-		map_emit(tmp_key, (void *) 1, ilen);
-		state = NOT_IN_WORD;
-	    } else {
-		tmp_key[ilen++] = curr_ltr;
-		assert(ilen < max_key_len);
-	    }
-	    break;
-	default:
-	    if (curr_ltr >= 'A' && curr_ltr <= 'Z') {
-		tmp_key[0] = curr_ltr;
-		ilen = 1;
-		state = IN_WORD;
-	    }
-	    break;
-	}
-    }
-
-    /* add the last word */
-    if (state == IN_WORD) {
-	tmp_key[ilen] = 0;
-	map_emit(tmp_key, (void *)1, ilen);
-    }
-}
 
 static void print_top(final_data_kv_t * wc_vals, int ndisp) {
     uint64_t occurs = 0;

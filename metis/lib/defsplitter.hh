@@ -3,6 +3,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <algorithm>
+#include <ctype.h>
 
 struct defsplitter {
     defsplitter(char *d, size_t size, size_t nsplit)
@@ -50,5 +51,32 @@ bool defsplitter::split(split_t *ma, int ncores, const char *stop) {
     pthread_mutex_unlock(&mu_);
     return true;
 }
+
+struct split_word {
+    split_word(split_t *ma) : ma_(ma), pos_(0) {
+        assert(ma_ && ma_->data);
+    }
+    char *fill(char *k, size_t maxlen, size_t &klen) {
+        char *d = (char *)ma_->data;
+        klen = 0;
+        for (; pos_ < ma_->length && !letter(d[pos_]); ++pos_)
+            ;
+        if (pos_ == ma_->length)
+            return NULL;
+        char *index = &d[pos_];
+        for (; pos_ < ma_->length && letter(d[pos_]); ++pos_) {
+            k[klen++] = toupper(d[pos_]);
+	    assert(klen < maxlen);
+        }
+	k[klen] = 0;
+        return index;
+    }
+  private:
+    bool letter(char c) {
+        return toupper(c) >= 'A' && toupper(c) <= 'Z';
+    }
+    split_t *ma_;
+    size_t pos_;
+};
 
 #endif

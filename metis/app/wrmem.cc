@@ -22,7 +22,13 @@ struct wr : public map_group {
     wr(char *d, size_t size, int nsplit) : s_(d, size, nsplit) {
     }
 
-    void map_function(split_t *);
+    void map_function(split_t *ma) {
+        char k[1024];
+        size_t klen;
+        split_word sw(ma);
+        while (char *index = sw.fill(k, sizeof(k), klen))
+            map_emit(k, index, klen);
+    }
 
     bool split(split_t *ma, int ncore) {
         return s_.split(ma, ncore, " \t\n\r\0");
@@ -41,39 +47,6 @@ struct wr : public map_group {
   private:
     defsplitter s_;
 };
-
-/* keycopy version of the map function. Go through the splits and reverse
- * index each word */
-void wr::map_function(split_t *a) {
-    assert(a && a->data);
-    char *data = (char *)a->data;
-    bool inword = false;
-    char k[1024];
-    int ilen = 0;
-    char *index = NULL;
-    for (uint32_t i = 0; i < a->length; ++i) {
-	char letter = toupper(data[i]);
-        if (inword) {
-	    if ((letter < 'A' || letter > 'Z') && letter != '\'') {
-		k[ilen] = 0;
-		map_emit(k, index, ilen);
-                inword = false;
-	    } else {
-		k[ilen++] = letter;
-		assert(size_t(ilen) < sizeof(k));
-	    }
-        } else if (letter >= 'A' && letter <= 'Z') {
-            index = &data[i];
-	    k[0] = letter;
-	    ilen = 1;
-            inword = true;
-	}
-    }
-    if (inword) {
-	k[ilen] = 0;
-	map_emit(k, index, ilen);
-    }
-}
 
 static void print_top(final_data_kvs_len_t * wc_vals, int ndisp) {
     uint64_t occurs = 0;
