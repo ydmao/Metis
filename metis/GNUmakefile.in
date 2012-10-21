@@ -36,7 +36,8 @@ PROGS := obj/wrmem \
          obj/wr \
          obj/hist \
          obj/matrix_mult \
-         obj/matrix_mult2
+         obj/matrix_mult2 \
+         obj/linear_regression
 
 all: $(PROGS)
 

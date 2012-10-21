@@ -44,6 +44,8 @@
 #define IMG_DATA_OFFSET_POS 10
 #define BITS_PER_PIXEL_POS 28
 
+enum { pre_fault = 0 };
+
 int swap;			// to indicate if we need to swap byte order of header information
 short red_keys[256];
 short green_keys[256];
@@ -76,7 +78,10 @@ static void swap_bytes(char *bytes, int nbytes) {
 }
 
 struct hist : public map_reduce {
-    hist(char *d, size_t length, int nsplit) : s_(d, length, nsplit) {}
+    hist(char *d, size_t length, int nsplit) : s_(d, length, nsplit) {
+        if (pre_fault)
+            printf("ignore this sum %d\n", s_.prefault());
+    }
 
     bool split(split_t *ma, int ncore) {
         return s_.split(ma, ncore, NULL, 3);
@@ -235,13 +240,6 @@ int main(int argc, char *argv[]) {
     imgdata_bytes = round_down(imgdata_bytes, 3);
     cond_printf(!quiet, "File stat: %ld bytes, %ld pixels\n", imgdata_bytes,
 	        imgdata_bytes / 3);
-
-//#define PREFETCH_DATA
-#ifdef PREFETCH_DATA
-    size_t sum = 0;
-    for (int i = 0; i < imgdata_bytes; i += 4096)
-	sum += mf[i];
-#endif
 
     // We use this global variable arrays to store the "key" for each histogram
     // bucket. This is to prevent memory leaks in the mapreduce scheduler

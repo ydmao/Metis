@@ -37,13 +37,16 @@
 #include <sched.h>
 #include <time.h>
 #include <sys/time.h>
-#include "mr-sched.hh"
+#include "application.hh"
+#include "defsplitter.hh"
 #include "bench.hh"
 
-typedef struct {
+enum { pre_fault = 0 };
+
+struct POINT_T {
     char x;
     char y;
-} POINT_T;
+};
 
 enum {
     KEY_SX = 0,
@@ -53,43 +56,31 @@ enum {
     KEY_SXY,
 };
 
-static int
-intkeycmp(const void *v1, const void *v2)
-{
-    prof_enterkcmp();
-    int res;
-    long int i1 = (long int) v1;
-    long int i2 = (long int) v2;
+struct lr : public map_reduce {
+    lr(const char *f, int nsplit) : s_(f, nsplit) {
+        s_.resize(round_down(s_.size(), sizeof(POINT_T)));
+        if (pre_fault)
+            printf("ignore this %d\n", s_.prefault());
+    }
+    int key_compare(const void *v1, const void *v2) {
+        prof_enterkcmp();
+        long int i1 = (long int) v1;
+        long int i2 = (long int) v2;
+        int r = i2 - i1;
+       prof_leavekcmp();
+       return r;
+    }
+    bool split(split_t *ma, int ncores) {
+        return s_.split(ma, ncores, "", sizeof(POINT_T));
+    }
+    void map_function(split_t *);
+    void reduce_function(void *k, void **v, size_t length);
+    int combine_function(void *k, void **v, size_t length);
+    defsplitter s_;
+};
 
-    if (i1 < i2)
-	res = 1;
-    else if (i1 > i2)
-	res = -1;
-    else
-	res = 0;
-    prof_leavekcmp();
-    return res;
-}
-
-static unsigned int
-linear_regression_partition(void *key, int key_size)
-{
-    prof_enterapp();
-    size_t hash = 5381;
-    char *str = (char *) &key;
-
-    for (int i = 0; i < key_size; i++)
-	hash = ((hash << 5) + hash) + ((unsigned) str[i]);
-    prof_leaveapp();
-    return hash % ((unsigned) (-1));
-}
-
-/** sort_map()
- *  Sorts based on the val output of wordcount
- */
-static void
-linear_regression_map(split_t * args)
-{
+/** Sorts based on the val output of wordcount */
+void lr::map_function(split_t *args) {
     assert(args);
     POINT_T *data = (POINT_T *) args->data;
     assert(data);
@@ -106,19 +97,14 @@ linear_regression_map(split_t * args)
 	SXY += data[i].x * data[i].y;
     }
     prof_leaveapp();
-    mr_map_emit((void *) KEY_SX, (void *) SX, sizeof(void *));
-    mr_map_emit((void *) KEY_SXX, (void *) SXX, sizeof(void *));
-    mr_map_emit((void *) KEY_SY, (void *) SY, sizeof(void *));
-    mr_map_emit((void *) KEY_SYY, (void *) SYY, sizeof(void *));
-    mr_map_emit((void *) KEY_SXY, (void *) SXY, sizeof(void *));
+    map_emit((void *) KEY_SX, (void *) SX, sizeof(void *));
+    map_emit((void *) KEY_SXX, (void *) SXX, sizeof(void *));
+    map_emit((void *) KEY_SY, (void *) SY, sizeof(void *));
+    map_emit((void *) KEY_SYY, (void *) SYY, sizeof(void *));
+    map_emit((void *) KEY_SXY, (void *) SXY, sizeof(void *));
 }
 
-/** linear_regression_reduce()
- *
- */
-static void
-linear_regression_reduce(void *key_in, void **vals_in, size_t vals_len)
-{
+void lr::reduce_function(void *key_in, void **vals_in, size_t vals_len) {
     prof_enterapp();
     long long *vals = (long long *) vals_in;
     long long sum = 0;
@@ -126,26 +112,22 @@ linear_regression_reduce(void *key_in, void **vals_in, size_t vals_len)
     for (size_t i = 0; i < vals_len; i++)
 	sum += (uint64_t) vals[i];
     prof_enterapp();
-    mr_reduce_emit(key_in, (void *) sum);
+    reduce_emit(key_in, (void *) sum);
 }
 
-static int
-linear_regression_combine(void *key_in, void **vals_in, size_t vals_len)
-{
+int lr::combine_function(void *, void **vals_in, size_t vals_len) {
     prof_enterapp();
     long long *vals = (long long *) vals_in;
     long long sum = 0;
     assert(vals);
-    for (size_t i = 0; i < vals_len; i++)
+    for (size_t i = 0; i < vals_len; ++i)
 	sum += vals[i];
     vals[0] = sum;
     prof_leaveapp();
     return 1;
 }
 
-static inline void
-lr_usage(char *prog)
-{
+static void usage(char *prog) {
     printf("usage: %s <filename> [options]\n", prog);
     printf("options:\n");
     printf("  -p #procs : # of processors to use\n");
@@ -156,24 +138,11 @@ lr_usage(char *prog)
     printf("  -d : debug output\n");
 }
 
-int
-main(int argc, char *argv[])
-{
-    final_data_kv_t final_vals;
-    int fd;
-    struct defsplitter_state ps;
-    char *fdata;
-    char *fname;
-    struct stat finfo;
-    int i;
+int main(int argc, char *argv[]) {
     int nprocs = 0, map_tasks = 0, quiet = 0;
     int c;
-
-    // Make sure a filename is specified
-
-    fname = argv[1];
     if (argc < 2) {
-	lr_usage(argv[0]);
+	usage(argv[0]);
 	exit(EXIT_FAILURE);
     }
     while ((c = getopt(argc - 1, argv + 1, "p:m:q")) != -1) {
@@ -188,56 +157,24 @@ main(int argc, char *argv[])
 	    quiet = 1;
 	    break;
 	default:
-	    lr_usage(argv[0]);
+	    usage(argv[0]);
 	    exit(EXIT_FAILURE);
 	    break;
 	}
     }
 
-    // Read in the file
-    assert((fd = open(fname, O_RDONLY)) >= 0);
-    // Get the file info (for file length)
-    assert(fstat(fd, &finfo) == 0);
-    // Memory map the file
-    assert((fdata = (char *)mmap(0, finfo.st_size + 1,
-			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,
-			 0)) != MAP_FAILED);
-    // Setup scheduler args
-    mr_param_t mr_param;
-    memset(&mr_param, 0, sizeof(mr_param_t));
-    mr_param.nr_cpus = nprocs;
-    mr_param.map_func = linear_regression_map;
-    mr_param.app_arg.atype = atype_mapreduce;
-    mr_param.app_arg.mapreduce.reduce_func = linear_regression_reduce;
-    mr_param.app_arg.mapreduce.combiner = linear_regression_combine;
-    memset(&final_vals, 0, sizeof(final_vals));
-    mr_param.app_arg.mapreduce.results = &final_vals;
-    defsplitter_init(&ps, fdata, finfo.st_size -
-		     (finfo.st_size % sizeof(POINT_T)), map_tasks,
-		     sizeof(POINT_T));
-
-    mr_param.split_func = defsplitter;	// Array splitter;
-    mr_param.split_arg = &ps;	// Array to regress
-    mr_param.part_func = linear_regression_partition;
-    mr_param.key_cmp = intkeycmp;
-//#define PREFETCH
-#ifdef PREFETCH
-    int sum = 0;
-    for (int i = 0; i < finfo.st_size; i += 4096) {
-	sum += fdata[i];
-    }
-    printf("ignore this %d\n", sum);
-#endif
+    lr app(argv[1], map_tasks);
+    app.set_ncore(nprocs);
     cond_printf(!quiet, "Linear regression: running...\n");
-    assert(mr_run_scheduler(&mr_param) == 0);
-    mr_print_stats();
+    app.sched_run();
+    app.print_stats();
 
     long long n;
     double a, b, xbar, ybar, r2;
     long long SX_ll = 0, SY_ll = 0, SXX_ll = 0, SYY_ll = 0, SXY_ll = 0;
     // ADD UP RESULTS
-    for (i = 0; i < int(final_vals.length); ++i) {
-	keyval_t *curr = &final_vals.data[i];
+    for (int i = 0; i < int(app.results_.length); ++i) {
+	keyval_t *curr = &app.results_.data[i];
 	switch ((long int) curr->key) {
 	case KEY_SX:
 	    SX_ll = (long long) curr->val;
@@ -267,7 +204,7 @@ main(int argc, char *argv[])
     double SYY = (double) SYY_ll;
     double SXY = (double) SXY_ll;
 
-    n = (long long) finfo.st_size / sizeof(POINT_T);
+    n = (long long) app.s_.size() / sizeof(POINT_T);
     b = (double) (n * SXY - SX * SY) / (n * SXX - SX * SX);
     a = (SY_ll - b * SX_ll) / n;
     xbar = (double) SX_ll / n;
@@ -291,9 +228,7 @@ main(int argc, char *argv[])
 	printf("\tSXY  = %lld\n", SXY_ll);
     }
 
-    free(final_vals.data);
-    assert(munmap(fdata, finfo.st_size + 1) == 0);
-    assert(close(fd) == 0);
-    mr_finalize();
+    free(app.results_.data);
+    app.join();
     return 0;
 }

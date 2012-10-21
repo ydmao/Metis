@@ -39,8 +39,21 @@ struct defsplitter {
         size_ = mf_.size_;
         d_ = mf_.d_;
     }
-
+    int prefault() {
+        int sum = 0;
+        for (size_t i = 0; i < size_; i += 4096)
+            sum += d_[i];
+        return sum;
+    }
     bool split(split_t *ma, int ncore, const char *stop, size_t align = 0);
+    void resize(size_t sz) {
+        assert(sz <= size_);
+        size_ = sz;
+    }
+    size_t size() const {
+        return size_;
+    }
+
   private:
     char *d_;
     size_t size_;
