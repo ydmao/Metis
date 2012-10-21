@@ -2,42 +2,38 @@
 #define DEFSPLITTER_HH
 #include <string.h>
 #include <pthread.h>
+#include <algorithm>
 
 struct defsplitter {
-    defsplitter(char *d, size_t size, size_t nsplit, size_t align = 1)
-        : d_(d), size_(size), nsplit_(nsplit), align_(align) {
+    defsplitter(char *d, size_t size, size_t nsplit)
+        : d_(d), size_(size), nsplit_(nsplit), pos_(0) {
         pthread_mutex_init(&mu_, 0);
     }
 
-    void split(split_t *ma, int ncore);
+    bool split(split_t *ma, int ncore, const char *stop);
   private:
-    size_t align_;
     char *d_;
     size_t size_;
     size_t nsplit_;
     size_t pos_;
-    pthread_mutex_lock mu_;
+    pthread_mutex_t mu_;
 };
 
-int defsplitter::split(split_t *ma, int ncores) {
+bool defsplitter::split(split_t *ma, int ncores, const char *stop) {
     pthread_mutex_lock(&mu_);
     if (pos_ >= size_) {
-	pthread_mutex_unlock(&ds->mu);
-	return 0;
+	pthread_mutex_unlock(&mu_);
+	return false;
     }
     if (nsplit_ == 0)
 	nsplit_ = ncores * def_nsplits_per_core;
 
-    size_t split_size = size_ / nsplit_;
-    split_size = round_down(split_size, align_);
-    ma->data = (void *) &d_[split_pos];
-    if (pos_ + split_size > size_)
-	ma->length = size_ - pos_;
-    else
-	ma->length = split_size;
-    pos_ += split_size;
+    ma->data = (void *) &d_[pos_];
+    ma->length = std::min(size_ - pos_, size_ / nsplit_);
+    pos_ += ma->length;
+    for (; pos_ < size_ && stop && !strchr(stop, d_[pos_]); ++pos_, ++ma->length);
     pthread_mutex_unlock(&mu_);
-    return 1;
+    return true;
 }
 
 #endif

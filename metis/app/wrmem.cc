@@ -14,20 +14,20 @@
 #include <sched.h>
 #include "application.hh"
 #include "bench.hh"
+#include "defsplitter.hh"
 
 #define DEFAULT_NDISP 10
 
 struct wr : public map_group {
-    wr(char *d, uint64_t length, int nsplit) {
-        pos_ = 0;
-        len_ = length;
-        d_ = (char *)d;
-        nsplit_ = nsplit;
-        pthread_mutex_init(&mu_, 0); 
+    wr(char *d, size_t size, int nsplit) : s_(d, size, nsplit) {
     }
 
     void map_function(split_t *);
-    int split(split_t *ret, int ncore);
+
+    bool split(split_t *ma, int ncore) {
+        return s_.split(ma, ncore, " \t\n\r\0");
+    }
+
     int key_compare(const void *k1, const void *k2) {
         return strcmp((const char *)k1, (const char *)k2);
     }
@@ -39,38 +39,8 @@ struct wr : public map_group {
         return key;
     }
   private:
-    uint64_t pos_;
-    uint64_t len_;
-    int nsplit_;
-    char *d_;
-    pthread_mutex_t mu_;
+    defsplitter s_;
 };
-
-/* Divide input on a word border i.e. a space. */
-int wr::split(split_t *out, int ncores) {
-    assert(d_);
-    if (nsplit_ == 0)
-        nsplit_ = ncores * def_nsplits_per_core;
-    pthread_mutex_lock(&mu_);
-    /* EOF, return FALSE for no more data */
-    if (pos_ >= len_) {
-	pthread_mutex_unlock(&mu_);
-	return 0;
-    }
-    out->data = &d_[pos_];
-    out->length = len_ / nsplit_;
-    if ((unsigned long)(pos_ + out->length) > len_)
-	out->length = len_ - pos_;
-
-    /* set the length to end at a space */
-    for (pos_ += (long) out->length; pos_ < len_ &&
-	 d_[pos_] != ' ' && d_[pos_] != '\t' &&
-	 d_[pos_] != '\r' && d_[pos_] != '\n' &&
-	 d_[pos_] != 0; ++pos_, ++out->length);
-
-    pthread_mutex_unlock(&mu_);
-    return 1;
-}
 
 /* keycopy version of the map function. Go through the splits and reverse
  * index each word */

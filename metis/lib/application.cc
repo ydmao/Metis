@@ -105,7 +105,7 @@ void mapreduce_appbase::run_phase(int phase, int ncore, uint64_t &t, int first_t
 size_t mapreduce_appbase::sched_sample() {
     const size_t nsample_map_task = std::max(size_t(1), sample_percent * ma_.size() / 100);
     const size_t nma = ma_.size();
-
+    assert(nma);
     ma_.trim(nsample_map_task);
     rt_->sample_init(ncore_, default_sample_reduce_task);
     size_t t = 0;

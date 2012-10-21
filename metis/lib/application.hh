@@ -10,7 +10,7 @@ struct metis_runtime;
 
 struct mapreduce_appbase {
     virtual void map_function(split_t *) = 0;
-    virtual int split(split_t *ret, int ncore) = 0;
+    virtual bool split(split_t *ret, int ncore) = 0;
     virtual int key_compare(const void *, const void *) = 0;
 
     /* @brief: optional function invokded for each new key. */
