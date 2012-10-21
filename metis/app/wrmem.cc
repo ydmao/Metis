@@ -31,7 +31,7 @@ struct wr : public map_group {
     int key_compare(const void *k1, const void *k2) {
         return strcmp((const char *)k1, (const char *)k2);
     }
-    void *keycopy(void *src, size_t s) {
+    void *key_copy(void *src, size_t s) {
         char *key;
         assert(key = (char *)malloc(s + 1));
         memcpy(key, src, s);

@@ -158,9 +158,10 @@ int mapreduce_appbase::sched_run() {
 	run_phase(REDUCE, ncore_, reduce_time);
     // merge phase
     const int use_psrs = USE_PSRS;
-    if (use_psrs)
+    if (use_psrs) {
+        merge_ncpus_ = ncore_;
 	run_phase(MERGE, merge_ncpus_, merge_time);
-    else {
+    } else {
 	merge_ncpus_ = std::min(merge_nsplits_ / 2, ncore_);
 	while (merge_nsplits_ > 1) {
 	    run_phase(MERGE, merge_ncpus_, merge_time);
