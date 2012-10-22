@@ -136,8 +136,7 @@ bool pca_mean::split(split_t * out, int ncores) {
     if (pca_data->next_start_row >= num_rows)
 	return false;
     prof_enterapp();
-    pca_map_data_t *map_data =
-	(pca_map_data_t *) malloc(sizeof(pca_map_data_t));
+    pca_map_data_t *map_data = safe_malloc<pca_map_data_t>();
 
     /* Allocate last few rows if less than required number of rows */
     if (pca_data->next_start_row + req_units <= num_rows) {
@@ -165,12 +164,12 @@ void pca_mean::map_function(split_t *args) {
     int **matrix = data->matrix;
     /* Compute the mean for the allocated rows to the map task */
     for (uint32_t i = 0; i < args->length; ++i) {
-	int *mean = (int *) malloc(sizeof(int));
+	int *mean = safe_malloc<int>();
 	int sum = 0;
 	for (int j = 0; j < num_cols; j++)
 	    sum += matrix[i][j];
 	*mean = sum / num_cols;
-	int *curr_row = (int *) malloc(sizeof(int));
+	int *curr_row = safe_malloc<int>();
 	*curr_row = data->start_row;
 	prof_leaveapp();
 	map_emit((void *) curr_row, (void *) mean, sizeof(int *));
@@ -220,8 +219,8 @@ bool pca_cov::split(split_t *out, int ncores) {
 	return false;
     prof_enterapp();
     /* Allocate memory for the structures */
-    pca_cov_loc_t *cov_locs = (pca_cov_loc_t *) malloc(sizeof(pca_cov_loc_t) * req_units);
-    pca_cov_data_t *cov_data = new pca_cov_data_t;
+    pca_cov_loc_t *cov_locs = safe_malloc<pca_cov_loc_t>(req_units);
+    pca_cov_data_t *cov_data = safe_malloc<pca_cov_data_t>();
     assert(cov_locs && cov_data);
     cov_data->size = 0;
     /* Compute the boundaries of the region that is to be allocated to the map task */
@@ -255,45 +254,34 @@ void pca_cov::map_function(split_t * args) {
     assert(args);
     assert(args->length == 1);
     prof_enterapp();
-    int i, j;
-    int *start_row, *cov_row;
-    int start_idx, cov_idx;
-    keyval_t *mean;
-    int sum;
-    int *covariance;
-    long size, cols;
-
     pca_cov_data_t *cov_data = (pca_cov_data_t *) args->data;
-    mean = cov_data->mean;
-    pca_cov_loc_t *cov_loc;
-    size = cov_data->size;
-    cols = num_cols;
+    keyval_t *mean = cov_data->mean;
+    long size = cov_data->size;
+    long cols = num_cols;
 
     /* compute the covariance for the allocated region */
-    for (i = 0; i < size; i++) {
-	start_idx = cov_data->cov_locs[i].start_row;
-	cov_idx = cov_data->cov_locs[i].cov_row;
+    for (int i = 0; i < size; i++) {
+	int start_idx = cov_data->cov_locs[i].start_row;
+	int cov_idx = cov_data->cov_locs[i].cov_row;
 	assert(cov_idx >= start_idx);
-	start_row = cov_data->matrix[start_idx];
-	cov_row = cov_data->matrix[cov_idx];
-	sum = 0;
+	int *start_row = cov_data->matrix[start_idx];
+	int *cov_row = cov_data->matrix[cov_idx];
+	int sum = 0;
 	dprintf("Mean for row %d is %d\n", start_idx,
 		*((int *) (mean[start_idx].val)));
 	dprintf("Mean for row %d is %d\n", cov_idx,
 		*((int *) (mean[cov_idx].val)));
 
-	for (j = 0; j < cols; j++)
+	for (int j = 0; j < cols; j++)
 	    sum += (start_row[j] - *((int *) mean[start_idx].val)) *
 		(cov_row[j] - *((int *) mean[cov_idx].val));
 
-	assert((covariance = (int *) malloc(sizeof(int))) != NULL);
+        int *covariance = safe_malloc<int>();
 	*covariance = sum / (num_rows - 1);
 
 	dprintf("Covariance for <%d, %d> is %d\n", start_idx, cov_idx,
 		*covariance);
-
-	assert((cov_loc =
-		(pca_cov_loc_t *) malloc(sizeof(pca_cov_loc_t))) != NULL);
+        pca_cov_loc_t *cov_loc = safe_malloc<pca_cov_loc_t>();
 	cov_loc->start_row = cov_data->cov_locs[i].start_row;
 	cov_loc->cov_row = cov_data->cov_locs[i].cov_row;
 	prof_leaveapp();
@@ -360,9 +348,9 @@ int main(int argc, char **argv) {
     }
 
     // Allocate space for the matrix
-    pca_data_.matrix = (int **) malloc(sizeof(int *) * num_rows);
+    pca_data_.matrix = safe_malloc<int *>(num_rows);
     for (int i = 0; i < num_rows; i++)
-	pca_data_.matrix[i] = (int *) malloc(sizeof(int) * num_cols);
+	pca_data_.matrix[i] = safe_malloc<int>(num_cols);
 
     //Generate random values for all the points in the matrix
     generate_points(pca_data_.matrix, num_rows, num_cols);

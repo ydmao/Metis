@@ -134,9 +134,9 @@ int main(int argc, char *argv[]) {
 	    exit(EXIT_FAILURE);
 	}
     }
-    matrix_A_ptr = (int *)malloc(sizeof(int) * matrix_len * matrix_len);
-    matrix_B_ptr = (int *)malloc(sizeof(int) * matrix_len * matrix_len);
-    fdata_out = (int *)malloc(sizeof(int) * matrix_len * matrix_len);
+    matrix_A_ptr = safe_malloc<int>(matrix_len * matrix_len);
+    matrix_B_ptr = safe_malloc<int>(matrix_len * matrix_len);
+    fdata_out = safe_malloc<int>(matrix_len * matrix_len);
 
     for (int i = 0; i < matrix_len; i++)
 	for (int j = 0; j < matrix_len; j++) {

@@ -24,8 +24,7 @@ struct wr : public map_group {
         return strcmp((const char *)k1, (const char *)k2);
     }
     void *key_copy(void *src, size_t s) {
-        char *key;
-        assert(key = (char *)malloc(s + 1));
+        char *key = safe_malloc<char>(s + 1);
         memcpy(key, src, s);
         key[s] = 0;
         return key;

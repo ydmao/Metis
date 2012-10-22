@@ -32,6 +32,13 @@ inline T round_up(T n, M b) {
     return round_down(r + b - 1, b);
 }
 
+template <typename T>
+inline T *safe_malloc(int n = 1) {
+    void *x = malloc(sizeof(T) * n);
+    assert(n ==0 || x);
+    return (T *)x;
+}
+
 #define cond_printf(__exp, __fmt, __args...) \
 do { \
     if (__exp) \

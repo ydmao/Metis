@@ -55,7 +55,7 @@ int mm::key_compare(const void *v1, const void *v2) {
 
 bool mm::split_nonblock(split_t *out, int ncores) {
     /* Make a copy of the mm_data structure */
-    mm_data_t *data_out = (mm_data_t *)malloc(sizeof(mm_data_t));
+    mm_data_t *data_out = safe_malloc<mm_data_t>();
     *data_out = d_;
     /* Check whether the various terms exist */
     if (nsplit_ == 0)
@@ -110,7 +110,7 @@ void mm::map_function_nonblock(split_t *args) {
 bool mm::split_block(split_t *out, int ncore) {
     prof_enterapp();
     /* Make a copy of the mm_data structure */
-    mm_data_t *data_out = (mm_data_t *) malloc(sizeof(mm_data_t));
+    mm_data_t *data_out = safe_malloc<mm_data_t>();
     *data_out = d_;
     if (d_.startrow >= d_.matrix_len) {
 	free(data_out);

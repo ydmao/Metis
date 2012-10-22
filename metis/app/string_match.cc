@@ -111,7 +111,7 @@ bool sm::split(split_t * out, int ncores) {
     prof_enterapp();
     /* Make a copy of the mm_data structure */
     str_data_t *data = &str_data;
-    str_map_data_t *map_data = (str_map_data_t *) malloc(sizeof(str_map_data_t));
+    str_map_data_t *map_data = safe_malloc<str_map_data_t>();
     map_data->encrypt_file = data->encrypt_file;
     map_data->keys_file = data->keys_file + data->bytes_comp;
     if (nsplits == 0)
@@ -281,10 +281,10 @@ int main(int argc, char *argv[]) {
 
     cond_printf(!quiet, "String Match: Calling String Match\n");
 
-    key1_final = (char *)malloc(strlen(key1));
-    key2_final = (char *)malloc(strlen(key2));
-    key3_final = (char *)malloc(strlen(key3));
-    key4_final = (char *)malloc(strlen(key4));
+    key1_final = safe_malloc<char>(strlen(key1));
+    key2_final = safe_malloc<char>(strlen(key2));
+    key3_final = safe_malloc<char>(strlen(key3));
+    key4_final = safe_malloc<char>(strlen(key4));
 
     compute_hashes(key1, key1_final);
     compute_hashes(key2, key2_final);

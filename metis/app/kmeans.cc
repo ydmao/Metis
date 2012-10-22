@@ -209,7 +209,7 @@ bool kmeans::split(split_t *out, int ncores) {
     if (kd_.next_point >= num_points)
 	return false;
     prof_enterapp();
-    kmeans_map_data_t *out_data = (kmeans_map_data_t *) malloc(sizeof(kmeans_map_data_t));
+    kmeans_map_data_t *out_data = safe_malloc<kmeans_map_data_t>();
     out->length = 1;
     out->data = (void *) out_data;
 
@@ -268,7 +268,7 @@ void kmeans::reduce_function(void *key_in, void **vals_in, size_t vals_len) {
     if (!scanned) {
 	pthread_mutex_lock(&lock);
 	if (!scanned) {
-	    long *tmp = (long *) malloc(sizeof(long) * num_means);
+	    long *tmp = safe_malloc<long>(num_means);
 	    memset(tmp, 0, sizeof(long) * num_means);
 	    for (int i = 0; i < num_points; ++i)
 		++tmp[kd_.clusters[i]];
@@ -278,7 +278,7 @@ void kmeans::reduce_function(void *key_in, void **vals_in, size_t vals_len) {
 	pthread_mutex_unlock(&lock);
     }
     long len = stats[*((int *) key_in)];
-    int *mean = (int *) malloc(dim * sizeof(int));
+    int *mean = safe_malloc<int>(dim);
     for (int i = 0; i < dim; i++)
 	mean[i] = sum[i] / len;
 
@@ -289,19 +289,19 @@ void kmeans::reduce_function(void *key_in, void **vals_in, size_t vals_len) {
 
 static void init_kmeans(kmeans_data_t &kd, int nsplit) {
     // get points.
-    kd.points = (int **) malloc(sizeof(int *) * num_points);
+    kd.points = safe_malloc<int *>(num_points);
     // We generate the points continously so that it is easy to determine
     // whether a value can be freed in kmeans_combine
-    inbuf_start = (int *) malloc(sizeof(int) * num_points * dim);
+    inbuf_start = safe_malloc<int>(num_points * dim);
     for (int i = 0; i < num_points; i++)
 	kd.points[i] = &inbuf_start[i * dim];
     inbuf_end = (int *)(intptr_t(inbuf_start) + sizeof(int) * num_points * dim - 1);
     generate_points(kd.points, num_points);
     // get means
-    kd.means = (keyval_t *) malloc(sizeof(keyval_t) * num_means);
+    kd.means = safe_malloc<keyval_t>(num_means);
     for (int i = 0; i < num_means; ++i) {
-	kd.means[i].val = malloc(sizeof(int) * dim);
-	kd.means[i].key = malloc(sizeof(int));
+	kd.means[i].val = safe_malloc<int>(dim);
+	kd.means[i].key = safe_malloc<int>();
 	memcpy(kd.means[i].val, kd.points[i], sizeof(int) * dim);
 	((int *) kd.means[i].key)[0] = i;
     }
@@ -310,7 +310,7 @@ static void init_kmeans(kmeans_data_t &kd, int nsplit) {
     kd.unit_size = sizeof(int) * dim;
     kd.nsplits = nsplit;
 
-    kd.clusters = (int *) malloc(sizeof(int) * num_points);
+    kd.clusters = safe_malloc<int>(num_points);
     memset(kd.clusters, -1, sizeof(int) * num_points);
 }
 
