@@ -163,9 +163,7 @@ static void usage(char *prog) {
     exit(EXIT_FAILURE);
 }
 
-int
-main(int argc, TCHAR * argv[])
-{
+int main(int argc, TCHAR * argv[]) {
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0;
     int quiet = 0;
     int c;
