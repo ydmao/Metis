@@ -139,7 +139,7 @@ int mapreduce_appbase::sched_run() {
         ma_.push_back(ma);
         bzero(&ma, sizeof(ma));
     }
-
+    uint64_t real_start = read_tsc();
     nsampled_splits_ = 0;
     // get the number of reduce tasks by sampling if needed
     if (skip_reduce_or_group_phase()) {
@@ -153,7 +153,6 @@ int mapreduce_appbase::sched_run() {
     }
     get_reduce_bucket_manager()->init(merge_nsplits_);
 
-    uint64_t real_start = read_tsc();
     uint64_t map_time = 0, reduce_time = 0, merge_time = 0;
     // map phase
     run_phase(MAP, ncore_, map_time, nsampled_splits_);
