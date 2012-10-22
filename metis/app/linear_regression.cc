@@ -75,7 +75,7 @@ struct lr : public map_reduce {
     }
     unsigned partition(void *k, size_t length) {
         assert(length == sizeof(void *));
-        return unsigned(k);
+        return unsigned(intptr_t(k));
     }
     void map_function(split_t *);
     void reduce_function(void *k, void **v, size_t length);
