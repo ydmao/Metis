@@ -133,6 +133,7 @@ int mapreduce_appbase::sched_run() {
 
     // pre-split
     split_t ma;
+    ma_.clear();
     while (split(&ma, ncore_))
         ma_.push_back(ma);
 
