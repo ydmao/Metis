@@ -132,10 +132,13 @@ int mapreduce_appbase::sched_run() {
     mthread_init(ncore_, main_lcpu);
 
     // pre-split
-    split_t ma;
     ma_.clear();
-    while (split(&ma, ncore_))
+    split_t ma;
+    bzero(&ma, sizeof(ma));
+    while (split(&ma, ncore_)) {
         ma_.push_back(ma);
+        bzero(&ma, sizeof(ma));
+    }
 
     nsampled_splits_ = 0;
     // get the number of reduce tasks by sampling if needed
