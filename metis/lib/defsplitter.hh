@@ -36,6 +36,7 @@ struct defsplitter {
         pthread_mutex_init(&mu_, 0);
     }
     defsplitter(const char *f, size_t nsplit) : nsplit_(nsplit), pos_(0), mf_(f) {
+        pthread_mutex_init(&mu_, 0);
         size_ = mf_.size_;
         d_ = mf_.d_;
     }
