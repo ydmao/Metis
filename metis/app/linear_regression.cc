@@ -71,7 +71,7 @@ struct lr : public map_reduce {
        return r;
     }
     bool split(split_t *ma, int ncores) {
-        return s_.split(ma, ncores, "", sizeof(POINT_T));
+        return s_.split(ma, ncores, NULL, sizeof(POINT_T));
     }
     void map_function(split_t *);
     void reduce_function(void *k, void **v, size_t length);
