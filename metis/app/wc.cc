@@ -102,9 +102,7 @@ struct wc : public map_reduce {
         key[s] = 0;
         return key;
     }
-    int final_output_compare(const void *p1, const void *p2) {
-        const keyval_t *kv1 = (const keyval_t *)p1;
-        const keyval_t *kv2 = (const keyval_t *)p2;
+    int final_output_compare(const keyval_t *kv1, const keyval_t *kv2) {
 #ifdef HADOOP
 	return strcmp((char *) kv1->key, (char *) kv2->key);
 #else
