@@ -69,9 +69,7 @@ static void usage(char *prog) {
     exit(EXIT_FAILURE);
 }
 
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     affinity_set(0);
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0, quiet = 0;
     uint64_t inputsize = 0x80000000;
@@ -108,16 +106,14 @@ main(int argc, char *argv[])
 	MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(fdata != MAP_FAILED);
     uint64_t pos = 0;
-    int n = 0;
-    for (uint64_t i = 0; i < inputsize / (wordlength + 1); i++) {
-	for (uint32_t j = 0; j < wordlength; j++)
+    for (uint64_t i = 0; i < inputsize / (wordlength + 1); ++i) {
+	for (int j = 0; j < wordlength; ++j)
 	    fdata[pos++] = rnd(&seed) % 26 + 'A';
 	fdata[pos++] = ' ';
-        ++n;
     }
     memset(&fdata[pos], 0, inputsize - pos);
 
-    wr app((char *)fdata, inputsize, map_tasks);
+    wr app(fdata, inputsize, map_tasks);
     app.set_ncore(nprocs);
     app.set_group_task(reduce_tasks);
     app.sched_run();
