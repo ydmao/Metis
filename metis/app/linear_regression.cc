@@ -58,7 +58,7 @@ enum {
 
 struct lr : public map_reduce {
     lr(const char *f, int nsplit) : s_(f, nsplit) {
-        s_.resize(round_down(s_.size(), sizeof(POINT_T)));
+        s_.trim(round_down(s_.size(), sizeof(POINT_T)));
         if (pre_fault)
             printf("ignore this %d\n", s_.prefault());
     }

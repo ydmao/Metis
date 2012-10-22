@@ -47,7 +47,7 @@ struct defsplitter {
         return sum;
     }
     bool split(split_t *ma, int ncore, const char *stop, size_t align = 0);
-    void resize(size_t sz) {
+    void trim(size_t sz) {
         assert(sz <= size_);
         size_ = sz;
     }
