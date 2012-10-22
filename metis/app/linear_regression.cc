@@ -73,7 +73,7 @@ struct lr : public map_reduce {
     bool split(split_t *ma, int ncores) {
         return s_.split(ma, ncores, NULL, sizeof(POINT_T));
     }
-    unsigned partition(void *k, size_t length) {
+    unsigned partition(void *k, int length) {
         assert(length == sizeof(void *));
         return unsigned(intptr_t(k));
     }
