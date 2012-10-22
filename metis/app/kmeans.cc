@@ -104,7 +104,7 @@ struct kmeans : public map_reduce {
 /** dump_means()
  *  Helper function to Print out the mean values
  */
-void dump_means(keyval_t * means, int size) {
+static void dump_means(keyval_t * means, int size) {
     for (int i = 0; i < size; ++i) {
 	for (int j = 0; j < dim; ++j)
 	    printf("%5d ", ((int *) means[i].val)[j]);
@@ -113,7 +113,7 @@ void dump_means(keyval_t * means, int size) {
 }
 
 /** Helper function to print out the points */
-void dump_points(int **vals, int rows) {
+static void dump_points(int **vals, int rows) {
     for (int i = 0; i < rows; i++) {
 	for (int j = 0; j < dim; j++)
 	    printf("%5d ", vals[i][j]);
@@ -121,7 +121,7 @@ void dump_points(int **vals, int rows) {
     }
 }
 
-void usage(char *fn) {
+static void usage(char *fn) {
     printf("Usage: %s <vector dimension> <num clusters> <num points> <max value> [options]\n", fn);
     printf("options:\n");
     printf("  -p nprocs : # of processors to use\n");
@@ -134,7 +134,7 @@ void usage(char *fn) {
 /** parse_args()
  *  Parse the user arguments
  */
-void parse_args(int argc, char **argv) {
+static void parse_args(int argc, char **argv) {
     if (argc < 5) {
 	usage(argv[0]);
 	exit(1);
@@ -239,6 +239,10 @@ void *kmeans::inplace_modify(void *oldv, void *newv) {
 /** Updates the sum calculation for the various points */
 int kmeans::combine_function(void *key_in, void **vals_in, size_t vals_len) {
     prof_enterapp();
+    if (!with_combiner) {
+        prof_leaveapp();
+        return vals_len;
+    }
     int *sum = (int *) calloc(dim, sizeof(int));
     for (size_t i = 0; i < vals_len; i++) {
 	add_to_sum(sum, (int *)vals_in[i]);
