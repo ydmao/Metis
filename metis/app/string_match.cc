@@ -37,7 +37,8 @@
 #include <time.h>
 #include <sys/time.h>
 
-#include "mr-sched.hh"
+#include "application.hh"
+#include "defsplitter.hh"
 #include "bench.hh"
 
 #define DEFAULT_UNIT_SIZE 5
@@ -68,12 +69,10 @@ static char *key3_final;
 static char *key4_final;
 static uint64_t nsplits = 0;
 
-/** getnextline()
- *  Function to get the next word
- */
-int
-getnextline(char *output, int max_len, char *file)
-{
+static str_data_t str_data;
+
+/** Function to get the next word */
+int getnextline(char *output, int max_len, char *file) {
     int i = 0;
     while (i < max_len - 1) {
 	if (file[i] == '\0')
@@ -88,52 +87,43 @@ getnextline(char *output, int max_len, char *file)
     return i;
 }
 
-/** mystrcmp()
- *  Default comparison function
- */
-int
-mystrcmp(const void *v1, const void *v2)
-{
-    prof_enterkcmp();
-    int res = strcmp((char *) v1, (char *) v2);
-    prof_leavekcmp();
-    return res;
-}
+struct sm : public map_reduce {
+    int key_compare(const void *v1, const void *v2) {
+        prof_enterkcmp();
+        int r = strcmp((char *) v1, (char *) v2);
+        prof_leavekcmp();
+        return r;
+    }
+    void map_function(split_t *ma);
+    bool split(split_t *out, int ncores);
+    void reduce_function(void *key_in, void **vals_in, size_t vals_len);
+    int combine_function(void *key_in, void **vals_in, size_t vals_len);
+};
 
-/** compute_hashes()
- *  Simple Cipher to generate a hash of the word
- */
-static void
-compute_hashes(const char *word, char *final_word)
-{
+/** Simple Cipher to generate a hash of the word */
+static void compute_hashes(const char *word, char *final_word) {
     int len = strlen(word);
     for (int i = 0; i < len; i++)
 	final_word[i] = word[i] + OFFSET;
 }
 
-/** string_match_splitter()
- *  Splitter Function to assign portions of the file to each map task
- */
-int
-string_match_splitter(void *data_in, split_t * out, int ncores)
-{
+bool sm::split(split_t * out, int ncores) {
     prof_enterapp();
     /* Make a copy of the mm_data structure */
-    str_data_t *data = (str_data_t *) data_in;
-    str_map_data_t *map_data =
-	(str_map_data_t *) malloc(sizeof(str_map_data_t));
+    str_data_t *data = &str_data;
+    str_map_data_t *map_data = (str_map_data_t *) malloc(sizeof(str_map_data_t));
     map_data->encrypt_file = data->encrypt_file;
     map_data->keys_file = data->keys_file + data->bytes_comp;
     if (nsplits == 0)
 	nsplits = ncores * def_nsplits_per_core;
     uint64_t split_size = data->keys_file_len / nsplits;
     /* Check whether the various terms exist */
-    assert(data_in && out && (split_size >= 0));
+    assert(out && split_size >= 0);
     assert(data->bytes_comp <= data->keys_file_len);
     if (data->bytes_comp == data->keys_file_len) {
 	free(map_data);
 	prof_leaveapp();
-	return 0;
+	return false;
     }
     /* Assign the required number of bytes */
     int req_bytes = split_size;
@@ -158,15 +148,11 @@ string_match_splitter(void *data_in, split_t * out, int ncores)
     out->length = counter - data->bytes_comp;
     data->bytes_comp = counter;
     prof_leaveapp();
-    return 1;
+    return true;
 }
 
-/** string_match_map()
- *  Map Function that checks the hash of each word to the given hashes
- */
-void
-string_match_map(split_t * args)
-{
+/* Map Function that checks the hash of each word to the given hashes */
+void sm::map_function(split_t *args) {
     assert(args);
     prof_enterapp();
     str_map_data_t *data_in = (str_map_data_t *) (args->data);
@@ -203,15 +189,13 @@ string_match_map(split_t * args)
 	total_len += key_len;
     }
     prof_leaveapp();
-    mr_map_emit((void *)key1, (void *) (size_t) cnt1, strlen(key1));
-    mr_map_emit((void *)key2, (void *) (size_t) cnt2, strlen(key2));
-    mr_map_emit((void *)key3, (void *) (size_t) cnt3, strlen(key3));
-    mr_map_emit((void *)key4, (void *) (size_t) cnt4, strlen(key4));
+    map_emit((void *)key1, (void *) (size_t) cnt1, strlen(key1));
+    map_emit((void *)key2, (void *) (size_t) cnt2, strlen(key2));
+    map_emit((void *)key3, (void *) (size_t) cnt3, strlen(key3));
+    map_emit((void *)key4, (void *) (size_t) cnt4, strlen(key4));
 }
 
-int
-string_match_combine(void *key_in, void **vals_in, size_t vals_len)
-{
+int sm::combine_function(void *key_in, void **vals_in, size_t vals_len) {
     char *key = (char *) key_in;
     long *vals = (long *) vals_in;
     long sum = 0;
@@ -224,9 +208,7 @@ string_match_combine(void *key_in, void **vals_in, size_t vals_len)
     return 1;
 }
 
-void
-string_match_reduce(void *key_in, void **vals_in, size_t vals_len)
-{
+void sm::reduce_function(void *key_in, void **vals_in, size_t vals_len) {
     char *key = (char *) key_in;
     long *vals = (long *) vals_in;
     long sum = 0;
@@ -235,12 +217,10 @@ string_match_reduce(void *key_in, void **vals_in, size_t vals_len)
     for (size_t i = 0; i < vals_len; i++)
 	sum += vals[i];
     prof_leaveapp();
-    mr_reduce_emit(key, (void *) sum);
+    reduce_emit(key, (void *) sum);
 }
 
-static inline void
-sm_usage(char *prog)
-{
+static void usage(char *prog) {
     printf("usage: %s <filename> [options]\n", prog);
     printf("options:\n");
     printf("  -p #procs : # of processors to use\n");
@@ -253,24 +233,14 @@ sm_usage(char *prog)
     exit(EXIT_FAILURE);
 }
 
-int
-main(int argc, char *argv[])
-{
-    final_data_kv_t str_vals;
-    int fd_keys;
-    char *fdata_keys;
-    struct stat finfo_keys;
-    char *fname_keys;
+int main(int argc, char *argv[]) {
     int nprocs = 0, map_tasks = 0, reduce_tasks = 0, quiet = 0;
     /* Option to provide the encrypted words in a file as opposed to source code */
     //fname_encrypt = "encrypt.txt";
     if (argc < 2) {
-	sm_usage(argv[0]);
+	usage(argv[0]);
 	exit(EXIT_FAILURE);
     }
-
-    fname_keys = argv[1];
-
     int c;
     while ((c = getopt(argc - 1, argv + 1, "p:m:r:q")) != -1) {
 	switch (c) {
@@ -287,7 +257,7 @@ main(int argc, char *argv[])
 	    quiet = 1;
 	    break;
 	default:
-	    sm_usage(argv[0]);
+	    usage(argv[0]);
 	    exit(EXIT_FAILURE);
 	    break;
 	}
@@ -296,55 +266,18 @@ main(int argc, char *argv[])
     srand((unsigned) time(NULL));
 
     cond_printf(!quiet, "String Match: Running...\n");
-    /*// Read in the file
-       echeck((fd_encrypt = open(fname_encrypt,O_RDONLY)) < 0);
-       // Get the file info (for file length)
-       echeck(fstat(fd_encrypt, &finfo_encrypt) < 0);
-       // Memory map the file
-       echeck((fdata_encrypt= mmap(0, finfo_encrypt.st_size + 1,
-       PROT_READ | PROT_WRITE, MAP_PRIVATE, fd_encrypt, 0)) == NULL); */
-
     // Read in the file
-    assert((fd_keys = open(fname_keys, O_RDONLY)) >= 0);
-    // Get the file info (for file length)
-    assert(fstat(fd_keys, &finfo_keys) == 0);
-    // Memory map the file
-    assert((fdata_keys = (char *)mmap(0, finfo_keys.st_size + 1,
-			      PROT_READ | PROT_WRITE, MAP_PRIVATE, fd_keys,
-			      0)) != NULL);
-
-    // Setup splitter args
-
+    mmap_file mf(argv[1]);
     //dprintf("Encrypted Size is %ld\n",finfo_encrypt.st_size);
-    cond_printf(!quiet, "Keys Size is %ld\n", finfo_keys.st_size);
+    cond_printf(!quiet, "Keys Size is %ld\n", mf.size_);
 
-    str_data_t str_data;
-
-    str_data.keys_file_len = finfo_keys.st_size;
+    str_data.keys_file_len = mf.size_;
     str_data.encrypted_file_len = 0;
     str_data.bytes_comp = 0;
-    str_data.keys_file = ((char *) fdata_keys);
+    str_data.keys_file = mf.d_;
     str_data.encrypt_file = NULL;
     //str_data.encrypted_file_len = finfo_encrypt.st_size;
     //str_data.encrypt_file  = ((char *)fdata_encrypt);
-
-    // Setup scheduler args
-    mr_param_t mr_params;
-    memset(&mr_params, 0, sizeof(mr_params));
-    mr_params.app_arg.atype = atype_mapreduce;
-    mr_params.app_arg.mapreduce.reduce_func = string_match_reduce;
-    mr_params.app_arg.mapreduce.combiner = string_match_combine;
-    memset(&str_vals, 0, sizeof(str_vals));
-    mr_params.app_arg.mapreduce.results = &str_vals;
-    mr_params.app_arg.mapreduce.reduce_tasks = reduce_tasks;
-
-    mr_params.map_func = string_match_map;
-    mr_params.split_func = string_match_splitter;
-    mr_params.split_arg = &str_data;
-    mr_params.key_cmp = mystrcmp;
-    mr_params.part_func = NULL;	// use default
-    mr_params.nr_cpus = nprocs;
-    nsplits = map_tasks;
 
     cond_printf(!quiet, "String Match: Calling String Match\n");
 
@@ -357,15 +290,18 @@ main(int argc, char *argv[])
     compute_hashes(key2, key2_final);
     compute_hashes(key3, key3_final);
     compute_hashes(key4, key4_final);
+    sm app;
+    app.set_ncore(nprocs);
+    app.set_reduce_task(reduce_tasks);
+    nsplits = map_tasks;
+    app.sched_run();
+    app.print_stats();
 
-    assert(mr_run_scheduler(&mr_params) == 0);
-    mr_print_stats();
     if (!quiet) {
 	printf("\nstring match: results:\n");
-	for (int i = 0; i < int(str_vals.length); ++i) {
-	    keyval_t *curr = &((keyval_t *) str_vals.data)[i];
-	    printf("%15s - %d\n", (char *) curr->key,
-		   (unsigned) (size_t) curr->val);
+	for (size_t i = 0; i < app.results_.length; ++i) {
+	    keyval_t *curr = &app.results_.data[i];
+	    printf("%15s - %d\n", (char *)curr->key, (unsigned) (size_t) curr->val);
 	}
     }
     free(key1_final);
@@ -375,9 +311,5 @@ main(int argc, char *argv[])
 
     /*echeck(munmap(fdata_encrypt, finfo_encrypt.st_size + 1) < 0);
        echeck(close(fd_encrypt) < 0); */
-
-    assert(munmap(fdata_keys, finfo_keys.st_size + 1) == 0);
-    assert(close(fd_keys) == 0);
-
     return 0;
 }
