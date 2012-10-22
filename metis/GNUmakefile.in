@@ -38,7 +38,8 @@ PROGS := obj/wrmem \
          obj/matrix_mult \
          obj/matrix_mult2 \
          obj/linear_regression \
-         obj/kmeans
+         obj/kmeans \
+         obj/pca
 
 all: $(PROGS)
 

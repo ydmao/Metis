@@ -37,8 +37,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sched.h>
-#define TCHAR char
-#include "mr-sched.hh"
+#include "application.hh"
 #include "bench.hh"
 
 //#define MAPONLY
@@ -77,21 +76,37 @@ typedef struct {
 #define DEF_NUM_ROWS 10
 #define DEF_NUM_COLS 10
 
-pca_data_t pca_data;
+pca_data_t pca_data_;
 int num_rows;
 int num_cols;
 int grid_size;
 
+#ifdef MAPONLY
+struct pca_mean : map_only {
+#else
+struct pca_mean : map_reduce {
+#endif
+    int key_compare(const void *v1, const void *v2) {
+        prof_enterkcmp();
+        int r = (*(int *)v1) - (*(int *)v2);
+        assert(v1 == v2 || r);
+        prof_leavekcmp();
+        return r;
+    }
+    bool split(split_t *out, int ncores);
+    void map_function(split_t *out);
+    void reduce_function(void *key, void **vals, size_t length) {
+        assert(length == 1);
+        reduce_emit(key, vals[0]);
+    }
+};
+
 /** dump_points()
  *  Print the values in the matrix to the screen
  */
-static void
-dump_points(int **vals, int rows, int cols)
-{
-    int i, j;
-
-    for (i = 0; i < rows; i++) {
-	for (j = 0; j < cols; j++)
+static void dump_points(int **vals, int rows, int cols) {
+    for (int i = 0; i < rows; i++) {
+	for (int j = 0; j < cols; j++)
 	    dprintf("%5d ", vals[i][j]);
 	dprintf("\n");
     }
@@ -100,39 +115,16 @@ dump_points(int **vals, int rows, int cols)
 /** generate_points()
  *  Create the values in the matrix
  */
-static void
-generate_points(int **pts, int rows, int cols)
-{
-    int i, j;
-
-    for (i = 0; i < rows; i++)
-	for (j = 0; j < cols; j++)
+static void generate_points(int **pts, int rows, int cols) {
+    for (int i = 0; i < rows; i++)
+	for (int j = 0; j < cols; j++)
 	    pts[i][j] = rand() % grid_size;
 }
 
-/** mymeancmp()
- *  Comparison Function for computing the mean
- */
-static int mymeancmp(const void *v1, const void *v2)
-{
-    prof_enterkcmp();
-    int res = (*(int *)v1) - (*(int *)v2);
-    assert(res);
-    prof_leavekcmp();
-    return res;
-}
-
-/** pca_mean_splitter()
- *
- * Assigns one or more points to each map task
- */
-static int
-pca_mean_splitter(void *arg, split_t * out, int ncores)
-{
-    assert(arg);
+/** Assigns one or more points to each map task */
+bool pca_mean::split(split_t * out, int ncores) {
     assert(out);
-
-    pca_data_t *pca_data = (pca_data_t *) arg;
+    pca_data_t *pca_data = &pca_data_;
     assert(pca_data->matrix);
     if (nsplits == 0)
 	nsplits = ncores * def_nsplits_per_core;
@@ -142,13 +134,13 @@ pca_mean_splitter(void *arg, split_t * out, int ncores)
 
     /* Assign a fixed number of rows to each map task */
     if (pca_data->next_start_row >= num_rows)
-	return 0;
+	return false;
     prof_enterapp();
     pca_map_data_t *map_data =
 	(pca_map_data_t *) malloc(sizeof(pca_map_data_t));
 
     /* Allocate last few rows if less than required number of rows */
-    if ((pca_data->next_start_row + req_units) <= num_rows) {
+    if (pca_data->next_start_row + req_units <= num_rows) {
 	out->length = req_units;
 	out->data = (void *) map_data;
 	map_data->matrix = &(pca_data->matrix[pca_data->next_start_row]);
@@ -163,21 +155,16 @@ pca_mean_splitter(void *arg, split_t * out, int ncores)
 	    map_data->start_row);
     pca_data->next_start_row += req_units;
     prof_leaveapp();
-    return 1;
+    return true;
 }
 
-/** pca_mean_map()
- *  Map task to compute the mean
- */
-static void
-pca_mean_map(split_t * args)
-{
+/** Map task to compute the mean */
+void pca_mean::map_function(split_t *args) {
     prof_enterapp();
     pca_map_data_t *data = (pca_map_data_t *) args->data;
     int **matrix = data->matrix;
-
     /* Compute the mean for the allocated rows to the map task */
-    for (uint32_t i = 0; i < args->length; i++) {
+    for (uint32_t i = 0; i < args->length; ++i) {
 	int *mean = (int *) malloc(sizeof(int));
 	int sum = 0;
 	for (int j = 0; j < num_cols; j++)
@@ -186,94 +173,67 @@ pca_mean_map(split_t * args)
 	int *curr_row = (int *) malloc(sizeof(int));
 	*curr_row = data->start_row;
 	prof_leaveapp();
-	mr_map_emit((void *) curr_row, (void *) mean, sizeof(int *));
+	map_emit((void *) curr_row, (void *) mean, sizeof(int *));
 	prof_enterapp();
-	data->start_row++;
+	++data->start_row;
     }
 
     free(data);
     prof_leaveapp();
 }
 
-/** mycovcmp()
- *  Comparison function for computing the covariance
- */
-static int
-mycovcmp(const void *v1, const void *v2)
-{
-    prof_enterkcmp();
-    int res = 0;
-    pca_cov_loc_t *k1 = (pca_cov_loc_t *) v1;
-    pca_cov_loc_t *k2 = (pca_cov_loc_t *) v2;
-
-    if (k1->start_row < k2->start_row)
-	res = -1;
-    else if (k1->start_row > k2->start_row)
-	res = 1;
-    else {
-	if (k1->cov_row < k2->cov_row)
-	    res = -1;
-	else if (k1->cov_row > k2->cov_row)
-	    res = 1;
-	else
-	    res = 0;
+#ifdef MAPONLY
+struct pca_cov : public map_only {
+#else
+struct pca_cov : public map_reduce {
+#endif
+    int key_compare(const void *v1, const void *v2) {
+        prof_enterkcmp();
+        int r = 0;
+        pca_cov_loc_t *k1 = (pca_cov_loc_t *) v1;
+        pca_cov_loc_t *k2 = (pca_cov_loc_t *) v2;
+        if (k1->start_row != k2->start_row)
+	    r = k1->start_row - k2->start_row;
+        else
+            r = k1->cov_row - k2->cov_row;
+        prof_leavekcmp();
+        return r;
     }
-    prof_leavekcmp();
-    return res;
-}
+    bool split(split_t *out, int ncore);
+    void map_function(split_t *ma);
+    void reduce_function(void *key, void **vals, size_t length) {
+        assert(length == 1);
+        reduce_emit(key, vals[0]);
+    }
+};
 
-/** pca_cov_splitter()
- *  Splitter function for computing the covariance
- */
-int
-pca_cov_splitter(void *arg, split_t * out, int ncores)
-{
-    assert(arg);
+bool pca_cov::split(split_t *out, int ncores) {
     assert(out);
-
-    pca_data_t *pca_data = (pca_data_t *) arg;
+    pca_data_t *pca_data = &pca_data_;
     assert(pca_data->matrix);
     assert(pca_data->mean);
     if (nsplits == 0)
 	nsplits = ncores * def_nsplits_per_core;
-    int req_units =
-	((((num_rows * num_rows) - num_rows) / 2) + num_rows) / nsplits;
-
+    int req_units = ((num_rows * num_rows - num_rows) / 2 + num_rows) / nsplits;
     assert(req_units);
-
-    if ((pca_data->next_start_row >= num_rows)
-	&& (pca_data->next_cov_row >= num_rows))
-	return 0;
+    if (pca_data->next_start_row >= num_rows && pca_data->next_cov_row >= num_rows)
+	return false;
     prof_enterapp();
-    pca_cov_loc_t *cov_locs;
-    pca_cov_data_t *cov_data;
-    if (out->length != 1) {
-	/* Allocate memory for the structures */
-	assert((cov_locs = (pca_cov_loc_t *)
-		malloc(sizeof(pca_cov_loc_t) * req_units)) != NULL);
-	assert((cov_data = (pca_cov_data_t *)
-		malloc(sizeof(pca_cov_data_t))) != NULL);
-
-	out->length = 1;
-	out->data = (void *) cov_data;
-    } else {
-	cov_data = (pca_cov_data_t *) out->data;
-	cov_locs = cov_data->cov_locs;
-    }
-
+    /* Allocate memory for the structures */
+    pca_cov_loc_t *cov_locs = (pca_cov_loc_t *) malloc(sizeof(pca_cov_loc_t) * req_units);
+    pca_cov_data_t *cov_data = new pca_cov_data_t;
+    assert(cov_locs && cov_data);
     cov_data->size = 0;
     /* Compute the boundaries of the region that is to be allocated to the map task */
     while (pca_data->next_start_row < num_rows && cov_data->size < req_units) {
 	cov_locs[cov_data->size].start_row = pca_data->next_start_row;
 	cov_locs[cov_data->size].cov_row = pca_data->next_cov_row;
-
 	if (pca_data->next_cov_row + 1 >= num_rows) {
-	    pca_data->next_start_row++;
+	    ++pca_data->next_start_row;
 	    pca_data->next_cov_row = pca_data->next_start_row;
-	} else {
-	    pca_data->next_cov_row += 1;
-	}
-	cov_data->size++;
+	} else
+	    ++pca_data->next_cov_row;
+	++cov_data->size;
     }
 
     /* Assign pointers to the matrix with the data */
@@ -285,17 +245,13 @@ pca_cov_splitter(void *arg, split_t * out, int ncores)
 	    cov_data->size, cov_locs[0].start_row, cov_locs[0].cov_row,
 	    cov_locs[cov_data->size - 1].start_row,
 	    cov_locs[cov_data->size - 1].cov_row);
+    out->length = 1;
+    out->data = (void *) cov_data;
     prof_leaveapp();
-    return 1;
+    return true;
 }
 
-/** pca_cov_map()
- *  Map task for computing the covariance matrix
- *
- */
-static void
-pca_cov_map(split_t * args)
-{
+void pca_cov::map_function(split_t * args) {
     assert(args);
     assert(args->length == 1);
     prof_enterapp();
@@ -341,8 +297,7 @@ pca_cov_map(split_t * args)
 	cov_loc->start_row = cov_data->cov_locs[i].start_row;
 	cov_loc->cov_row = cov_data->cov_locs[i].cov_row;
 	prof_leaveapp();
-	mr_map_emit((void *) cov_loc, (void *) covariance,
-		    sizeof(pca_cov_loc_t));
+	map_emit((void *) cov_loc, (void *) covariance, sizeof(pca_cov_loc_t));
 	prof_enterapp();
     }
 
@@ -351,17 +306,7 @@ pca_cov_map(split_t * args)
     prof_leaveapp();
 }
 
-#ifndef MAPONLY
-static void ident_reduce(void *key, void **vals, size_t len)
-{
-    assert(len == 1);
-    mr_reduce_emit(key, vals[0]);
-}
-#endif
-
-static void
-pca_usage(char *fn)
-{
+static void usage(char *fn) {
     printf("usage: %s [options]\n", fn);
     printf("options:\n");
     printf("  -p nprocs : # of processors to use\n");
@@ -374,24 +319,14 @@ pca_usage(char *fn)
     printf("  -M max : # of max number\n");
 }
 
-int
-main(int argc, char **argv)
-{
-    final_data_kv_t pca_mean_vals;
-    final_data_kv_t pca_cov_vals;
-    mr_param_t mr_param;
-    int i;
-    int nprocs = 0, map_tasks = 0;
-    int nreduce_tasks = 0;
-    int quiet = 0;
-    int c;
-
+int main(int argc, char **argv) {
+    int nprocs = 0, map_tasks = 0, nreduce_tasks = 0, quiet = 0, c;
     num_rows = DEF_NUM_ROWS;
     num_cols = DEF_NUM_COLS;
     grid_size = DEF_GRID_SIZE;
 
     if (argc < 2) {
-	pca_usage(argv[0]);
+	usage(argv[0]);
 	exit(EXIT_FAILURE);
     }
 
@@ -419,96 +354,70 @@ main(int argc, char **argv)
 	    assert((grid_size = atoi(optarg)) >= 0);
 	    break;
 	default:
-	    pca_usage(argv[0]);
+	    usage(argv[0]);
 	    exit(EXIT_FAILURE);
 	}
     }
 
     // Allocate space for the matrix
-    pca_data.matrix = (int **) malloc(sizeof(int *) * num_rows);
-    for (i = 0; i < num_rows; i++)
-	pca_data.matrix[i] = (int *) malloc(sizeof(int) * num_cols);
+    pca_data_.matrix = (int **) malloc(sizeof(int *) * num_rows);
+    for (int i = 0; i < num_rows; i++)
+	pca_data_.matrix[i] = (int *) malloc(sizeof(int) * num_cols);
 
     //Generate random values for all the points in the matrix
-    generate_points(pca_data.matrix, num_rows, num_cols);
+    generate_points(pca_data_.matrix, num_rows, num_cols);
 
     // Print the points
-    dump_points(pca_data.matrix, num_rows, num_cols);
+    dump_points(pca_data_.matrix, num_rows, num_cols);
 
     /* Create the structure to store the mean value */
-    pca_data.unit_size = sizeof(int) * num_cols;	// size of one row
-    pca_data.next_start_row = pca_data.next_cov_row = 0;
-    pca_data.mean = NULL;
+    pca_data_.unit_size = sizeof(int) * num_cols;	// size of one row
+    pca_data_.next_start_row = pca_data_.next_cov_row = 0;
+    pca_data_.mean = NULL;
 
-    // Setup scheduler args for computing the mean
-    memset(&mr_param, 0, sizeof(mr_param_t));
-    mr_param.nr_cpus = nprocs;
-    mr_param.map_func = pca_mean_map;
-    memset(&pca_mean_vals, 0, sizeof(pca_mean_vals));
-#ifdef MAPONLY
-    mr_param.app_arg.atype = atype_maponly;
-    mr_param.app_arg.maponly.results = &pca_mean_vals;
-#else
-    mr_param.app_arg.atype = atype_mapreduce;
-    mr_param.app_arg.mapreduce.results = &pca_mean_vals;
-    mr_param.app_arg.mapreduce.reduce_func = ident_reduce;
-    mr_param.app_arg.mapreduce.reduce_tasks = nreduce_tasks;
+    pca_mean m;
+    m.set_ncore(nprocs);
+#ifndef MAPONLY
+    m.set_reduce_task(nreduce_tasks);
 #endif
-    mr_param.key_cmp = mymeancmp;
-    mr_param.split_func = pca_mean_splitter;
-    mr_param.split_arg = &pca_data;
     nsplits = map_tasks;
+    m.sched_run();
+    m.print_stats();
 
-    assert(mr_run_scheduler(&mr_param) == 0);
-    mr_print_stats();
-    pca_data.unit_size = sizeof(int) * num_cols * 2;	// size of two rows
-    pca_data.next_start_row = pca_data.next_cov_row = 0;
-    pca_data.mean = pca_mean_vals.data;	// array of keys and values - 
-    // the keys have been freed tho
-    // Setup Scheduler args for computing the covariance
-    memset(&mr_param, 0, sizeof(mr_param_t));
-    memset(&pca_cov_vals, 0, sizeof(pca_cov_vals));
-    mr_param.nr_cpus = nprocs;
-    mr_param.map_func = pca_cov_map;
-#ifdef MAPONLY
-    mr_param.app_arg.atype = atype_maponly;
-    mr_param.app_arg.maponly.results = &pca_cov_vals;
-#else
-    mr_param.app_arg.atype = atype_mapreduce;
-    mr_param.app_arg.mapreduce.results = &pca_cov_vals;
-    mr_param.app_arg.mapreduce.reduce_func = ident_reduce;
-    mr_param.app_arg.mapreduce.reduce_tasks = nreduce_tasks;
+    pca_data_.unit_size = sizeof(int) * num_cols * 2;	// size of two rows
+    pca_data_.next_start_row = pca_data_.next_cov_row = 0;
+    pca_data_.mean = m.results_.data;	// array of keys and values - 
+
+    pca_cov cov;
+    cov.set_ncore(nprocs);
+#ifndef MAPONLY
+    cov.set_reduce_task(nreduce_tasks);
 #endif
-    mr_param.split_func = pca_cov_splitter;
-    mr_param.split_arg = &pca_data;
-    mr_param.part_func = NULL;	// use default
-    mr_param.key_cmp = mycovcmp;
     nsplits = map_tasks;
-    assert(mr_run_scheduler(&mr_param) == 0);
-    mr_print_stats();
-    assert(int(pca_cov_vals.length) ==
-	   ((((num_rows * num_rows) - num_rows) / 2) + num_rows));
+    cov.sched_run();
+    cov.print_stats();
+
+    assert(int(cov.results_.length) == (num_rows * (num_rows - 1) / 2 + num_rows));
     // Free the allocated structures
     int cnt = 0;
     int rows = num_rows;
     cond_printf(!quiet, "\n\nCovariance matrix:\n");
-    for (i = 0; i < int(pca_cov_vals.length); i++) {
-	cond_printf(!quiet, "%5d ", *((int *) (pca_cov_vals.data[i].val)));
-	cnt++;
+    for (size_t i = 0; i < cov.results_.length; ++i) {
+	cond_printf(!quiet, "%5d ", *((int *) (cov.results_.data[i].val)));
+	++cnt;
 	if (cnt == num_rows) {
 	    cond_printf(!quiet, "\n");
 	    num_rows--;
 	    cnt = 0;
 	}
-	free(pca_cov_vals.data[i].val);
-	free(pca_cov_vals.data[i].key);
+	free(cov.results_.data[i].val);
+	free(cov.results_.data[i].key);
     }
-
-    free(pca_cov_vals.data);
-    for (i = 0; i < rows; i++) {
-	free(pca_mean_vals.data[i].val);
-	free(pca_data.matrix[i]);
+    free(cov.results_.data);
+    for (int i = 0; i < rows; i++) {
+	free(m.results_.data[i].val);
+	free(pca_data_.matrix[i]);
     }
-    free(pca_data.matrix);
+    free(pca_data_.matrix);
     return 0;
 }
