@@ -112,6 +112,7 @@ static void dump_means(keyval_t * means, int size) {
     }
 }
 
+#if 0
 /** Helper function to print out the points */
 static void dump_points(int **vals, int rows) {
     for (int i = 0; i < rows; i++) {
@@ -120,6 +121,7 @@ static void dump_points(int **vals, int rows) {
 	printf("\n");
     }
 }
+#endif
 
 static void usage(char *fn) {
     printf("Usage: %s <vector dimension> <num clusters> <num points> <max value> [options]\n", fn);
