@@ -31,16 +31,6 @@ PROGS := obj/kmeans 			    \
          obj/search_unit              \
          obj/misc
 
-PROGS := obj/wrmem \
-         obj/wc \
-         obj/wr \
-         obj/hist \
-         obj/matrix_mult \
-         obj/matrix_mult2 \
-         obj/linear_regression \
-         obj/kmeans \
-         obj/pca
-
 all: $(PROGS)
 
 include lib/Makefrag

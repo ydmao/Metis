@@ -1,15 +1,25 @@
 #include "btree.hh"
+#include "application.hh"
 #include "test_util.hh"
 #include "comparator.hh"
 #include <assert.h>
 #include <iostream>
 using namespace std;
 
-static int intcmp(const void *k1, const void *k2) {
-    int64_t i1 = int64_t(k1);
-    int64_t i2 = int64_t(k2);
-    return i1 - i2;
-}
+struct mock_app : public map_only {
+    int key_compare(const void *k1, const void *k2) {
+        int64_t i1 = int64_t(k1);
+        int64_t i2 = int64_t(k2);
+        return i1 - i2;
+    }
+   
+    bool split(split_t *ma, int ncore) {
+        assert(0);
+    }
+    void map_function(split_t *ma) {
+        assert(0);
+    }
+};
 
 void check_tree(btree_type &bt) {
     int64_t i = 1;
@@ -49,7 +59,6 @@ void check_tree_copy_and_free(btree_type &bt) {
 
 void test1() {
     btree_type bt;
-    comparator::set_key_compare(intcmp);
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);
@@ -63,7 +72,6 @@ void test1() {
 
 void test2() {
     btree_type bt;
-    comparator::set_key_compare(intcmp);
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);
@@ -80,7 +88,11 @@ void test2() {
     check_tree_copy_and_free(bt);
 }
 
+extern mapreduce_appbase *the_app_;
+
 int main(int argc, char *argv[]) {
+    mock_app app;
+    the_app_ = &app;
     test1();
     test2();
     cerr << "PASS" << endl;
