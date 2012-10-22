@@ -14,8 +14,7 @@ struct mm_data_t {
     int *output;
 };
 
-/* Structure to store the coordinates
-and location for each value in the matrix */
+/** @brief: Coordinates and location for each value in the matrix */
 struct mm_key_t {
     int x_loc;
     int y_loc;
@@ -41,7 +40,6 @@ struct mm : public map_only {
    mm_data_t d_;
 };
 
-/**  Comparison Function to compare 2 locations in the matrix */
 int mm::key_compare(const void *v1, const void *v2) {
     prof_enterkcmp();
     mm_key_t *key1 = (mm_key_t *) v1;
@@ -80,7 +78,7 @@ bool mm::split_nonblock(split_t *out, int ncores) {
     return true;
 }
 
-/* Multiplies the allocated regions of matrix to compute partial sums */
+/** @brief: Multiplies the allocated regions of matrix to compute partial sums */
 void mm::map_function_nonblock(split_t *args) {
     int row_count = 0, x_loc, value;
     int *a_ptr, *b_ptr;
@@ -108,14 +106,13 @@ void mm::map_function_nonblock(split_t *args) {
     prof_leaveapp();
 }
 
-/** Assign block_len elements in a row the output matrix */
+/* @brief: Assign block_len elements in a row the output matrix */
 bool mm::split_block(split_t *out, int ncore) {
-    /* Make a copy of the mm_data structure */
     prof_enterapp();
+    /* Make a copy of the mm_data structure */
     mm_data_t *data_out = (mm_data_t *) malloc(sizeof(mm_data_t));
     *data_out = d_;
     if (d_.startrow >= d_.matrix_len) {
-	fflush(stdout);
 	free(data_out);
 	prof_leaveapp();
 	return false;
@@ -133,7 +130,6 @@ bool mm::split_block(split_t *out, int ncore) {
 
 /* Multiplies the allocated regions of matrix to compute partial sums */
 void mm::map_function_block(split_t * args) {
-    int end_i, end_j, end_k, a, b, c;
     prof_enterapp();
     assert(args && args->data);
     mm_data_t *data = (mm_data_t *) (args->data);
@@ -142,19 +138,17 @@ void mm::map_function_block(split_t * args) {
     int j = data->startcol;
     dprintf("do %d %d of %d\n", i, j, data->matrix_len);
     for (int k = 0; k < data->matrix_len; k += block_len) {
-	end_i = i + block_len;
-	end_j = j + block_len;
-	end_k = k + block_len;
-	for (a = i; a < end_i && a < data->matrix_len; a++)
-	    for (b = j; b < end_j && b < data->matrix_len; b++)
-		for (c = k; c < end_k && c < data->matrix_len; c++) {
+	int end_i = i + block_len;
+	int end_j = j + block_len;
+	int end_k = k + block_len;
+	for (int a = i; a < end_i && a < data->matrix_len; a++)
+	    for (int b = j; b < end_j && b < data->matrix_len; b++)
+		for (int c = k; c < end_k && c < data->matrix_len; c++)
 		    data->output[data->matrix_len * a + b] +=
 			(data->matrix_A[data->matrix_len * a + c] *
 			 data->matrix_B[data->matrix_len * c + b]);
-		}
     }
     dprintf("Finished Map task %d\n", data->row_num);
-    fflush(stdout);
     prof_leaveapp();
 }
 
