@@ -5,8 +5,11 @@ Metis is a multi-core MapReduce library.
 
 Getting started
 ---------------
-Metis is tested on 64-bit Linux.  Some example MapReduce applications are
-included.  For a list:
+Metis is tested on 64-bit Linux. While [the previous version of Metis](http://pdos.csail.mit.edu/metis/)
+also work on [Corey](http://pdos.csail.mit.edu/papers/corey:osdi08.pdf),
+this version may not.
+
+Some example MapReduce applications are included.  For a list:
 
     $ ls app/*.c
     foo.c wc.c wr.c ...
@@ -21,10 +24,14 @@ Memory allocator
 ----------------
 
 To build Metis with scalable memory allocator such as jemalloc and flow.  Flow
-is our re-implementation of Streamflow that may be open-sourced soon.  You can
-link with a specific memory allocator using:
+is our re-implementation of [Streamflow](http://people.cs.vt.edu/~scschnei/streamflow/).
+Flow may be open-sourced in future.
+
+To link with a specific memory allocator,
 
     $ ./configure --with-malloc=<jemalloc|flow>
+    $ make clean
+    $ make
 
 Running Test
 ------------
@@ -39,9 +46,11 @@ inputs for all applications:
 
 Scalability on Linux
 --------------------
-Metis can take advantage of Linux super pages to reduce the contentions
-on page faults. To enable feature, Metis currently relies on the use
-of flow allocator, which will allocate memory from OS in huge pages.
+As our previous work of 
+[An analysis of Linux scalability to Many Cores](http://pdos.csail.mit.edu/mosbench/) shows, Metis can take advantage of Linux
+super pages to reduce the contentions on page faults. To enable feature, Metis
+currently relies on the use of flow allocator, which will allocate memory from OS
+in super pages.
 
 Note there was a scalability bottleneck in Linux kernel's hugepage
 allocator. We haven't checked yet whether Linux has fixed the scalability
