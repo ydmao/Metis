@@ -3,6 +3,11 @@ Metis MapReduce
 
 Metis is a multi-core MapReduce library.
 
+LICENSE
+-------
+All source files, except for the ones in `app` directory, are subject
+to the LICENSE distributed with Metis release.
+
 Getting started
 ---------------
 Metis is tested on 64-bit Linux. While [the previous version of Metis](http://pdos.csail.mit.edu/metis/)
