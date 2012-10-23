@@ -6,7 +6,7 @@ Metis is a multi-core MapReduce library.
 Getting started
 ---------------
 Metis is tested on 64-bit Linux. While [the previous version of Metis](http://pdos.csail.mit.edu/metis/)
-also work on [Corey](http://pdos.csail.mit.edu/papers/corey:osdi08.pdf),
+also works on [Corey](http://pdos.csail.mit.edu/papers/corey:osdi08.pdf),
 this version may not.
 
 Some example MapReduce applications are included.  For a list:
@@ -59,7 +59,8 @@ linux-patches directory about the problem and our 'fix'.
 
 Other configuration
 -------------------
-As described in Metis technical report, Metis can be configured to use
+As described in [Metis technical report](http://pdos.csail.mit.edu/papers/metis:mittr10.pdf),
+Metis can be configured to use
 different data structures to organize the intermediate key/value pairs,
 although we beleive the default configuration is generally efficient
 across all workloads. See `./configure --help` for details.
