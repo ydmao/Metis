@@ -20,6 +20,7 @@ void metis_runtime::create_map_bucket_manager() {
 #else
     int index = (the_app_->application_type() == atype_maponly) ? index_append : index_btree;
 #endif
+    assert(current_manager_ == NULL);
     switch (index) {
     case index_append:
 #ifdef SINGLE_APPEND_GROUP_MERGE_FIRST
@@ -38,6 +39,13 @@ void metis_runtime::create_map_bucket_manager() {
         assert(0);
     }
 };
+
+metis_runtime::~metis_runtime() {
+    if (current_manager_)
+        delete current_manager_;
+    if (sample_manager_)
+        delete sample_manager_;
+}
 
 void metis_runtime::sample_init(int rows, int cols) {
     sample_manager_ = NULL;

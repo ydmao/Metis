@@ -10,6 +10,7 @@
 extern mapreduce_appbase *the_app_;
 
 struct map_bucket_manager_base {
+    virtual ~map_bucket_manager_base() {}
     virtual void init(int rows, int cols) = 0;
     virtual void destroy(void) = 0;
     virtual void rehash(int row, map_bucket_manager_base *backup) = 0;
@@ -81,7 +82,11 @@ struct map_bucket_manager : public map_bucket_manager_base {
   private:
     DT *mapdt_bucket(int row, int col) {
         return &mapdt_[row * cols_ + col];
-    } 
+    }
+    ~map_bucket_manager() {
+        for (size_t i = 0; i < output_.size(); ++i)
+            output_[i].shallow_free();
+    }
     const DT *mapdt_bucket(int row, int col) const {
         return &mapdt_[row * cols_ + col];
     } 
