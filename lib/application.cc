@@ -206,6 +206,7 @@ void mapreduce_appbase::print_stats(void) {
 }
 
 void mapreduce_appbase::join() {
+    free_results();
     mthread_finalize();
 }
 

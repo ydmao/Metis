@@ -29,6 +29,9 @@ struct wr : public map_group {
         key[s] = 0;
         return key;
     }
+    void key_free(void *k) {
+        free(k);
+    }
   private:
     defsplitter s_;
 };
