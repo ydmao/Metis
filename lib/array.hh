@@ -30,8 +30,7 @@ struct xarray {
     void clear() {
         if (a_ && !multiplex())
             resize(0);
-        a_ = NULL;
-        capacity_ = n_ = 0;
+        init();
     }
     static size_t elem_size() {
         return sizeof(T);
