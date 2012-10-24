@@ -36,13 +36,20 @@ struct psrs {
     }
 
   private:
+    ~psrs() {
+        if (pivots)
+            delete[] pivots;
+    }
     psrs() {
+        pivots = NULL;
         status = STOP;
         deinit();
         bzero(ready, sizeof(ready));
         reset();
     }
     void reset() {
+        if (pivots)
+            delete[] pivots;
 	pivots = new pair_type[JOS_NCPU * (JOS_NCPU - 1)];
 	memset(pivots, 0, JOS_NCPU * (JOS_NCPU - 1) * C::elem_size());
 	memset(subsize, 0, sizeof(subsize));
