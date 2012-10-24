@@ -109,6 +109,8 @@ inline uint64_t get_cpu_freq(void) {
     size_t len = 0;
     while (getline(&line, &len, f) != EOF &&
            sscanf(line, "cpu MHz\t: %f", &freqf) != 1);
+    if (line)
+        free(line);
     fclose(f);
     return uint64_t(freqf * (1 << 20));
 #endif
