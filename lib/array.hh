@@ -157,7 +157,11 @@ struct xarray {
         qsort(a_, size(), sizeof(T), cmp);
     }
     void set_capacity(size_t c) {
-        a_ = reinterpret_cast<T *>(realloc(a_, c * sizeof(T)));
+        if (c == 0) {
+            free(a_);
+            a_ = NULL;
+        } else
+            a_ = reinterpret_cast<T *>(realloc(a_, c * sizeof(T)));
         capacity_ = c;
     }
   private:
