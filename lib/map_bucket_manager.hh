@@ -103,11 +103,12 @@ void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu
     C *out = initialize_psrs<C>(lcpu, sum_subarray(output_));
     // reduce the output of psrs
     the_app_->get_reduce_bucket_manager()->set_current_reduce_task(lcpu);
-    pi->do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
+    C *myshare = pi->do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
+    delete myshare;
+    // barrier before freeing xo to make sure no one is accessing out anymore.
+    pi->cpu_barrier(lcpu, ncpus);
     if (out)
         group_one_sorted(*out, reduce_emit_functor::instance());
-    // barrier before freeing xo to make sure no one is accessing xo anymore.
-    pi->cpu_barrier(lcpu, ncpus);
     if (pi->main_cpu(lcpu)) {
         out->shallow_free();
         delete out;
