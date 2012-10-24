@@ -277,6 +277,5 @@ int main(int argc, char *argv[]) {
 	cond_printf(!quiet, "%hd - %ld\n", pix_val, freq);
 	prev = pix_val;
     }
-    free(app.results_.data);
     return 0;
 }

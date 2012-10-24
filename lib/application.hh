@@ -12,7 +12,7 @@ struct mapreduce_appbase {
     virtual void map_function(split_t *) = 0;
     virtual bool split(split_t *ret, int ncore) = 0;
     virtual int key_compare(const void *, const void *) = 0;
-
+    virtual ~mapreduce_appbase() {}
     /* @brief: optional function invokded for each new key. */
     virtual void *key_copy(void *k, size_t len) {
         return k;
@@ -53,6 +53,7 @@ struct mapreduce_appbase {
         src->reset();
     }
   protected:
+    virtual void verify_before_run() = 0;
     uint64_t sched_sample();
     virtual bool skip_reduce_or_group_phase() = 0;
     virtual void set_final_result() = 0;
@@ -108,6 +109,14 @@ struct map_reduce : public map_reduce_or_group_base {
     map_reduce() : map_reduce_or_group_base() {
         bzero(&results_, sizeof(results_));
     }
+    virtual ~map_reduce() {
+        free_results();
+    }
+    void free_results() {
+        if (results_.data)
+            free(results_.data);
+        bzero(&results_, sizeof(results_));
+    }
     /* @brief: if not zero, disable the sampling. */
     void set_reduce_task(int nreduce_task) {
         nreduce_or_group_task_ = nreduce_task;
@@ -149,13 +158,28 @@ struct map_reduce : public map_reduce_or_group_base {
     }
     void map_values_insert(keyvals_t *kvs, void *val);
     void map_values_move(keyvals_t *dst, keyvals_t *src);
+  protected:
+    void verify_before_run() {
+        assert(results_.length == 0 && results_.data == NULL);
+    }
 };
 
 struct map_group : public map_reduce_or_group_base {
     map_group() : map_reduce_or_group_base() {
         bzero(&results_, sizeof(results_));
     }
- 
+    virtual ~map_group() {
+        free_results();
+    }
+    void free_results() {
+        for (size_t i = 0; i < results_.length; ++i) {
+            if (results_.data[i].len)
+                free(results_.data[i].vals);
+        }
+        if (results_.data)
+            free(results_.data);
+        bzero(&results_, sizeof(results_));
+    }
     /* @brief: output data, <key, values> */
     final_data_kvs_len_t results_;
     void set_final_result();
@@ -182,12 +206,25 @@ struct map_group : public map_reduce_or_group_base {
     int application_type() {
         return atype_mapgroup;
     }
+  protected:
+    void verify_before_run() {
+        assert(results_.length == 0 && results_.data == NULL);
+    }
 };
 
 struct map_only : public mapreduce_appbase {
     map_only() : mapreduce_appbase() {
         bzero(&results_, sizeof(results_));
     }
+    virtual ~map_only() {
+        free_results();
+    }
+    void free_results() {
+        if (results_.data)
+            free(results_.data);
+        bzero(&results_, sizeof(results_));
+    }
+
     int internal_final_output_compare(const void *p1, const void *p2) {
         return final_output_compare((keyval_t *)p1, (keyval_t *)p2);
     }
@@ -204,6 +241,9 @@ struct map_only : public mapreduce_appbase {
   protected:
     bool skip_reduce_or_group_phase() {
         return true;
+    }
+    void verify_before_run() {
+        assert(results_.length == 0 && results_.data == NULL);
     }
 };
 

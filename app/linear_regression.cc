@@ -232,7 +232,6 @@ int main(int argc, char *argv[]) {
 	printf("\tSXY  = %lld\n", SXY_ll);
     }
 
-    free(app.results_.data);
     app.join();
     return 0;
 }

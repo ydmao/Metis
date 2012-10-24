@@ -401,7 +401,6 @@ int main(int argc, char **argv) {
 	free(cov.results_.data[i].val);
 	free(cov.results_.data[i].key);
     }
-    free(cov.results_.data);
     for (int i = 0; i < rows; i++) {
 	free(m.results_.data[i].val);
 	free(pca_data_.matrix[i]);

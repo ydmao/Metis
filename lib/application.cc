@@ -122,6 +122,7 @@ size_t mapreduce_appbase::sched_sample() {
 
 int mapreduce_appbase::sched_run() {
     the_app_ = this;
+    verify_before_run();
     rt_ = &metis_runtime::instance();
     rt_->initialize();
     const int max_ncore = get_core_count();
@@ -232,8 +233,9 @@ reduce_bucket_manager_base *mapreduce_appbase::get_reduce_bucket_manager() {
 void map_reduce::internal_reduce_emit(keyvals_t &p) {
     if (has_value_modifier()) {
         assert(p.size() == 1);
-        const keyval_t x(p.key, p.multiplex_value());
+        keyval_t x(p.key, p.multiplex_value());
 	reduce_bucket_manager<keyval_t>::instance()->emit(x);
+        x.init();
         p.init();
     } else {
         reduce_function(p.key, p.array(), p.size());
@@ -278,8 +280,9 @@ void map_reduce::set_final_result() {
 
 /** === map_group === */
 void map_group::internal_reduce_emit(keyvals_t &p) {
-    const keyvals_len_t x(p.key, p.array(), p.size());
+    keyvals_len_t x(p.key, p.array(), p.size());
     reduce_bucket_manager<keyvals_len_t>::instance()->emit(x);
+    x.init();
     p.init();
 }
 

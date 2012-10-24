@@ -219,7 +219,6 @@ int main(int argc, TCHAR * argv[]) {
 	output_all(&app.results_, fout);
 	fclose(fout);
     }
-    free(app.results_.data);
     app.join();
     return 0;
 }

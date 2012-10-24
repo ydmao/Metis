@@ -363,9 +363,7 @@ int main(int argc, char **argv) {
 	    free(app.kd_.means[mean_idx].val);
 	    app.kd_.means[mean_idx] = app.results_.data[i];
 	}
-	if (app.results_.length > 0)
-	    free(app.results_.data);
-        bzero(&app.results_, sizeof(app.results_));
+        app.free_results();
     }
     app.print_stats();
     if (!quiet)
