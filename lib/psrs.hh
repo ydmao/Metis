@@ -38,7 +38,7 @@ struct psrs {
   private:
     ~psrs() {
         if (pivots)
-            delete[] pivots;
+            free(pivots);
     }
     psrs() {
         pivots = NULL;
@@ -49,8 +49,8 @@ struct psrs {
     }
     void reset() {
         if (pivots)
-            delete[] pivots;
-	pivots = new pair_type[JOS_NCPU * (JOS_NCPU - 1)];
+            free(pivots);
+	pivots = safe_malloc<pair_type>(JOS_NCPU * (JOS_NCPU - 1));
 	memset(pivots, 0, JOS_NCPU * (JOS_NCPU - 1) * C::elem_size());
 	memset(subsize, 0, sizeof(subsize));
 	memset(partsize, 0, sizeof(partsize));
