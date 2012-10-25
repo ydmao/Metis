@@ -161,9 +161,6 @@ struct btree_type {
         keyvals_t &operator*() {
             return c_->e_[i_];
         }
-        keyvals_t *operator&() {
-            return &c_->e_[i_];
-        }
       private:
         btnode_leaf *c_;
         int i_;
