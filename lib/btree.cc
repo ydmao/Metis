@@ -103,7 +103,7 @@ size_t btree_type::size() const {
 }
 
 void btree_type::delete_level(btnode_base *node, int level) {
-    for (int i = 0; level > 1 && i < node->nk_; ++i)
+    for (int i = 0; level > 1 && i <= node->nk_; ++i)
         delete_level(static_cast<btnode_internal *>(node)->e_[i].v_, level - 1);
     delete node;
 }

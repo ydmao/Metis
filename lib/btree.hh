@@ -22,12 +22,17 @@ struct btnode_base {
 struct btnode_leaf : public btnode_base {
     keyvals_t e_[2 * order + 2];
     btnode_leaf *next_;
-    virtual ~btnode_leaf() {}
-
-    btnode_leaf() : btnode_base(), next_(NULL) {
-        bzero(e_, sizeof(e_));
+    ~btnode_leaf() {
+        for (int i = 0; i < nk_; ++i)
+            e_[i].reset();
+        for (int i = nk_; i < 2 * order + 2; ++i)
+            e_[i].init();
     }
 
+    btnode_leaf() : btnode_base(), next_(NULL) {
+        for (int i = 0; i < 2 * order + 2; ++i)
+            e_[i].init();
+    }
     btnode_leaf *split() {
         btnode_leaf *right = new btnode_leaf;
         memcpy(right->e_, &e_[order + 1], sizeof(e_[0]) * (1 + order));
