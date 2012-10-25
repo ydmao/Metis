@@ -56,6 +56,7 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
             psrs<C> *pi = psrs<C>::instance();
             assert(out || !pi->main_cpu(lcpu));
             C *myshare = pi->do_psrs(rb_, ncpus, lcpu, comparator::final_output_pair_comp);
+            myshare->init();
             delete myshare;
             // Let one CPU free the input buckets
             if (pi->main_cpu(lcpu))

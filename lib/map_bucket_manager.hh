@@ -109,6 +109,7 @@ void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu
     // reduce the output of psrs
     the_app_->get_reduce_bucket_manager()->set_current_reduce_task(lcpu);
     C *myshare = pi->do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
+    myshare->init();
     delete myshare;
     // barrier before freeing xo to make sure no one is accessing out anymore.
     pi->cpu_barrier(lcpu, ncpus);
@@ -152,7 +153,7 @@ void map_bucket_manager<S, DT, OPT>::rehash(int row, map_bucket_manager_base *a)
         for (auto it = src->begin(); it != src->end(); ++it) {
             DT *dst = mapdt_bucket(row, it->hash % cols_);
             dst->insert_new(&(*it), f);
-            it->reset();
+            it->init();
         }
     }
 }
