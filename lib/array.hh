@@ -29,7 +29,7 @@ struct xarray {
     }
     void clear() {
         if (a_ && !multiplex())
-            resize(0);
+            set_capacity(0);
         init();
     }
     static size_t elem_size() {
@@ -94,7 +94,7 @@ struct xarray {
         return true;
     }
     void set_array(T *e, int n) {
-        resize(0);
+        set_capacity(0);
         a_ = e;
         n_ = n;
         capacity_ = n;
@@ -122,7 +122,7 @@ struct xarray {
         return capacity_ & (size_t(1) << 63);
     }
     void shallow_free() {
-        resize(0);
+        set_capacity(0);
     }
     void init() {
         n_ = 0;
@@ -147,6 +147,8 @@ struct xarray {
         append(src.array(), src.size());
     }
     void append(T *x, size_t n) {
+        if (!n)
+            return;
         set_capacity(n_ + n);
         memcpy(a_ + n_, x, n * sizeof(T));
         n_ += n;
@@ -156,11 +158,15 @@ struct xarray {
         qsort(a_, size(), sizeof(T), cmp);
     }
     void set_capacity(size_t c) {
-        if (c == 0) {
+        if (c) {
+            if (!capacity_)
+                a_ = reinterpret_cast<T *>(malloc(c * sizeof(T)));
+            else
+                a_ = reinterpret_cast<T *>(realloc(a_, c * sizeof(T)));
+        } else if (capacity_) {
             free(a_);
             a_ = NULL;
-        } else
-            a_ = reinterpret_cast<T *>(realloc(a_, c * sizeof(T)));
+        }
         capacity_ = c;
     }
   private:
