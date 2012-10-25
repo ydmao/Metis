@@ -86,6 +86,9 @@ struct map_bucket_manager : public map_bucket_manager_base {
     ~map_bucket_manager() {
         for (size_t i = 0; i < output_.size(); ++i)
             output_[i].shallow_free();
+        for (size_t i = 0; i < mapdt_.size(); ++i)
+            mapdt_[i].shallow_free();
+
     }
     const DT *mapdt_bucket(int row, int col) const {
         return &mapdt_[row * cols_ + col];
