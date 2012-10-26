@@ -37,7 +37,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
 	    parent->e_[i + 1].v_ = parent->e_[i].v_;
 	parent->e_[ikey].k_ = key;
 	parent->e_[ikey + 1].v_ = right;
-	parent->nk_++;
+	++parent->nk_;
 	right->parent_ = parent;
 	if (parent->nk_ == 2 * order + 1) {
 	    void *newkey = parent->e_[order].k_;
