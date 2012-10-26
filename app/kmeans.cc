@@ -86,6 +86,9 @@ struct kmeans : public map_reduce {
     void reduce_function(void *k, void **v, size_t length);
     int combine_function(void *k, void **v, size_t length);
     void *inplace_modify(void *oldv, void *newv);
+    unsigned partition(void *k, int) {
+        return ptr2int<unsigned>(k);
+    } 
     bool split(split_t *out, int ncores);
     bool has_value_modifier() {
         return with_value_modifier;
