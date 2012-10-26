@@ -282,8 +282,6 @@ reduce_bucket_manager_base *mapreduce_appbase::get_reduce_bucket_manager() {
 
 void mapreduce_appbase::reset() {
     sampling_ = false;
-    reduce_bucket_manager<keyval_t>::instance()->reset();
-    reduce_bucket_manager<keyvals_len_t>::instance()->reset();
     if (m_) {
         delete m_;
         m_ = NULL;
@@ -346,6 +344,12 @@ void map_reduce::set_final_result() {
     reduce_bucket_manager<keyval_t>::instance()->transfer(0, &results_);
 }
 
+void map_reduce::reset() {
+    free_results();
+    reduce_bucket_manager<keyval_t>::instance()->reset();
+    mapreduce_appbase::reset();
+}
+
 /** === map_group === */
 void map_group::internal_reduce_emit(keyvals_t &p) {
     keyvals_len_t x(p.key, p.array(), p.size());
@@ -357,8 +361,21 @@ void map_group::internal_reduce_emit(keyvals_t &p) {
 void map_group::set_final_result() {
     reduce_bucket_manager<keyvals_len_t>::instance()->transfer(0, &results_);
 }
+
+void map_group::reset() {
+    free_results();
+    reduce_bucket_manager<keyvals_len_t>::instance()->reset();
+    mapreduce_appbase::reset();
+}
+
 /** === map_only ===*/
 
 void map_only::set_final_result() {
     reduce_bucket_manager<keyval_t>::instance()->transfer(0, &results_);
+}
+
+void map_only::reset() {
+    free_results();
+    mapreduce_appbase::reset();
+    reduce_bucket_manager<keyval_t>::instance()->reset();
 }

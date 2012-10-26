@@ -21,9 +21,8 @@ struct mapreduce_appbase {
     }
 
     /* @brief: if you have implemented key_copy, you should also implement key_free */
-    virtual void key_free(void *k) {
-    }
-    
+    virtual void key_free(void *k) {}
+
     /* @brief: default partition function that partition keys into reduce/group buckets */
     virtual unsigned partition(void *k, int length) {
         size_t h = 5381;
@@ -122,6 +121,9 @@ struct map_reduce : public map_reduce_or_group_base {
     map_reduce() : map_reduce_or_group_base() {
         bzero(&results_, sizeof(results_));
     }
+    virtual ~map_reduce() {
+        reset();
+    }
     /* @brief: if not zero, disable the sampling. */
     void set_reduce_task(int nreduce_task) {
         nreduce_or_group_task_ = nreduce_task;
@@ -147,26 +149,23 @@ struct map_reduce : public map_reduce_or_group_base {
     virtual bool has_value_modifier() const {
         return false;
     }
-    int internal_final_output_compare(const void *p1, const void *p2) {
-        return final_output_compare((keyval_t *)p1, (keyval_t *)p2);
-    }
     /* @brief: set the optional output compare function */
     virtual int final_output_compare(const keyval_t *p1, const keyval_t *p2) {
         return key_compare(p1->key, p2->key);
     }
-    void set_final_result();
     final_data_kv_t results_;	/* output data, <key, mapped value> */
 
+    void set_final_result();
+    int internal_final_output_compare(const void *p1, const void *p2) {
+        return final_output_compare((keyval_t *)p1, (keyval_t *)p2);
+    }
     void internal_reduce_emit(keyvals_t &p);
     int application_type() {
         return atype_mapreduce;
     }
     void map_values_insert(keyvals_t *kvs, void *val);
     void map_values_move(keyvals_t *dst, keyvals_t *src);
-    virtual void reset() {
-        free_results();
-        mapreduce_appbase::reset();
-    }
+    virtual void reset();
   protected:
     void free_results() {
         if (results_.data) {
@@ -185,36 +184,30 @@ struct map_group : public map_reduce_or_group_base {
     map_group() : map_reduce_or_group_base() {
         bzero(&results_, sizeof(results_));
     }
+    virtual ~map_group() {
+        reset();
+    }
     /* @brief: output data, <key, values> */
     final_data_kvs_len_t results_;
-    void set_final_result();
-
     /* @brief: if not zero, disables the sampling */
     void set_group_task(int group_task) {
         nreduce_or_group_task_ = group_task;
     }
     /* @brief: default output compare function */
-    virtual int final_output_compare(const void *p1, const void *p2) {
-        const keyvals_len_t *x1 = reinterpret_cast<const keyvals_len_t *>(p1);
-        const keyvals_len_t *x2 = reinterpret_cast<const keyvals_len_t *>(p2);
-        return key_compare(x1->key, x2->key);
-    }
-    int internal_final_output_compare(const void *p1, const void *p2) {
-        return final_output_compare((keyvals_len_t *)p1,(keyvals_len_t *)p2);
-    }
-    /* @brief: set the optional output compare function */
     virtual int final_output_compare(const keyvals_len_t *p1, const keyvals_len_t *p2) {
         return key_compare(p1->key, p2->key);
     }
 
+
+    void set_final_result();
+    int internal_final_output_compare(const void *p1, const void *p2) {
+        return final_output_compare((keyvals_len_t *)p1,(keyvals_len_t *)p2);
+    }
     void internal_reduce_emit(keyvals_t &p);
     int application_type() {
         return atype_mapgroup;
     }
-    virtual void reset() {
-        free_results();
-        mapreduce_appbase::reset();
-    }
+    virtual void reset();
   protected:
     void free_results() {
         for (size_t i = 0; i < results_.length; ++i) {
@@ -235,23 +228,24 @@ struct map_only : public mapreduce_appbase {
     map_only() : mapreduce_appbase() {
         bzero(&results_, sizeof(results_));
     }
-    int internal_final_output_compare(const void *p1, const void *p2) {
-        return final_output_compare((keyval_t *)p1, (keyval_t *)p2);
+    virtual ~map_only() {
+        reset();
     }
     /* @brief: set the optional output compare function */
     virtual int final_output_compare(const keyval_t *p1, const keyval_t *p2) {
         return key_compare(p1->key, p2->key);
     }
     final_data_kv_t results_;	/* output data, <key, mapped value> */
-    void set_final_result();
 
+
+    void set_final_result();
+    int internal_final_output_compare(const void *p1, const void *p2) {
+        return final_output_compare((keyval_t *)p1, (keyval_t *)p2);
+    }
     int application_type() {
         return atype_maponly;
     }
-    virtual void reset() {
-        free_results();
-        mapreduce_appbase::reset();
-    }
+    virtual void reset();
   protected:
     void free_results() {
         if (results_.data) {
