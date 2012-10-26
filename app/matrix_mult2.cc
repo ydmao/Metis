@@ -100,6 +100,7 @@ void mm2::map_function_block(split_t *args) {
     }
     dprintf("Finished Map task %d\n", data->row_num);
     fflush(stdout);
+    free(data);
     prof_leaveapp();
 }
 
@@ -166,6 +167,9 @@ int main(int argc, char *argv[]) {
 	    printf("%d\t", fdata_out[(matrix_len - 1) * matrix_len + i]);
 	printf("\n");
     }
+    free(matrix_A_ptr);
+    free(matrix_B_ptr);
+    free(fdata_out);
     return 0;
 }
 
