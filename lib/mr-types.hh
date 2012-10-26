@@ -47,7 +47,7 @@ struct keyval_t {
     void set(void *k, void *v, unsigned h) {
         key = k;
         val = v;
-        h = h;
+        hash = h;
     }
 };
 
