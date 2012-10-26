@@ -26,6 +26,15 @@ void cprint(const char *key, uint64_t v, const char *delim) {
 }
 }
 
+mapreduce_appbase::mapreduce_appbase() {
+    rt_ = new metis_runtime;
+    clean_ = true;
+}
+
+mapreduce_appbase::~mapreduce_appbase() {
+    delete rt_;
+}
+
 int mapreduce_appbase::map_worker() {
     int n, next;
     rt_->map_worker_init(cur_lcpu);
@@ -122,9 +131,9 @@ size_t mapreduce_appbase::sched_sample() {
 
 int mapreduce_appbase::sched_run() {
     the_app_ = this;
+    assert(clean_);
+    clean_ = false;
     verify_before_run();
-    rt_ = &metis_runtime::instance();
-    rt_->initialize();
     const int max_ncore = get_core_count();
     assert(ncore_ <= max_ncore);
     if (!ncore_)
@@ -227,6 +236,12 @@ reduce_bucket_manager_base *mapreduce_appbase::get_reduce_bucket_manager() {
         return reduce_bucket_manager<keyvals_len_t>::instance();
     else
         return reduce_bucket_manager<keyval_t>::instance();
+}
+
+void mapreduce_appbase::reset() {
+    free_results();
+    rt_->reset();
+    clean_ = true;
 }
 
 

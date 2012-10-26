@@ -13,7 +13,7 @@ struct metis_runtime {
     uint64_t sample_finished(int ntotal);
 
     /* Initialize the data structure for Map and Reduce phase */
-    void initialize();
+    void reset();
     void init_map(int rows, int cols, int nsplits);
 
     /* map phase */
@@ -25,13 +25,11 @@ struct metis_runtime {
     /* reduce phase */
     void reduce_do_task(int row, int col);
     void merge(int ncpus, int lcpu, int reduce_skipped);
-    static metis_runtime &instance() {
-        static metis_runtime instance_;
-        return instance_;
+    metis_runtime()
+        : current_manager_(), sample_manager_() {
     }
-  private:
-    metis_runtime() {}
     ~metis_runtime();
+  private:
     void create_map_bucket_manager();
 
     map_bucket_manager_base *current_manager_;

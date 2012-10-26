@@ -9,10 +9,11 @@ struct reduce_bucket_manager_base;
 struct metis_runtime;
 
 struct mapreduce_appbase {
+    mapreduce_appbase();
     virtual void map_function(split_t *) = 0;
     virtual bool split(split_t *ret, int ncore) = 0;
     virtual int key_compare(const void *, const void *) = 0;
-    virtual ~mapreduce_appbase() {}
+    virtual ~mapreduce_appbase();
     /* @brief: optional function invokded for each new key. */
     virtual void *key_copy(void *k, size_t len) {
         return k;
@@ -57,8 +58,9 @@ struct mapreduce_appbase {
         dst->append(*src);
         src->reset();
     }
-    virtual void free_results() = 0;
+    void reset();
   protected:
+    virtual void free_results() = 0;
     virtual void verify_before_run() = 0;
     uint64_t sched_sample();
     virtual bool skip_reduce_or_group_phase() = 0;
@@ -88,6 +90,7 @@ struct mapreduce_appbase {
     uint64_t total_merge_time_;
     uint64_t total_real_time_;
     metis_runtime *rt_;
+    bool clean_;
     
     int next_task() {
         return atomic_add32_ret(&next_task_);
@@ -156,6 +159,7 @@ struct map_reduce : public map_reduce_or_group_base {
     }
     void map_values_insert(keyvals_t *kvs, void *val);
     void map_values_move(keyvals_t *dst, keyvals_t *src);
+  protected:
     void free_results() {
         if (results_.data) {
             for (size_t i = 0; i < results_.length; ++i)
@@ -164,7 +168,6 @@ struct map_reduce : public map_reduce_or_group_base {
         }
         bzero(&results_, sizeof(results_));
     }
-  public:
     void verify_before_run() {
         assert(results_.length == 0 && results_.data == NULL);
     }
@@ -200,6 +203,7 @@ struct map_group : public map_reduce_or_group_base {
     int application_type() {
         return atype_mapgroup;
     }
+  protected:
     void free_results() {
         for (size_t i = 0; i < results_.length; ++i) {
             if (results_.data[i].len)
@@ -210,7 +214,6 @@ struct map_group : public map_reduce_or_group_base {
             free(results_.data);
         bzero(&results_, sizeof(results_));
     }
-  protected:
     void verify_before_run() {
         assert(results_.length == 0 && results_.data == NULL);
     }

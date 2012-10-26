@@ -48,7 +48,6 @@ metis_runtime::~metis_runtime() {
 }
 
 void metis_runtime::sample_init(int rows, int cols) {
-    sample_manager_ = NULL;
     create_map_bucket_manager();
     current_manager_->init(rows, cols);
     bzero(e_, sizeof(e_));
@@ -79,7 +78,6 @@ uint64_t metis_runtime::sample_finished(int ntotal) {
     sample_manager_ = current_manager_;
     current_manager_ = NULL;
     sampling_ = false;
-
     dprintf("Estimated %" PRIu64 " keys, %" PRIu64 " pairs, %"
 	    PRIu64 " reduce tasks, %" PRIu64 " per bucket\n",
 	    nk, np, ntasks, nk / ntasks);
@@ -98,16 +96,18 @@ void metis_runtime::init_map(int rows, int cols, int nsplits) {
     current_manager_->init(rows, cols);
 }
 
-void metis_runtime::initialize(void) {
-    reduce_bucket_manager<keyval_t>::instance()->destroy();
-    reduce_bucket_manager<keyvals_len_t>::instance()->destroy();
-    if (current_manager_)
-        current_manager_->destroy();
-    if (sample_manager_) {
-        sample_manager_->destroy();
-        sample_manager_ = NULL;
-        sampling_ = false;
+void metis_runtime::reset() {
+    reduce_bucket_manager<keyval_t>::instance()->reset();
+    reduce_bucket_manager<keyvals_len_t>::instance()->reset();
+    if (current_manager_) {
+        delete current_manager_;
+        current_manager_ = NULL;
     }
+    if (sample_manager_) {
+        delete sample_manager_;
+        sample_manager_ = NULL;
+    }
+    sampling_ = false;
 }
 
 void metis_runtime::map_emit(int row, void *key, void *val,

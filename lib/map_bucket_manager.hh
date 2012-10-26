@@ -12,7 +12,7 @@ extern mapreduce_appbase *the_app_;
 struct map_bucket_manager_base {
     virtual ~map_bucket_manager_base() {}
     virtual void init(int rows, int cols) = 0;
-    virtual void destroy(void) = 0;
+    virtual void reset(void) = 0;
     virtual void rehash(int row, map_bucket_manager_base *backup) = 0;
     virtual bool emit(int row, void *key, void *val, size_t keylen,
 	              unsigned hash) = 0;
@@ -64,7 +64,7 @@ struct map_insert_analyzer<DT, false> {
 template <bool S, typename DT, typename OPT>
 struct map_bucket_manager : public map_bucket_manager_base {
     void init(int rows, int cols);
-    void destroy(void);
+    void reset(void);
     void rehash(int row, map_bucket_manager_base *backup);
     bool emit(int row, void *key, void *val, size_t keylen,
 	      unsigned hash);
@@ -138,7 +138,7 @@ void map_bucket_manager<S, DT, OPT>::init(int rows, int cols) {
 }
 
 template <bool S, typename DT, typename OPT>
-void map_bucket_manager<S, DT, OPT>::destroy() {
+void map_bucket_manager<S, DT, OPT>::reset() {
     for (size_t i = 0; i < mapdt_.size(); ++i) {
         mapdt_[i].shallow_free();
         output_[i].shallow_free();

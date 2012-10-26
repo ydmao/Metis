@@ -7,7 +7,7 @@
 
 struct reduce_bucket_manager_base {
     virtual void init(int n) = 0;
-    virtual void destroy() = 0;
+    virtual void reset() = 0;
     virtual void set_current_reduce_task(int i) = 0;
     virtual void merge_reduced_buckets(int ncpus, int lcpu) = 0;
 };
@@ -25,7 +25,7 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
         assert(pthread_key_create(&current_task_key_, NULL) == 0);
         set_current_reduce_task(0);
     }
-    void destroy() {
+    void reset() {
         rb_.resize(0);
     }
     typedef xarray<T> C;
