@@ -59,9 +59,8 @@ struct mapreduce_appbase {
         dst->append(*src);
         src->reset();
     }
-    void reset();
+    virtual void reset();
   protected:
-    virtual void free_results() = 0;
     virtual void verify_before_run() = 0;
     uint64_t sched_sample();
     virtual bool skip_reduce_or_group_phase() = 0;
@@ -74,9 +73,8 @@ struct mapreduce_appbase {
     map_bucket_manager_base *create_map_bucket_manager(int nrow, int ncol);
 
     int nreduce_or_group_task_;
-    enum { main_lcpu = 0 };
-    enum { def_gr_tasks_per_cpu = 16 };
-    enum { default_sample_reduce_task = 10000 };
+    enum { default_group_or_reduce_task_per_core = 16 };
+    enum { default_sample_hashtable_size = 10000 };
     enum { sample_percent = 5 };
     enum { combiner_threshold = 8 };
     enum { expected_keys_per_bucket = 10 };
@@ -167,6 +165,10 @@ struct map_reduce : public map_reduce_or_group_base {
     }
     void map_values_insert(keyvals_t *kvs, void *val);
     void map_values_move(keyvals_t *dst, keyvals_t *src);
+    virtual void reset() {
+        free_results();
+        mapreduce_appbase::reset();
+    }
   protected:
     void free_results() {
         if (results_.data) {
@@ -211,6 +213,10 @@ struct map_group : public map_reduce_or_group_base {
     int application_type() {
         return atype_mapgroup;
     }
+    virtual void reset() {
+        free_results();
+        mapreduce_appbase::reset();
+    }
   protected:
     void free_results() {
         for (size_t i = 0; i < results_.length; ++i) {
@@ -244,6 +250,11 @@ struct map_only : public mapreduce_appbase {
     int application_type() {
         return atype_maponly;
     }
+    virtual void reset() {
+        free_results();
+        mapreduce_appbase::reset();
+    }
+  protected:
     void free_results() {
         if (results_.data) {
             for (size_t i = 0; i < results_.length; ++i)
@@ -252,7 +263,6 @@ struct map_only : public mapreduce_appbase {
         }
         bzero(&results_, sizeof(results_));
     }
-  protected:
     bool skip_reduce_or_group_phase() {
         return true;
     }

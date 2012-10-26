@@ -112,6 +112,5 @@ int main(int argc, TCHAR * argv[]) {
     app.print_stats();
     if (!quiet)
 	print_top(&app.results_, ndisp);
-    app.join();
     return 0;
 }

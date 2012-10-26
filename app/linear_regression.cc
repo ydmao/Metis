@@ -231,7 +231,5 @@ int main(int argc, char *argv[]) {
 	printf("\tSYY  = %lld\n", SYY_ll);
 	printf("\tSXY  = %lld\n", SXY_ll);
     }
-
-    app.join();
     return 0;
 }

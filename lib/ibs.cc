@@ -65,7 +65,7 @@ static void readsamples(const char *path) {
 void ibs_start(int cid) {
     if (!ibs_enabled)
 	return;
-    cid = lcpu_to_pcpu[cid];
+    cid = cpumap_physical_cpuid(cid);
     nsamples = 0;
     latency = 0;
     char path[512];
@@ -94,7 +94,7 @@ void ibs_start(int cid) {
 void ibs_stop(int cid) {
     if (!ibs_enabled)
 	return;
-    cid = lcpu_to_pcpu[cid];
+    cid = cpumap_physical_cpuid(cid);
     char path[512];
     // set opctl to stop
     sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/opctl", cid);

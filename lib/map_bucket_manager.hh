@@ -118,7 +118,7 @@ void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu
     delete myshare;
     // barrier before freeing xo to make sure no one is accessing out anymore.
     pi->cpu_barrier(lcpu, ncpus);
-    if (pi->main_cpu(lcpu)) {
+    if (lcpu == main_core) {
         out->shallow_free();
         delete out;
     }

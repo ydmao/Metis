@@ -42,17 +42,12 @@ struct  __attribute__ ((aligned(JOS_CLINE))) thread_pool_t {
 static thread_pool_t tp_[JOS_NCPU];
 static bool tp_inited_ = false;
 __thread int cur_lcpu = 0;
-static int main_lcpu = 0;
-static int used_nlcpus = 0;
-
-int mthread_is_mainlcpu(int lcpu) {
-    return lcpu == main_lcpu;
-}
+static int ncore_ = 0;
 
 void mthread_create(pthread_t * tid, int lid, void *(*start_routine) (void *),
   	            void *arg) {
     assert(tp_inited_);
-    if (lid == main_lcpu)
+    if (lid == main_core)
 	start_routine(arg);
     else {
         tp_[lid].wait_finish();
@@ -69,23 +64,22 @@ void mthread_join(pthread_t tid, int lid, void **exitcode) {
 
 static void *mthread_entry(void *args) {
     cur_lcpu = ptr2int<int>(args);
-    assert(affinity_set(lcpu_to_pcpu[cur_lcpu]) == 0);
+    assert(affinity_set(cpumap_physical_cpuid(cur_lcpu)) == 0);
     while (true)
         tp_[cur_lcpu].run_next_task();
 }
 
-void mthread_init(int nlcpus, int mlcpu) {
+void mthread_init(int ncore) {
     if (tp_inited_)
         return;
     cpumap_init();
-    used_nlcpus = nlcpus;
-    cur_lcpu = mlcpu;
-    main_lcpu = mlcpu;
-    assert(affinity_set(lcpu_to_pcpu[main_lcpu]) == 0);
+    ncore_ = ncore;
+    cur_lcpu = main_core;
+    assert(affinity_set(cpumap_physical_cpuid(main_core)) == 0);
     tp_inited_ = true;
     bzero(tp_, sizeof(tp_));
-    for (int i = 0; i < used_nlcpus; ++i)
-	if (i == main_lcpu)
+    for (int i = 0; i < ncore_; ++i)
+	if (i == main_core)
 	    tp_[i].tid_ = pthread_self();
 	else
 	    assert(pthread_create(&tp_[i].tid_, NULL, mthread_entry, int2ptr(i)) == 0);
@@ -98,13 +92,13 @@ static void *mthread_exit(void *) {
 void mthread_finalize(void) {
     if (!tp_inited_)
         return;
-    for (int i = 0; i < used_nlcpus; ++i) {
-	if (i == main_lcpu)
+    for (int i = 0; i < ncore_; ++i) {
+	if (i == main_core)
 	    continue;
 	mthread_create(NULL, i, mthread_exit, NULL);
     }
-    for (int i = 0; i < used_nlcpus; ++i)
-	if (i != main_lcpu)
+    for (int i = 0; i < ncore_; ++i)
+	if (i != main_core)
 	    pthread_join(tp_[i].tid_, NULL);
     tp_inited_ = false;
 }

@@ -219,6 +219,5 @@ int main(int argc, TCHAR * argv[]) {
 	output_all(&app.results_, fout);
 	fclose(fout);
     }
-    app.join();
     return 0;
 }

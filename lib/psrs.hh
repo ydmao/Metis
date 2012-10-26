@@ -5,6 +5,7 @@
 #include "bench.hh"
 #include "bsearch.hh"
 #include "mergesort.hh"
+#include "cpumap.hh"
 
 template <typename C>
 struct psrs {
@@ -13,21 +14,18 @@ struct psrs {
         static psrs<C> instance;
         return &instance;
     }
-    void cpu_barrier(int lcpu, int ncpus);
+    void cpu_barrier(int me, int ncpus);
     /* Divide array[start, end] into subarrays using [pivots[fp], pivots[lp]],
      * so that subsize[at + i] is the first element that is > pivots[i]
      */
     void sublists(pair_type *base, int start, int end, int *subsize,
                   const pair_type *pivots, int fp, int lp, pair_cmp_t pcmp);
     C *copy_elems(C *arr_colls, int ncolls, int dst_start, int dst_end);
-    void mergesort(pair_type **lpairs, int npairs, int *subsize, int lcpu,
+    void mergesort(pair_type **lpairs, int npairs, int *subsize, int me,
                    pair_type *out, int ncpus, pair_cmp_t pcmp);
-    C *do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp);
-    C *do_psrs(xarray<C> &a, int ncpus, int lcpu, pair_cmp_t pcmp) {
-        return do_psrs(a.array(), a.size(), ncpus, lcpu, pcmp);
-    }
-    static bool main_cpu(int lcpu) {
-        return lcpu == main_lcpu;
+    C *do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp);
+    C *do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
+        return do_psrs(a.array(), a.size(), ncpus, me, pcmp);
     }
     void init(C *xo) {
         output_ = xo;
@@ -63,7 +61,6 @@ struct psrs {
         assert(output_ && status == STOP);
     }
 
-    enum { main_lcpu = 0 };
     enum { STOP, START };
     union {
         char __pad[JOS_CLINE];
@@ -80,26 +77,25 @@ struct psrs {
 };
 
 template <typename C>
-void psrs<C>::cpu_barrier(int lcpu, int ncpus)
-{
-    if (lcpu != main_lcpu) {
+void psrs<C>::cpu_barrier(int me, int ncpus) {
+    if (me != main_core) {
 	while (status != START) ;
-	ready[lcpu].v = 1;
+	ready[me].v = 1;
 	mfence();
 	while (status != STOP) ;
-	ready[lcpu].v = 0;
+	ready[me].v = 0;
     } else {
 	status = START;
 	mfence();
 	for (int i = 0; i < ncpus; i++) {
-	    if (i == main_lcpu)
+	    if (i == main_core)
 		continue;
 	    while (!ready[i].v) ;
 	}
 	status = STOP;
 	mfence();
 	for (int i = 0; i < ncpus; i++) {
-	    if (i == main_lcpu)
+	    if (i == main_core)
 		continue;
 	    while (ready[i].v)
                 ;
@@ -137,13 +133,13 @@ void psrs<C>::sublists(pair_type *base, int start, int end, int *subsize, const 
 
 template <typename C>
 void psrs<C>::mergesort(typename psrs<C>::pair_type **lpairs, int npairs, int *subsize,
-                        int lcpu, typename psrs<C>::pair_type *out,
+                        int me, typename psrs<C>::pair_type *out,
 	                int ncpus, pair_cmp_t pcmp)
 {
     C a[JOS_NCPU];
     for (int i = 0; i < ncpus; ++i) {
-        int s = subsize[i * (ncpus + 1) + lcpu];
-        int e = subsize[i * (ncpus + 1) + lcpu + 1];
+        int s = subsize[i * (ncpus + 1) + me];
+        int e = subsize[i * (ncpus + 1) + me + 1];
         a[i].set_array(&lpairs[i][s], e - s);
     }
     C output;
@@ -191,30 +187,29 @@ C *psrs<C>::copy_elems(C *arr_colls, int ncolls, int dst_start, int dst_end) {
  * otherwise, put the output into the first array of acolls;
  */
 template <typename C>
-C *psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp)
-{
-    if (lcpu == main_lcpu)
+C *psrs<C>::do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp) {
+    if (me == main_core)
 	check_inited();
-    cpu_barrier(lcpu, ncpus);
+    cpu_barrier(me, ncpus);
     // get the [start, end] subarray
     int w = (total_len + ncpus - 1) / ncpus;
-    int start = w * lcpu;
-    int end = w * (lcpu + 1) - 1;
+    int start = w * me;
+    int end = w * (me + 1) - 1;
     if (end >= total_len)
 	end = total_len - 1;
     if (total_len < ncpus * ncpus * ncpus) {
-	if (lcpu != main_lcpu)
+	if (me != main_core)
 	    return new C;
 	start = 0;
 	end = total_len - 1;
     }
     C *localpairs = copy_elems(a, n, start, end);
     int copied = localpairs->size();
-    lpairs[lcpu] = localpairs->array();
+    lpairs[me] = localpairs->array();
     // sort the subarray locally
     localpairs->sort(pcmp);
     if (ncpus == 1 || total_len < ncpus * ncpus * ncpus) {
-	assert(lcpu == main_lcpu && size_t(total_len) == localpairs->size());
+	assert(me == main_core && size_t(total_len) == localpairs->size());
         // transfer memory ownership to output_
         output_->shallow_free();
         output_->set_array(localpairs->array(), localpairs->size());
@@ -225,55 +220,55 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int lcpu, pair_cmp_t pcmp)
     // sends (p - 1) local pivots to main cpu
     for (int i = 0; i < ncpus - 1; i++) {
 	if ((i + 1) * rsize < copied)
-            pivots[lcpu * (ncpus - 1) + i].assign(localpairs->at((i + 1) * rsize));
+            pivots[me * (ncpus - 1) + i].assign(localpairs->at((i + 1) * rsize));
 	else
-            pivots[lcpu * (ncpus - 1) + i].assign(localpairs->at(copied - 1));
+            pivots[me * (ncpus - 1) + i].assign(localpairs->at(copied - 1));
     }
-    cpu_barrier(lcpu, ncpus);
-    if (lcpu == main_lcpu) {
+    cpu_barrier(me, ncpus);
+    if (me == main_core) {
 	// sort p * (p - 1) pivots.
 	qsort(pivots, ncpus * (ncpus - 1), sizeof(pair_type), pcmp);
 	// select (p - 1) pivots into pivots[1 : (p - 1)]
 	for (int i = 0; i < ncpus - 1; i++)
             pivots[i + 1] = pivots[i * ncpus + ncpus / 2];
-	cpu_barrier(lcpu, ncpus);
+	cpu_barrier(me, ncpus);
     } else
-	cpu_barrier(lcpu, ncpus);
+	cpu_barrier(me, ncpus);
     // divide the local list into p sublists by the (p - 1) pivots received from main cpu
-    subsize[lcpu * (ncpus + 1)] = 0;
-    subsize[lcpu * (ncpus + 1) + ncpus] = copied;
-    sublists(localpairs->array(), 0, copied - 1, &subsize[lcpu * (ncpus + 1)],
+    subsize[me * (ncpus + 1)] = 0;
+    subsize[me * (ncpus + 1) + ncpus] = copied;
+    sublists(localpairs->array(), 0, copied - 1, &subsize[me * (ncpus + 1)],
 	     pivots, 1, ncpus - 1, pcmp);
-    cpu_barrier(lcpu, ncpus);
-    // decides the size of the lcpu-th sublist
-    partsize[lcpu] = 0;
+    cpu_barrier(me, ncpus);
+    // decides the size of the me-th sublist
+    partsize[me] = 0;
     for (int i = 0; i < ncpus; i++) {
-	int start = subsize[i * (ncpus + 1) + lcpu];
-	int end = subsize[i * (ncpus + 1) + lcpu + 1];
-	partsize[lcpu] += end - start;
+	int start = subsize[i * (ncpus + 1) + me];
+	int end = subsize[i * (ncpus + 1) + me + 1];
+	partsize[me] += end - start;
     }
-    cpu_barrier(lcpu, ncpus);
+    cpu_barrier(me, ncpus);
     // merge each partition in parallel
     // determines the position in the final results for local partition
     int output_offset = 0;
-    for (int i = 0; i < lcpu; i++)
+    for (int i = 0; i < me; ++i)
         output_offset += partsize[i];
     mergesort(reinterpret_cast<pair_type **>(lpairs),
-              partsize[lcpu], reinterpret_cast<int *>(subsize),
-              lcpu, &output_->at(output_offset), ncpus, pcmp);
-    cpu_barrier(lcpu, ncpus);
+              partsize[me], reinterpret_cast<int *>(subsize),
+              me, &output_->at(output_offset), ncpus, pcmp);
+    cpu_barrier(me, ncpus);
     localpairs->shallow_free();
-    localpairs->set_array(&output_->at(output_offset), partsize[lcpu]);
+    localpairs->set_array(&output_->at(output_offset), partsize[me]);
     // apply a barrier before deinit to make sure no one is using output_
-    cpu_barrier(lcpu, ncpus);
-    if (lcpu == main_lcpu)
+    cpu_barrier(me, ncpus);
+    if (me == main_core)
         deinit();
     return localpairs;
 }
 
 template <typename C>
-inline C *initialize_psrs(int lcpu, size_t output_size) {
-    if (!psrs<C>::main_cpu(lcpu))
+inline C *initialize_psrs(int me, size_t output_size) {
+    if (me != main_core)
         return NULL;
     C *xo = new C;
     xo->resize(output_size);

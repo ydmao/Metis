@@ -380,6 +380,5 @@ int main(int argc, char **argv) {
     free(app.kd_.clusters);
     free(app.kd_.means);
     pthread_mutex_destroy(&lock);
-    app.join();
     return 0;
 }

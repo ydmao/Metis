@@ -33,7 +33,8 @@ mapreduce_appbase::mapreduce_appbase() : m_(), sample_(), sampling_(false) {
 }
 
 mapreduce_appbase::~mapreduce_appbase() {
-    assert(clean_ && "please call mapreduce_appbase::reset() to free memory");
+    reset();
+    mthread_finalize();
 }
 
 map_bucket_manager_base *mapreduce_appbase::create_map_bucket_manager(int nrow, int ncol) {
@@ -137,13 +138,13 @@ void mapreduce_appbase::run_phase(int phase, int ncore, uint64_t &t, int first_t
     phase_ = phase;
     next_task_ = first_task;
     for (int i = 0; i < ncore; ++i) {
-	if (mthread_is_mainlcpu(i))
+	if (i == main_core)
 	    continue;
 	mthread_create(&tid[i], i, base_worker, this);
     }
-    mthread_create(&tid[main_lcpu], main_lcpu, base_worker, this);
+    mthread_create(&tid[main_core], main_core, base_worker, this);
     for (int i = 0; i < ncore; ++i) {
-	if (mthread_is_mainlcpu(i))
+	if (i == main_core)
 	    continue;
 	void *ret;
 	mthread_join(tid[i], i, &ret);
@@ -159,7 +160,7 @@ size_t mapreduce_appbase::sched_sample() {
     ma_.trim(nsample_map_task);
 
     sampling_ = true;
-    sample_ = create_map_bucket_manager(ncore_, default_sample_reduce_task);
+    sample_ = create_map_bucket_manager(ncore_, default_sample_hashtable_size);
     bzero(e_, sizeof(e_));
     size_t t = 0;
     run_phase(MAP, ncore_, t);
@@ -173,7 +174,7 @@ size_t mapreduce_appbase::sched_sample() {
     nsampled_splits_ = nsample_map_task;
 
     sampling_ = false;
-    return std::max(predicted_ntask, size_t(ncore_ * def_gr_tasks_per_cpu));
+    return std::max(predicted_ntask, size_t(ncore_ * default_group_or_reduce_task_per_core));
 }
 
 int mapreduce_appbase::sched_run() {
@@ -186,7 +187,7 @@ int mapreduce_appbase::sched_run() {
     if (!ncore_)
 	ncore_ = max_ncore;
     // initialize thread manager
-    mthread_init(ncore_, main_lcpu);
+    mthread_init(ncore_);
 
     // pre-split
     ma_.clear();
@@ -261,11 +262,6 @@ void mapreduce_appbase::print_stats(void) {
     }
 }
 
-void mapreduce_appbase::join() {
-    reset();
-    mthread_finalize();
-}
-
 void mapreduce_appbase::map_emit(void *k, void *v, int keylen) {
     unsigned hash = partition(k, keylen);
     bool newkey = (sampling_ ? sample_ : m_)->emit(cur_lcpu, k, v, keylen, hash);
@@ -290,7 +286,6 @@ reduce_bucket_manager_base *mapreduce_appbase::get_reduce_bucket_manager() {
 
 void mapreduce_appbase::reset() {
     sampling_ = false;
-    free_results();
     reduce_bucket_manager<keyval_t>::instance()->reset();
     reduce_bucket_manager<keyvals_len_t>::instance()->reset();
     if (m_) {

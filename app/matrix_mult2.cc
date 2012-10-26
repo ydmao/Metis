@@ -166,7 +166,6 @@ int main(int argc, char *argv[]) {
 	    printf("%d\t", fdata_out[(matrix_len - 1) * matrix_len + i]);
 	printf("\n");
     }
-    app.join();
     return 0;
 }
 

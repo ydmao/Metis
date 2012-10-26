@@ -1,8 +1,12 @@
 #include "lib/cpumap.hh"
 
-int lcpu_to_pcpu[JOS_NCPU];
+static int logical_to_physical_[JOS_NCPU];
 
 void cpumap_init() {
     for (int i = 0; i < JOS_NCPU; ++i)
-	lcpu_to_pcpu[i] = i;
+	logical_to_physical_[i] = i;
+}
+
+int cpumap_physical_cpuid(int i) {
+    return logical_to_physical_[i];
 }
