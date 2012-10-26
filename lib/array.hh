@@ -123,6 +123,7 @@ struct xarray {
     }
     void shallow_free() {
         set_capacity(0);
+        init();
     }
     void init() {
         n_ = 0;
