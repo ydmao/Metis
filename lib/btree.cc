@@ -124,6 +124,16 @@ btree_type::iterator btree_type::end() {
 }
 
 uint64_t btree_type::copy(xarray<keyvals_t> *dst) {
+    return copy_traverse(dst, false);
+}
+
+uint64_t btree_type::transfer(xarray<keyvals_t> *dst) {
+    uint64_t n = copy_traverse(dst, true);
+    shallow_free();
+    return n;
+}
+
+uint64_t btree_type::copy_traverse(xarray<keyvals_t> *dst, bool clear_leaf) {
     assert(dst->size() == 0);
     if (!nlevel_)
 	return 0;
@@ -133,16 +143,12 @@ uint64_t btree_type::copy(xarray<keyvals_t> *dst) {
     while (leaf) {
 	memcpy(&dst->at(n), leaf->e_, sizeof(keyvals_t) * leaf->nk_);
 	n += leaf->nk_;
+        if (clear_leaf)
+            leaf->nk_ = 0;  // quickly delete all key/values from the leaf
         leaf = leaf->next_;
     }
     assert(n == nk_);
     return n;
-}
-
-uint64_t btree_type::transfer(xarray<keyvals_t> *dst) {
-    copy(dst);
-    shallow_free();
-    return dst->size();
 }
 
 btnode_leaf *btree_type::first_leaf() const {

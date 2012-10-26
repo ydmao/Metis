@@ -120,8 +120,8 @@ struct btree_type {
        @return true if it is a new key */
     int map_insert_sorted(void *key, void *val, size_t keylen, unsigned hash);
     size_t size() const;
-    uint64_t copy(xarray<keyvals_t> *dst);
     uint64_t transfer(xarray<keyvals_t> *dst);
+    uint64_t copy(xarray<keyvals_t> *dst);
 
     /* @brief: return the number of values in the tree */
     uint64_t test_get_nvalue() {
@@ -178,7 +178,8 @@ struct btree_type {
     size_t nk_;
     short nlevel_;
     btnode_base *root_;
- 
+    uint64_t copy_traverse(xarray<keyvals_t> *dst, bool clear_leaf);
+
     /* @brief: insert @key at position @pos into leaf node @leaf,
      * and set the value of that key to empty */
     static void insert_leaf(btnode_leaf *leaf, void *key, int pos, int keylen);
