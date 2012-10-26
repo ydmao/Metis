@@ -85,6 +85,8 @@ static void *mthread_exit(void *) {
 }
 
 void mthread_finalize(void) {
+    if (!mthread_inited)
+        return;
     for (int i = 0; i < used_nlcpus; ++i) {
 	if (i == main_lcpu)
 	    continue;
