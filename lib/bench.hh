@@ -146,4 +146,13 @@ inline int atomic_add32_ret(int *cnt) {
     __asm__ __volatile("lock; xadd %0,%1":"+r"(__c), "+m"(*cnt)::"memory");
     return __c;
 }
+
+template <typename T>
+inline T prime_lower_bound(T x) {
+    for (int q = 2; q < sqrt(double(x)); ++q)
+        if (x % q == 0)
+            ++x, q = 1;  // restart
+    return x;
+}
+
 #endif

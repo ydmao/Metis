@@ -1,5 +1,4 @@
-LIB_SRCS := metis_runtime.cc		\
-	    pthreadpool.cc		\
+LIB_SRCS := pthreadpool.cc		\
 	    profile.cc		\
 	    value_helper.cc		\
 	    ibs.cc			\

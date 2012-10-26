@@ -53,4 +53,14 @@ union __attribute__ ((__packed__, __aligned__(JOS_CLINE))) predictor {
     enum { update_interval = 1000 };
 };
 
+inline uint64_t predict_nkey(predictor *e, int ne, int total_task) {
+    uint64_t nk = 0;
+    uint64_t np = 0;  // # of keys and pairs per mapper
+    int nvalid = 0;  // # of workers that has sampled
+    for (int i = 0; i < ne; ++i)
+	if (e[i].valid())
+	    ++ nvalid, e[i].inc_predict(&nk, &np, total_task);
+    return nk /= nvalid;
+}
+
 #endif

@@ -4,9 +4,10 @@
 #include "mr-types.hh"
 #include "profile.hh"
 #include "bench.hh"
+#include "predictor.hh"
 
 struct reduce_bucket_manager_base;
-struct metis_runtime;
+struct map_bucket_manager_base;
 
 struct mapreduce_appbase {
     mapreduce_appbase();
@@ -70,6 +71,7 @@ struct mapreduce_appbase {
     int merge_worker();
     static void *base_worker(void *arg);
     void run_phase(int phase, int ncore, uint64_t &t, int first_task = 0);
+    map_bucket_manager_base *create_map_bucket_manager(int nrow, int ncol);
 
     int nreduce_or_group_task_;
     enum { main_lcpu = 0 };
@@ -77,6 +79,8 @@ struct mapreduce_appbase {
     enum { default_sample_reduce_task = 10000 };
     enum { sample_percent = 5 };
     enum { combiner_threshold = 8 };
+    enum { expected_keys_per_bucket = 10 };
+
   private:
 
     uint64_t nsampled_splits_;
@@ -89,7 +93,6 @@ struct mapreduce_appbase {
     uint64_t total_reduce_time_;
     uint64_t total_merge_time_;
     uint64_t total_real_time_;
-    metis_runtime *rt_;
     bool clean_;
     
     int next_task() {
@@ -98,6 +101,11 @@ struct mapreduce_appbase {
     int next_task_;
     int phase_;
     xarray<split_t> ma_;
+
+    map_bucket_manager_base *m_;
+    map_bucket_manager_base *sample_;
+    bool sampling_;
+    predictor e_[JOS_NCPU];
 };
 
 struct map_reduce_or_group_base : public mapreduce_appbase {

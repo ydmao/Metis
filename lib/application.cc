@@ -11,7 +11,9 @@
 #include "bench.hh"
 #include "thread.hh"
 #include "reduce_bucket_manager.hh"
-#include "metis_runtime.hh"
+#include "map_bucket_manager.hh"
+#include "btree.hh"
+#include "array.hh"
 
 extern JTLS int cur_lcpu;	// defined in lib/pthreadpool.c
 mapreduce_appbase *the_app_ = NULL;
@@ -26,23 +28,54 @@ void cprint(const char *key, uint64_t v, const char *delim) {
 }
 }
 
-mapreduce_appbase::mapreduce_appbase() {
-    rt_ = new metis_runtime;
+mapreduce_appbase::mapreduce_appbase() : m_(), sample_(), sampling_(false) {
     clean_ = true;
 }
 
 mapreduce_appbase::~mapreduce_appbase() {
-    delete rt_;
+    assert(clean_ && "please call mapreduce_appbase::reset() to free memory");
 }
 
+map_bucket_manager_base *mapreduce_appbase::create_map_bucket_manager(int nrow, int ncol) {
+    enum { index_append, index_btree, index_array };
+#ifdef FORCE_APPEND
+    int index = index_append;
+#else
+    int index = (application_type() == atype_maponly) ? index_append : index_btree;
+#endif
+    map_bucket_manager_base *m = NULL;
+    switch (index) {
+    case index_append:
+#ifdef SINGLE_APPEND_GROUP_MERGE_FIRST
+        m = new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
+#else
+        m = new map_bucket_manager<false, keyval_arr_t, keyval_t>;
+#endif
+        break;
+    case index_btree:
+        m = new map_bucket_manager<true, btree_type, keyvals_t>;
+        break;
+    case index_array:
+        m = new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;
+        break;
+    default:
+        assert(0);
+    }
+    m->init(nrow, ncol);
+    return m;
+};
+
 int mapreduce_appbase::map_worker() {
+    if (!sampling_ && sample_)
+        m_->rehash(cur_lcpu, sample_);
     int n, next;
-    rt_->map_worker_init(cur_lcpu);
     for (n = 0; (next = next_task()) < int(ma_.size()); ++n) {
 	map_function(&ma_.at(next));
-	rt_->map_task_finished(cur_lcpu);
+        if (sampling_)
+	    e_[cur_lcpu].task_finished();
     }
-    rt_->map_worker_finished(cur_lcpu, skip_reduce_or_group_phase());
+    if (!sampling_ && skip_reduce_or_group_phase())
+        m_->prepare_merge(cur_lcpu);
     return n;
 }
 
@@ -50,13 +83,21 @@ int mapreduce_appbase::reduce_worker() {
     int n, next;
     for (n = 0; (next = next_task()) < nreduce_or_group_task_; ++n) {
         get_reduce_bucket_manager()->set_current_reduce_task(next);
-	rt_->reduce_do_task(cur_lcpu, next);
+	m_->do_reduce_task(next);
     }
     return n;
 }
 
 int mapreduce_appbase::merge_worker() {
-    rt_->merge(merge_nsplits_, merge_ncpus_, cur_lcpu, skip_reduce_or_group_phase());
+    reduce_bucket_manager_base *r = get_reduce_bucket_manager();
+    if (application_type() == atype_maponly || !skip_reduce_or_group_phase())
+	r->merge_reduced_buckets(merge_nsplits_, merge_ncpus_, cur_lcpu);
+    else {
+        // must use psrs
+        m_->merge_output_and_reduce(merge_ncpus_, cur_lcpu);
+        // merge reduced buckets
+	r->merge_reduced_buckets(merge_nsplits_, merge_ncpus_, cur_lcpu);
+    }
     return 1;
 }
 
@@ -116,16 +157,22 @@ size_t mapreduce_appbase::sched_sample() {
     const size_t nma = ma_.size();
     assert(nma);
     ma_.trim(nsample_map_task);
-    rt_->sample_init(ncore_, default_sample_reduce_task);
+
+    sampling_ = true;
+    sample_ = create_map_bucket_manager(ncore_, default_sample_reduce_task);
+    bzero(e_, sizeof(e_));
     size_t t = 0;
     run_phase(MAP, ncore_, t);
-    size_t predicted_ntask = rt_->sample_finished(nma);
+    const size_t predicted_nkey = predict_nkey(e_, ncore_, nma);
+    size_t predicted_ntask = prime_lower_bound(predicted_nkey / expected_keys_per_bucket);
     ma_.trim(nma, true);
 
     dprintf("sampled %zd from %zd tasks,", nsample_map_task, ma_.size());
     dprintf("time: %zd ms\n", cycle_to_ms(t));
     total_sample_time_ += t;
     nsampled_splits_ = nsample_map_task;
+
+    sampling_ = false;
     return std::max(predicted_ntask, size_t(ncore_ * def_gr_tasks_per_cpu));
 }
 
@@ -154,12 +201,12 @@ int mapreduce_appbase::sched_run() {
     // get the number of reduce tasks by sampling if needed
     if (skip_reduce_or_group_phase()) {
 	merge_nsplits_ = ncore_;
-	rt_->init_map(ncore_, 1);
+        m_ = create_map_bucket_manager(ncore_, 1);
     } else {
 	if (!nreduce_or_group_task_)
 	    nreduce_or_group_task_ = sched_sample();
 	merge_nsplits_ = nreduce_or_group_task_;
-	rt_->init_map(ncore_, nreduce_or_group_task_);
+        m_ = create_map_bucket_manager(ncore_, nreduce_or_group_task_);
     }
     get_reduce_bucket_manager()->init(merge_nsplits_);
 
@@ -220,7 +267,10 @@ void mapreduce_appbase::join() {
 }
 
 void mapreduce_appbase::map_emit(void *k, void *v, int keylen) {
-    rt_->map_emit(cur_lcpu, k, v, keylen, partition(k, keylen));
+    unsigned hash = partition(k, keylen);
+    bool newkey = (sampling_ ? sample_ : m_)->emit(cur_lcpu, k, v, keylen, hash);
+    if (sampling_)
+        e_[cur_lcpu].onepair(newkey);
 }
 
 void mapreduce_appbase::reduce_emit(void *k, void *v) {
@@ -239,8 +289,18 @@ reduce_bucket_manager_base *mapreduce_appbase::get_reduce_bucket_manager() {
 }
 
 void mapreduce_appbase::reset() {
+    sampling_ = false;
     free_results();
-    rt_->reset();
+    reduce_bucket_manager<keyval_t>::instance()->reset();
+    reduce_bucket_manager<keyvals_len_t>::instance()->reset();
+    if (m_) {
+        delete m_;
+        m_ = NULL;
+    }
+    if (sample_) {
+        delete sample_;
+        sample_ = NULL;
+    }
     clean_ = true;
 }
 
