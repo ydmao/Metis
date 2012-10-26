@@ -122,7 +122,8 @@ void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu
         out->shallow_free();
         delete out;
     }
-    shallow_free_subarray(output_);
+    // free output_ in parallel
+    shallow_free_subarray(output_, lcpu, ncpus);
 }
 
 template <bool S, typename DT, typename OPT>
