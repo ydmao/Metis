@@ -106,5 +106,8 @@ int main(int argc, char *argv[]) {
 	    printf("%d\t", fdata_out[(matrix_len - 1) * matrix_len + i]);
 	printf("\n");
     }
+    free(matrix_A_ptr);
+    free(matrix_B_ptr);
+    free(fdata_out);
     return 0;
 }

@@ -103,6 +103,7 @@ void mm::map_function_nonblock(split_t *args) {
     }
     printf("Finished Map task %d\n", data->row_num);
     fflush(stdout);
+    free(data);
     prof_leaveapp();
 }
 
@@ -132,7 +133,7 @@ bool mm::split_block(split_t *out, int ncore) {
 void mm::map_function_block(split_t * args) {
     prof_enterapp();
     assert(args && args->data);
-    mm_data_t *data = (mm_data_t *) (args->data);
+    mm_data_t *data = (mm_data_t *)args->data;
     dprintf("%d Start Loop \n", data->row_num);
     int i = data->startrow;
     int j = data->startcol;
@@ -149,6 +150,7 @@ void mm::map_function_block(split_t * args) {
 			 data->matrix_B[data->matrix_len * c + b]);
     }
     dprintf("Finished Map task %d\n", data->row_num);
+    free(data);
     prof_leaveapp();
 }
 
