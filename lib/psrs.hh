@@ -79,22 +79,25 @@ struct psrs {
 template <typename C>
 void psrs<C>::cpu_barrier(int me, int ncpus) {
     if (me != main_core) {
-	while (status != START) ;
+	while (status != START)
+            ;
 	ready[me].v = 1;
 	mfence();
-	while (status != STOP) ;
+	while (status != STOP)
+            ;
 	ready[me].v = 0;
     } else {
 	status = START;
 	mfence();
-	for (int i = 0; i < ncpus; i++) {
+	for (int i = 0; i < ncpus; ++i) {
 	    if (i == main_core)
 		continue;
-	    while (!ready[i].v) ;
+	    while (!ready[i].v)
+                ;
 	}
 	status = STOP;
 	mfence();
-	for (int i = 0; i < ncpus; i++) {
+	for (int i = 0; i < ncpus; ++i) {
 	    if (i == main_core)
 		continue;
 	    while (ready[i].v)
@@ -134,8 +137,7 @@ void psrs<C>::sublists(pair_type *base, int start, int end, int *subsize, const 
 template <typename C>
 void psrs<C>::mergesort(typename psrs<C>::pair_type **lpairs, int npairs, int *subsize,
                         int me, typename psrs<C>::pair_type *out,
-	                int ncpus, pair_cmp_t pcmp)
-{
+	                int ncpus, pair_cmp_t pcmp) {
     C a[JOS_NCPU];
     for (int i = 0; i < ncpus; ++i) {
         int s = subsize[i * (ncpus + 1) + me];
