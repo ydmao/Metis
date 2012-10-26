@@ -65,8 +65,7 @@ btnode_leaf *btree_type::get_leaf(void *key) {
 }
 
 // left < splitkey <= right. Right is the new sibling
-int btree_type::map_insert_sorted(void *key, void *val, size_t keylen, unsigned hash)
-{
+int btree_type::map_insert_sorted_copy_on_new(void *key, void *val, size_t keylen, unsigned hash) {
     btnode_leaf *leaf = get_leaf(key);
     bool bfound = false;
     int pos = leaf->lower_bound(key, &bfound);
@@ -83,7 +82,7 @@ int btree_type::map_insert_sorted(void *key, void *val, size_t keylen, unsigned 
     return !bfound;
 }
 
-bool btree_type::insert_kvs(keyvals_t *k) {
+void btree_type::map_insert_sorted_new_and_raw(keyvals_t *k) {
     btnode_leaf *leaf = get_leaf(k->key);
     bool found = false;
     int pos = leaf->lower_bound(k->key, &found);
@@ -95,7 +94,6 @@ bool btree_type::insert_kvs(keyvals_t *k) {
         btnode_leaf *right = leaf->split();
         insert_internal(right->e_[0].key, leaf, right);
     }
-    return true;
 }
 
 size_t btree_type::size() const {

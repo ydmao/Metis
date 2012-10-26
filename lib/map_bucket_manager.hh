@@ -21,6 +21,7 @@ struct map_bucket_manager_base {
     virtual int ncol() const = 0;
     virtual int nrow() const = 0;
     virtual void merge_output_and_reduce(int ncpus, int lcpu) = 0;
+    virtual size_t test_subsize() = 0;
 };
 
 template <typename DT, bool S>
@@ -47,15 +48,23 @@ struct map_insert_analyzer {
 
 template <typename DT>
 struct map_insert_analyzer<DT, true> {
-    static bool go(DT *dst, void *key, void *val, size_t keylen, unsigned hash) {
-        return dst->map_insert_sorted(key, val, keylen, hash);
+    static bool copy_on_new(DT *dst, void *key, void *val, size_t keylen, unsigned hash) {
+        return dst->map_insert_sorted_copy_on_new(key, val, keylen, hash);
+    }
+    typedef typename DT::element_type T;
+    static void insert_new_and_raw(DT *dst, T *t) {
+        dst->map_insert_sorted_new_and_raw(t);
     }
 };
 
 template <typename DT>
 struct map_insert_analyzer<DT, false> {
-    static bool go(DT *dst, void *key, void *val, size_t keylen, unsigned hash) {
-        return dst->map_append(key, val, keylen, hash);
+    static bool copy_on_new(DT *dst, void *key, void *val, size_t keylen, unsigned hash) {
+        return dst->map_append_copy(key, val, keylen, hash);
+    }
+    typedef typename DT::element_type T;
+    static void insert_new_and_raw(DT *dst, T *t) {
+        dst->map_append_raw(t);
     }
 };
 
@@ -77,7 +86,7 @@ struct map_bucket_manager : public map_bucket_manager_base {
         return cols_;
     }
     void merge_output_and_reduce(int ncpus, int lcpu);
-
+    size_t test_subsize();
     typedef xarray<OPT> output_bucket_type;
   private:
     DT *mapdt_bucket(int row, int col) {
@@ -151,12 +160,11 @@ void map_bucket_manager<S, DT, OPT>::rehash(int row, map_bucket_manager_base *a)
     typedef map_bucket_manager<S, DT, OPT> manager_type;
     manager_type *am = static_cast<manager_type *>(a);
 
-    const pair_cmp_t f = comparator::raw_comp<typename DT::element_type>::impl;
     for (int i = 0; i < am->cols_; ++i) {
         DT *src = am->mapdt_bucket(row, i);
         for (auto it = src->begin(); it != src->end(); ++it) {
             DT *dst = mapdt_bucket(row, it->hash % cols_);
-            dst->insert_new(&(*it), f);
+            map_insert_analyzer<DT, S>::insert_new_and_raw(dst, &(*it));
             it->init();
         }
     }
@@ -166,7 +174,7 @@ template <bool S, typename DT, typename OPT>
 bool map_bucket_manager<S, DT, OPT>::emit(int row, void *key, void *val,
                                        size_t keylen, unsigned hash) {
     DT *dst = mapdt_bucket(row, hash % cols_);
-    return map_insert_analyzer<DT, S>::go(dst, key, val, keylen, hash);
+    return map_insert_analyzer<DT, S>::copy_on_new(dst, key, val, keylen, hash);
 }
 
 /** @brief: Copy the intermediate DS into an xarray<OPT> */
@@ -189,4 +197,11 @@ void map_bucket_manager<S, DT, OPT>::do_reduce_task(int col) {
         a[i]->shallow_free();
 }
 
+template <bool S, typename DT, typename OPT>
+size_t map_bucket_manager<S, DT, OPT>::test_subsize() {
+    size_t n = 0;
+    for (size_t i = 0; i < mapdt_.size(); ++i)
+        n += mapdt_[i].size();
+    return n;
+}
 #endif

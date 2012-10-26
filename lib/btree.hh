@@ -109,16 +109,11 @@ struct btree_type {
     void init();
     /* @brief: free the tree, but not the values */
     void shallow_free();
-    bool insert_kvs(keyvals_t *kvs);
-
-    template <typename F>
-    void insert_new(keyvals_t *kvs, F &f) {
-        assert(insert_kvs(kvs) && f == comparator::raw_comp<keyvals_t>::impl);
-    }
+    void map_insert_sorted_new_and_raw(keyvals_t *kvs);
 
     /* @brief: insert key/val pair into the tree
        @return true if it is a new key */
-    int map_insert_sorted(void *key, void *val, size_t keylen, unsigned hash);
+    int map_insert_sorted_copy_on_new(void *key, void *val, size_t keylen, unsigned hash);
     size_t size() const;
     uint64_t transfer(xarray<keyvals_t> *dst);
     uint64_t copy(xarray<keyvals_t> *dst);

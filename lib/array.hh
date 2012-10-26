@@ -83,7 +83,7 @@ struct xarray {
         ++n_;
     }
     template <typename F>
-    bool insert_new(const T *e, const F &cmp, int *ppos = NULL) {
+    bool atomic_insert(const T *e, const F &cmp, int *ppos = NULL) {
         bool bfound = false;
         int pos = lower_bound(e, cmp, &bfound);
         if (ppos)

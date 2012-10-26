@@ -128,7 +128,8 @@ struct keyvals_t : public xarray<void *> {
 };
 
 struct keyval_arr_t : public xarray<keyval_t> {
-    bool map_append(void *key, void *val, size_t keylen, unsigned hash);
+    bool map_append_copy(void *key, void *val, size_t keylen, unsigned hash);
+    void map_append_raw(keyval_t *p);
 };
 
 void transfer(xarray<keyvals_t> *dst, xarray<keyvals_t> *src);
@@ -138,7 +139,8 @@ struct btree_type;
 void transfer(xarray<keyvals_t> *dst, btree_type *src);
 
 struct keyvals_arr_t : public xarray<keyvals_t> {
-    bool map_insert_sorted(void *key, void *val, size_t keylen, unsigned hash);
+    bool map_insert_sorted_copy_on_new(void *key, void *val, size_t keylen, unsigned hash);
+    void map_insert_sorted_new_and_raw(keyvals_t *p);
 };
 
 typedef enum {

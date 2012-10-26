@@ -63,7 +63,7 @@ void test1() {
     check_tree(bt);
     check_tree_copy(bt);
     for (int64_t i = 1; i < 1000; ++i) {
-        bt.map_insert_sorted((void *)i, (void *)(i + 1), 4, 0);
+        bt.map_insert_sorted_copy_on_new((void *)i, (void *)(i + 1), 4, 0);
         check_tree(bt);
         check_tree_copy(bt);
     }
@@ -79,7 +79,7 @@ void test2() {
         keyvals_t kvs;
         kvs.key = (void *)i;
         kvs.push_back((void *) (i + 1));
-        bt.insert_kvs(&kvs);
+        bt.map_insert_sorted_new_and_raw(&kvs);
         check_tree(bt);
         check_tree_copy(bt);
         CHECK_EQ(size_t(i), bt.size());
