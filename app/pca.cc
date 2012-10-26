@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
 
     pca_data_.unit_size = sizeof(int) * num_cols * 2;	// size of two rows
     pca_data_.next_start_row = pca_data_.next_cov_row = 0;
-    pca_data_.mean = m.results_.data;	// array of keys and values - 
+    pca_data_.mean = m.results_.array();	// array of keys and values - 
 
     pca_cov cov;
     cov.set_ncore(nprocs);
@@ -385,24 +385,24 @@ int main(int argc, char **argv) {
     cov.sched_run();
     cov.print_stats();
 
-    assert(int(cov.results_.length) == (num_rows * (num_rows - 1) / 2 + num_rows));
+    assert(int(cov.results_.size()) == (num_rows * (num_rows - 1) / 2 + num_rows));
     // Free the allocated structures
     int cnt = 0;
     int rows = num_rows;
     cond_printf(!quiet, "\n\nCovariance matrix:\n");
-    for (size_t i = 0; i < cov.results_.length; ++i) {
-	cond_printf(!quiet, "%5d ", *((int *) (cov.results_.data[i].val)));
+    for (size_t i = 0; i < cov.results_.size(); ++i) {
+	cond_printf(!quiet, "%5d ", *((int *) (cov.results_[i].val)));
 	++cnt;
 	if (cnt == num_rows) {
 	    cond_printf(!quiet, "\n");
 	    num_rows--;
 	    cnt = 0;
 	}
-	free(cov.results_.data[i].val);
-	free(cov.results_.data[i].key);
+	free(cov.results_[i].val);
+	free(cov.results_[i].key);
     }
     for (int i = 0; i < rows; i++) {
-	free(m.results_.data[i].val);
+	free(m.results_[i].val);
 	free(pca_data_.matrix[i]);
     }
     free(pca_data_.matrix);

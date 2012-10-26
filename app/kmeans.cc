@@ -361,10 +361,10 @@ int main(int argc, char **argv) {
 	    stats = NULL;
 	}
         app.sched_run();
-	for (size_t i = 0; i < app.results_.length; ++i) {
-	    int mean_idx = *((int *)app.results_.data[i].key);
+	for (size_t i = 0; i < app.results_.size(); ++i) {
+	    int mean_idx = *((int *)app.results_[i].key);
 	    free(app.kd_.means[mean_idx].val);
-	    app.kd_.means[mean_idx] = app.results_.data[i];
+	    app.kd_.means[mean_idx] = app.results_[i];
 	}
         app.free_results();
     }

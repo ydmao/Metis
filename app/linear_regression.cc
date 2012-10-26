@@ -177,8 +177,8 @@ int main(int argc, char *argv[]) {
     double a, b, xbar, ybar, r2;
     long long SX_ll = 0, SY_ll = 0, SXX_ll = 0, SYY_ll = 0, SXY_ll = 0;
     // ADD UP RESULTS
-    for (int i = 0; i < int(app.results_.length); ++i) {
-	keyval_t *curr = &app.results_.data[i];
+    for (size_t i = 0; i < app.results_.size(); ++i) {
+	keyval_t *curr = &app.results_[i];
 	switch ((long int) curr->key) {
 	case KEY_SX:
 	    SX_ll = (long long) curr->val;

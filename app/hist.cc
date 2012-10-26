@@ -260,8 +260,8 @@ int main(int argc, char *argv[]) {
     short prev = 0;
     cond_printf(!quiet, "\n\nBlue\n");
     cond_printf(!quiet, "----------\n\n");
-    for (size_t i = 0; i < app.results_.length; ++i) {
-	keyval_t *curr = &app.results_.data[i];
+    for (size_t i = 0; i < app.results_.size(); ++i) {
+	keyval_t *curr = &app.results_[i];
 	pix_val = *((short *) curr->key);
 	freq = (long) curr->val;
 

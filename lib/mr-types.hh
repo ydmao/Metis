@@ -51,11 +51,6 @@ struct keyval_t {
     }
 };
 
-struct final_data_kv_t {
-    keyval_t *data;
-    size_t length;
-};
-
 struct keyvals_len_t {
     void *key;
     void **vals;
@@ -91,11 +86,6 @@ struct keyvals_len_t {
         len = l;
     }
 };
-
-typedef struct {
-    keyvals_len_t *data;
-    size_t length;
-} final_data_kvs_len_t;
 
 /* types used internally */
 struct keyvals_len_arr_t: public xarray<keyvals_len_t> {

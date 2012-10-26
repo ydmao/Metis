@@ -341,15 +341,6 @@ void map_reduce::map_values_move(keyvals_t *dst, keyvals_t *src) {
     src->reset();
 }
 
-void map_reduce::set_final_result() {
-    reduce_bucket_manager<keyval_t>::instance()->transfer(0, &results_);
-}
-
-void map_reduce::reset() {
-    reduce_bucket_manager<keyval_t>::instance()->reset();
-    mapreduce_appbase::reset();
-}
-
 /** === map_group === */
 void map_group::internal_reduce_emit(keyvals_t &p) {
     keyvals_len_t x(p.key, p.array(), p.size());
@@ -358,22 +349,5 @@ void map_group::internal_reduce_emit(keyvals_t &p) {
     p.init();
 }
 
-void map_group::set_final_result() {
-    reduce_bucket_manager<keyvals_len_t>::instance()->transfer(0, &results_);
-}
-
-void map_group::reset() {
-    reduce_bucket_manager<keyvals_len_t>::instance()->reset();
-    mapreduce_appbase::reset();
-}
-
 /** === map_only ===*/
 
-void map_only::set_final_result() {
-    reduce_bucket_manager<keyval_t>::instance()->transfer(0, &results_);
-}
-
-void map_only::reset() {
-    mapreduce_appbase::reset();
-    reduce_bucket_manager<keyval_t>::instance()->reset();
-}

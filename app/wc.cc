@@ -122,30 +122,27 @@ struct wc : public map_reduce {
     defsplitter s_;
 };
 
-static void print_top(final_data_kv_t * wc_vals, int ndisp) {
-    uint64_t occurs = 0;
-    for (uint32_t i = 0; i < wc_vals->length; i++) {
-	keyval_t *curr = &((keyval_t *) wc_vals->data)[i];
-	occurs += (uint64_t) curr->val;
-    }
-    printf("\nwordcount: results (TOP %d from %zu keys, %" PRIu64
-	   " words):\n", ndisp, wc_vals->length, occurs);
+static void print_top(xarray<keyval_t> *wc_vals, size_t ndisp) {
+    size_t occurs = 0;
+    for (uint32_t i = 0; i < wc_vals->size(); i++)
+	occurs += size_t(wc_vals->at(i).val);
+    printf("\nwordcount: results (TOP %zd from %zu keys, %zd words):\n",
+           ndisp, wc_vals->size(), occurs);
 #ifdef HADOOP
-    ndisp = wc_vals->length;
+    ndisp = wc_vals->size();
+#else
+    ndisp = std::min(ndisp, wc_vals->size());
 #endif
-    ndisp = std::min(ndisp, int(wc_vals->length));
-    for (int i = 0; i < ndisp; i++) {
-	keyval_t *curr = &((keyval_t *) wc_vals->data)[i];
-	printf("%15s - %d\n", (char *) curr->key,
-	       (unsigned) (size_t) curr->val);
+    for (size_t i = 0; i < ndisp; i++) {
+	keyval_t *w = &wc_vals->at(i);
+	printf("%15s - %d\n", (char *)w->key, ptr2int<unsigned>(w->val));
     }
 }
 
-static void output_all(final_data_kv_t * wc_vals, FILE *fout) {
-    for (uint32_t i = 0; i < wc_vals->length; i++) {
-	keyval_t *curr = &((keyval_t *) wc_vals->data)[i];
-	fprintf(fout, "%18s - %lu\n", (char *) curr->key,
-		(uintptr_t) curr->val);
+static void output_all(xarray<keyval_t> *wc_vals, FILE *fout) {
+    for (uint32_t i = 0; i < wc_vals->size(); i++) {
+	keyval_t &w = wc_vals->at(i);
+	fprintf(fout, "%18s - %lu\n", (char *)w.key,  (uintptr_t)w.val);
     }
 }
 

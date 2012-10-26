@@ -76,12 +76,9 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
             delete out;
         }
     }
-    template <typename D>
-    void transfer(int p, D *dst) {
-        C *x = get(p);
-        dst->data = x->array();
-        dst->length = x->size();
-        x->init();
+    void transfer(int p, C *dst) {
+        assert(dst->size() == 0);
+        get(p)->swap(*dst);
     }
   private:
     int current_task() {
