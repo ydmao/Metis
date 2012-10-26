@@ -15,7 +15,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <algorithm>
-#include "platform.hh"
 
 #define JOS_PAGESIZE    4096
 enum { debug_print = 0 };
@@ -153,6 +152,13 @@ inline T prime_lower_bound(T x) {
         if (x % q == 0)
             ++x, q = 1;  // restart
     return x;
+}
+
+inline int affinity_set(int cpu) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(cpu, &cpuset);
+    return sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
 #endif
