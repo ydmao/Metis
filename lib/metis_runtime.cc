@@ -41,10 +41,7 @@ void metis_runtime::create_map_bucket_manager() {
 };
 
 metis_runtime::~metis_runtime() {
-    if (current_manager_)
-        delete current_manager_;
-    if (sample_manager_)
-        delete sample_manager_;
+    reset();
 }
 
 void metis_runtime::sample_init(int rows, int cols) {
