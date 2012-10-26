@@ -154,12 +154,12 @@ int mapreduce_appbase::sched_run() {
     // get the number of reduce tasks by sampling if needed
     if (skip_reduce_or_group_phase()) {
 	merge_nsplits_ = ncore_;
-	rt_->init_map(ncore_, 1, merge_nsplits_);
+	rt_->init_map(ncore_, 1);
     } else {
 	if (!nreduce_or_group_task_)
 	    nreduce_or_group_task_ = sched_sample();
 	merge_nsplits_ = nreduce_or_group_task_;
-	rt_->init_map(ncore_, nreduce_or_group_task_, merge_nsplits_);
+	rt_->init_map(ncore_, nreduce_or_group_task_);
     }
     get_reduce_bucket_manager()->init(merge_nsplits_);
 

@@ -88,7 +88,7 @@ void metis_runtime::map_worker_init(int row) {
     }
 }
 
-void metis_runtime::init_map(int rows, int cols, int nsplits) {
+void metis_runtime::init_map(int rows, int cols) {
     create_map_bucket_manager();
     current_manager_->init(rows, cols);
 }
@@ -109,9 +109,11 @@ void metis_runtime::reset() {
 
 void metis_runtime::map_emit(int row, void *key, void *val,
                              size_t keylen, unsigned hash) {
-    bool newkey = current_manager_->emit(row, key, val, keylen, hash);
-    if (sampling_)
+    if (sampling_) {
+        bool newkey = current_manager_->emit(row, key, val, keylen, hash);
         e_[row].onepair(newkey);
+    } else
+        current_manager_->emit(row, key, val, keylen, hash);
 }
 
 void metis_runtime::reduce_do_task(int row, int col) {

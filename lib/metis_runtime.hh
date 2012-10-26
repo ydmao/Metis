@@ -14,7 +14,7 @@ struct metis_runtime {
 
     /* Initialize the data structure for Map and Reduce phase */
     void reset();
-    void init_map(int rows, int cols, int nsplits);
+    void init_map(int rows, int cols);
 
     /* map phase */
     void map_worker_init(int row);
