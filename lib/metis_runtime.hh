@@ -24,7 +24,7 @@ struct metis_runtime {
     void map_worker_finished(int row, int reduce_skipped);
     /* reduce phase */
     void reduce_do_task(int row, int col);
-    void merge(int ncpus, int lcpu, int reduce_skipped);
+    void merge(int nin, int ncpus, int lcpu, int reduce_skipped);
     metis_runtime()
         : current_manager_(), sample_manager_(), sampling_(false) {
     }

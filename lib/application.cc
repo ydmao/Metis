@@ -56,7 +56,7 @@ int mapreduce_appbase::reduce_worker() {
 }
 
 int mapreduce_appbase::merge_worker() {
-    rt_->merge(merge_ncpus_, cur_lcpu, skip_reduce_or_group_phase());
+    rt_->merge(merge_nsplits_, merge_ncpus_, cur_lcpu, skip_reduce_or_group_phase());
     return 1;
 }
 

@@ -6,10 +6,11 @@
 #include "psrs.hh"
 
 struct reduce_bucket_manager_base {
+    virtual ~reduce_bucket_manager_base() {}
     virtual void init(int n) = 0;
     virtual void reset() = 0;
     virtual void set_current_reduce_task(int i) = 0;
-    virtual void merge_reduced_buckets(int ncpus, int lcpu) = 0;
+    virtual void merge_reduced_buckets(int nin, int ncpus, int lcpu) = 0;
 };
 
 template <typename T>
@@ -43,11 +44,12 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
     /** @brief: merge the output buckets of reduce phase, i.e. the final output.
         For psrs, the result is stored in rb_[0]; for mergesort, the result are
         spread in rb[0..(ncpus - 1)]. */
-    void merge_reduced_buckets(int ncpus, int lcpu) {
+    void merge_reduced_buckets(int nin, int ncpus, int lcpu) {
         C *out = NULL;
         const int use_psrs = USE_PSRS;
         if (!use_psrs) {
-            out = mergesort(rb_, ncpus, lcpu,
+            assert(size_t(nin) <= rb_.size());
+            out = mergesort(rb_.array(), nin, ncpus, lcpu,
                             comparator::final_output_pair_comp);
             shallow_free_subarray(rb_, lcpu, ncpus);
         } else {

@@ -127,13 +127,13 @@ void metis_runtime::map_worker_finished(int row, int reduce_skipped) {
     }
 }
 
-void metis_runtime::merge(int ncpus, int lcpu, int reduce_skipped) {
+void metis_runtime::merge(int nin, int ncpus, int lcpu, int reduce_skipped) {
     if (the_app_->application_type() == atype_maponly || !reduce_skipped)
-	the_app_->get_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
+	the_app_->get_reduce_bucket_manager()->merge_reduced_buckets(nin, ncpus, lcpu);
     else {
         current_manager_->merge_output_and_reduce(ncpus, lcpu);
         // merge reduced bucekts
-	the_app_->get_reduce_bucket_manager()->merge_reduced_buckets(ncpus, lcpu);
+	the_app_->get_reduce_bucket_manager()->merge_reduced_buckets(nin, ncpus, lcpu);
     }
 }
 
