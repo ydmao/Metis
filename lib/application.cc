@@ -28,8 +28,12 @@ void cprint(const char *key, uint64_t v, const char *delim) {
 }
 }
 
-mapreduce_appbase::mapreduce_appbase() : m_(), sample_(), sampling_(false) {
-    clean_ = true;
+mapreduce_appbase::mapreduce_appbase() 
+    : nsample_(), merge_ncore_(), merge_nsplit_(), ncore_(),
+      total_sample_time_(), total_map_time_(), total_reduce_time_(),
+      total_merge_time_(), total_real_time_(), clean_(true),
+      next_task_(), phase_(), m_(NULL), sample_(NULL), sampling_(false) {
+    bzero(e_, sizeof(e_));
 }
 
 mapreduce_appbase::~mapreduce_appbase() {
@@ -92,12 +96,12 @@ int mapreduce_appbase::reduce_worker() {
 int mapreduce_appbase::merge_worker() {
     reduce_bucket_manager_base *r = get_reduce_bucket_manager();
     if (application_type() == atype_maponly || !skip_reduce_or_group_phase())
-	r->merge_reduced_buckets(merge_nsplits_, merge_ncpus_, cur_lcpu);
+	r->merge_reduced_buckets(merge_nsplit_, merge_ncore_, cur_lcpu);
     else {
         // must use psrs
-        m_->merge_output_and_reduce(merge_ncpus_, cur_lcpu);
+        m_->merge_output_and_reduce(merge_ncore_, cur_lcpu);
         // merge reduced buckets
-	r->merge_reduced_buckets(merge_nsplits_, merge_ncpus_, cur_lcpu);
+	r->merge_reduced_buckets(merge_nsplit_, merge_ncore_, cur_lcpu);
     }
     return 1;
 }
@@ -154,25 +158,17 @@ void mapreduce_appbase::run_phase(int phase, int ncore, uint64_t &t, int first_t
 }
 
 size_t mapreduce_appbase::sched_sample() {
-    const size_t nsample_map_task = std::max(size_t(1), sample_percent * ma_.size() / 100);
+    nsample_ = std::max(size_t(1), sample_percent * ma_.size() / 100);
     const size_t nma = ma_.size();
     assert(nma);
-    ma_.trim(nsample_map_task);
+    ma_.trim(nsample_);
 
     sampling_ = true;
     sample_ = create_map_bucket_manager(ncore_, default_sample_hashtable_size);
-    bzero(e_, sizeof(e_));
-    size_t t = 0;
-    run_phase(MAP, ncore_, t);
+    run_phase(MAP, ncore_, total_sample_time_);
     const size_t predicted_nkey = predict_nkey(e_, ncore_, nma);
     size_t predicted_ntask = prime_lower_bound(predicted_nkey / expected_keys_per_bucket);
     ma_.trim(nma, true);
-
-    dprintf("sampled %zd from %zd tasks,", nsample_map_task, ma_.size());
-    dprintf("time: %zd ms\n", cycle_to_ms(t));
-    total_sample_time_ += t;
-    nsampled_splits_ = nsample_map_task;
-
     sampling_ = false;
     return std::max(predicted_ntask, size_t(ncore_ * default_group_or_reduce_task_per_core));
 }
@@ -181,12 +177,13 @@ int mapreduce_appbase::sched_run() {
     the_app_ = this;
     assert(clean_);
     clean_ = false;
-    verify_before_run();
     const int max_ncore = get_core_count();
     assert(ncore_ <= max_ncore);
     if (!ncore_)
 	ncore_ = max_ncore;
-    // initialize thread manager
+
+    verify_before_run();
+    // initialize threads
     mthread_init(ncore_);
 
     // pre-split
@@ -198,36 +195,35 @@ int mapreduce_appbase::sched_run() {
         bzero(&ma, sizeof(ma));
     }
     uint64_t real_start = read_tsc();
-    nsampled_splits_ = 0;
     // get the number of reduce tasks by sampling if needed
     if (skip_reduce_or_group_phase()) {
-	merge_nsplits_ = ncore_;
+	merge_nsplit_ = ncore_;
         m_ = create_map_bucket_manager(ncore_, 1);
     } else {
 	if (!nreduce_or_group_task_)
 	    nreduce_or_group_task_ = sched_sample();
-	merge_nsplits_ = nreduce_or_group_task_;
+	merge_nsplit_ = nreduce_or_group_task_;
         m_ = create_map_bucket_manager(ncore_, nreduce_or_group_task_);
     }
-    get_reduce_bucket_manager()->init(merge_nsplits_);
+    get_reduce_bucket_manager()->init(merge_nsplit_);
 
     uint64_t map_time = 0, reduce_time = 0, merge_time = 0;
     // map phase
-    run_phase(MAP, ncore_, map_time, nsampled_splits_);
+    run_phase(MAP, ncore_, map_time, nsample_);
     // reduce phase
     if (!skip_reduce_or_group_phase())
 	run_phase(REDUCE, ncore_, reduce_time);
     // merge phase
     const int use_psrs = USE_PSRS;
     if (use_psrs) {
-        merge_ncpus_ = ncore_;
-	run_phase(MERGE, merge_ncpus_, merge_time);
+        merge_ncore_ = ncore_;
+	run_phase(MERGE, merge_ncore_, merge_time);
     } else {
-	merge_ncpus_ = std::min(merge_nsplits_ / 2, ncore_);
-	while (merge_nsplits_ > 1) {
-	    run_phase(MERGE, merge_ncpus_, merge_time);
-	    merge_nsplits_ = merge_ncpus_;
-	    merge_ncpus_ /= 2;
+	merge_ncore_ = std::min(merge_nsplit_ / 2, ncore_);
+	while (merge_nsplit_ > 1) {
+	    run_phase(MERGE, merge_ncore_, merge_time);
+	    merge_nsplit_ = merge_ncore_;
+	    merge_ncore_ /= 2;
 	}
     }
     set_final_result();
@@ -252,12 +248,12 @@ void mapreduce_appbase::print_stats(void) {
     cprint("Sum:", sum_time, SEP);
     cprint("Real:", total_real_time_, "\n");
 
-    std::cout << "Number of Tasks\n\t";
+    std::cout << "Number of Tasks of last Metis run\n\t";
     if (application_type() == atype_maponly) {
 	pprint("Map:", ma_.size(), "\n");
     } else {
-	pprint("Sample:", nsampled_splits_, SEP);
-	pprint("Map:", ma_.size() - nsampled_splits_, SEP);
+	pprint("Sample:", nsample_, SEP);
+	pprint("Map:", ma_.size() - nsample_, SEP);
 	pprint("Reduce:", nreduce_or_group_task_, "\n");
     }
 }
@@ -296,6 +292,7 @@ void mapreduce_appbase::reset() {
         delete sample_;
         sample_ = NULL;
     }
+    bzero(e_, sizeof(e_));
     clean_ = true;
 }
 

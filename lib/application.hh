@@ -80,10 +80,9 @@ struct mapreduce_appbase {
     enum { expected_keys_per_bucket = 10 };
 
   private:
-
-    uint64_t nsampled_splits_;
-    int merge_ncpus_;
-    int merge_nsplits_;
+    uint64_t nsample_;
+    int merge_ncore_;
+    int merge_nsplit_;
 
     int ncore_;   
     uint64_t total_sample_time_;
