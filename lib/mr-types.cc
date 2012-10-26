@@ -1,7 +1,7 @@
 #include "mr-types.hh"
 #include "comparator.hh"
 #include "value_helper.hh"
-#include "reduce.hh"
+#include "group.hh"
 #include "btree.hh"
 
 extern mapreduce_appbase *the_app_;

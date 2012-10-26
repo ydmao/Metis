@@ -3,7 +3,7 @@
 
 #include "comparator.hh"
 #include "array.hh"
-#include "reduce.hh"
+#include "group.hh"
 #include "test_util.hh"
 #include "application.hh"
 
