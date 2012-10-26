@@ -46,18 +46,18 @@
 #define MAX_REC_LEN 1024
 #define OFFSET 5
 
-typedef struct {
+struct str_data_t {
     int keys_file_len;
     int encrypted_file_len;
     long bytes_comp;
     char *keys_file;
     char *encrypt_file;
-} str_data_t;
+};
 
-typedef struct {
+struct str_map_data_t {
     char *keys_file;
     char *encrypt_file;
-} str_map_data_t;
+};
 
 static const char *key1 = "Helloworld";
 static const char *key2 = "howareyou";
@@ -155,7 +155,7 @@ bool sm::split(split_t * out, int ncores) {
 void sm::map_function(split_t *args) {
     assert(args);
     prof_enterapp();
-    str_map_data_t *data_in = (str_map_data_t *) (args->data);
+    str_map_data_t *data_in = (str_map_data_t *)args->data;
     int key_len;
     uint64_t total_len = 0;
     char *key_file = data_in->keys_file;
@@ -188,6 +188,7 @@ void sm::map_function(split_t *args) {
 	bzero(cur_word_final, MAX_REC_LEN);
 	total_len += key_len;
     }
+    free(data_in);
     prof_leaveapp();
     map_emit((void *)key1, (void *) (size_t) cnt1, strlen(key1));
     map_emit((void *)key2, (void *) (size_t) cnt2, strlen(key2));
