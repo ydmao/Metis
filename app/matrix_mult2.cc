@@ -170,6 +170,7 @@ int main(int argc, char *argv[]) {
     free(matrix_A_ptr);
     free(matrix_B_ptr);
     free(fdata_out);
+    app.free_results();
     return 0;
 }
 

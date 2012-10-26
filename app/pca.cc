@@ -406,7 +406,7 @@ int main(int argc, char **argv) {
 	free(pca_data_.matrix[i]);
     }
     free(pca_data_.matrix);
-    m.reset();
-    cov.reset();
+    m.free_results();
+    cov.free_results();
     return 0;
 }

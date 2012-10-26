@@ -308,8 +308,8 @@ int main(int argc, char *argv[]) {
     free(key2_final);
     free(key3_final);
     free(key4_final);
-
     /*echeck(munmap(fdata_encrypt, finfo_encrypt.st_size + 1) < 0);
        echeck(close(fd_encrypt) < 0); */
+    app.free_results();
     return 0;
 }

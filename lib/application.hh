@@ -58,8 +58,11 @@ struct mapreduce_appbase {
         dst->append(*src);
         src->reset();
     }
-    virtual void reset();
   protected:
+    /* @breif: prepare the application for the next iteraton.
+       Everything should be cleaned up, except for that the application should
+       free the results. */
+    virtual void reset();
     virtual void verify_before_run() = 0;
     uint64_t sched_sample();
     virtual bool skip_reduce_or_group_phase() = 0;
@@ -165,8 +168,6 @@ struct map_reduce : public map_reduce_or_group_base {
     }
     void map_values_insert(keyvals_t *kvs, void *val);
     void map_values_move(keyvals_t *dst, keyvals_t *src);
-    virtual void reset();
-  protected:
     void free_results() {
         if (results_.data) {
             for (size_t i = 0; i < results_.length; ++i)
@@ -175,6 +176,8 @@ struct map_reduce : public map_reduce_or_group_base {
         }
         bzero(&results_, sizeof(results_));
     }
+  protected:
+    virtual void reset();
     void verify_before_run() {
         assert(results_.length == 0 && results_.data == NULL);
     }
@@ -207,8 +210,6 @@ struct map_group : public map_reduce_or_group_base {
     int application_type() {
         return atype_mapgroup;
     }
-    virtual void reset();
-  protected:
     void free_results() {
         for (size_t i = 0; i < results_.length; ++i) {
             if (results_.data[i].len)
@@ -219,6 +220,8 @@ struct map_group : public map_reduce_or_group_base {
             free(results_.data);
         bzero(&results_, sizeof(results_));
     }
+  protected:
+    virtual void reset();
     void verify_before_run() {
         assert(results_.length == 0 && results_.data == NULL);
     }
@@ -245,8 +248,6 @@ struct map_only : public mapreduce_appbase {
     int application_type() {
         return atype_maponly;
     }
-    virtual void reset();
-  protected:
     void free_results() {
         if (results_.data) {
             for (size_t i = 0; i < results_.length; ++i)
@@ -255,6 +256,8 @@ struct map_only : public mapreduce_appbase {
         }
         bzero(&results_, sizeof(results_));
     }
+  protected:
+    virtual void reset();
     bool skip_reduce_or_group_phase() {
         return true;
     }

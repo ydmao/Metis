@@ -120,5 +120,6 @@ int main(int argc, char *argv[]) {
     app.print_stats();
     if (!quiet)
 	print_top(&app.results_, ndisp);
+    app.free_results();
     return 0;
 }

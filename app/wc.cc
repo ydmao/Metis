@@ -219,5 +219,6 @@ int main(int argc, TCHAR * argv[]) {
 	output_all(&app.results_, fout);
 	fclose(fout);
     }
+    app.free_results();
     return 0;
 }

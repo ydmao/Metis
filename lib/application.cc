@@ -231,6 +231,7 @@ int mapreduce_appbase::sched_run() {
     total_reduce_time_ += reduce_time;
     total_merge_time_ += merge_time;
     total_real_time_ += read_tsc() - real_start;
+    reset();  // result everything except for results_
     return 0;
 }
 
@@ -345,7 +346,6 @@ void map_reduce::set_final_result() {
 }
 
 void map_reduce::reset() {
-    free_results();
     reduce_bucket_manager<keyval_t>::instance()->reset();
     mapreduce_appbase::reset();
 }
@@ -363,7 +363,6 @@ void map_group::set_final_result() {
 }
 
 void map_group::reset() {
-    free_results();
     reduce_bucket_manager<keyvals_len_t>::instance()->reset();
     mapreduce_appbase::reset();
 }
@@ -375,7 +374,6 @@ void map_only::set_final_result() {
 }
 
 void map_only::reset() {
-    free_results();
     mapreduce_appbase::reset();
     reduce_bucket_manager<keyval_t>::instance()->reset();
 }
