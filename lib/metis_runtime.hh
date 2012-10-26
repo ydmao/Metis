@@ -26,7 +26,7 @@ struct metis_runtime {
     void reduce_do_task(int row, int col);
     void merge(int ncpus, int lcpu, int reduce_skipped);
     metis_runtime()
-        : current_manager_(), sample_manager_() {
+        : current_manager_(), sample_manager_(), sampling_(false) {
     }
     ~metis_runtime();
   private:
