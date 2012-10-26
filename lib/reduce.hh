@@ -30,7 +30,7 @@ struct append_functor {
     void operator()(keyvals_t &kvs) {
 	// kvs.vals is owned by callee
         x_->push_back(kvs);
-        kvs.reset();
+        kvs.init();
     }
   private:
     xarray<keyvals_t> *x_;
