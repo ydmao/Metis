@@ -9,8 +9,10 @@ struct reduce_bucket_manager_base {
     virtual ~reduce_bucket_manager_base() {}
     virtual void init(int n) = 0;
     virtual void reset() = 0;
+    virtual void trim(size_t n) = 0;
+    virtual size_t size() = 0;
     virtual void set_current_reduce_task(int i) = 0;
-    virtual void merge_reduced_buckets(int nin, int ncpus, int lcpu) = 0;
+    virtual void merge_reduced_buckets(int ncpus, int lcpu) = 0;
 };
 
 template <typename T>
@@ -29,6 +31,12 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
     void reset() {
         rb_.resize(0);
     }
+    void trim(size_t n) {
+        rb_.trim(n);
+    }
+    size_t size() {
+        return rb_.size();
+    }
     typedef xarray<T> C;
     xarray<T> *get(int p) {
         return &rb_[p];
@@ -44,12 +52,11 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
     /** @brief: merge the output buckets of reduce phase, i.e. the final output.
         For psrs, the result is stored in rb_[0]; for mergesort, the result are
         spread in rb[0..(ncpus - 1)]. */
-    void merge_reduced_buckets(int nin, int ncpus, int lcpu) {
+    void merge_reduced_buckets(int ncpus, int lcpu) {
         C *out = NULL;
         const int use_psrs = USE_PSRS;
         if (!use_psrs) {
-            assert(size_t(nin) <= rb_.size());
-            out = mergesort(rb_.array(), nin, ncpus, lcpu,
+            out = mergesort(rb_, ncpus, lcpu,
                             comparator::final_output_pair_comp);
             shallow_free_subarray(rb_, lcpu, ncpus);
         } else {

@@ -29,7 +29,7 @@ void cprint(const char *key, uint64_t v, const char *delim) {
 }
 
 mapreduce_appbase::mapreduce_appbase() 
-    : nsample_(), merge_ncore_(), merge_nsplit_(), ncore_(),
+    : nsample_(), merge_ncore_(), ncore_(),
       total_sample_time_(), total_map_time_(), total_reduce_time_(),
       total_merge_time_(), total_real_time_(), clean_(true),
       next_task_(), phase_(), m_(NULL), sample_(NULL), sampling_(false) {
@@ -96,12 +96,12 @@ int mapreduce_appbase::reduce_worker() {
 int mapreduce_appbase::merge_worker() {
     reduce_bucket_manager_base *r = get_reduce_bucket_manager();
     if (application_type() == atype_maponly || !skip_reduce_or_group_phase())
-	r->merge_reduced_buckets(merge_nsplit_, merge_ncore_, cur_lcpu);
+	r->merge_reduced_buckets(merge_ncore_, cur_lcpu);
     else {
         // must use psrs
         m_->merge_output_and_reduce(merge_ncore_, cur_lcpu);
         // merge reduced buckets
-	r->merge_reduced_buckets(merge_nsplit_, merge_ncore_, cur_lcpu);
+	r->merge_reduced_buckets(merge_ncore_, cur_lcpu);
     }
     return 1;
 }
@@ -197,15 +197,14 @@ int mapreduce_appbase::sched_run() {
     uint64_t real_start = read_tsc();
     // get the number of reduce tasks by sampling if needed
     if (skip_reduce_or_group_phase()) {
-	merge_nsplit_ = ncore_;
         m_ = create_map_bucket_manager(ncore_, 1);
+        get_reduce_bucket_manager()->init(ncore_);
     } else {
 	if (!nreduce_or_group_task_)
 	    nreduce_or_group_task_ = sched_sample();
-	merge_nsplit_ = nreduce_or_group_task_;
         m_ = create_map_bucket_manager(ncore_, nreduce_or_group_task_);
+        get_reduce_bucket_manager()->init(nreduce_or_group_task_);
     }
-    get_reduce_bucket_manager()->init(merge_nsplit_);
 
     uint64_t map_time = 0, reduce_time = 0, merge_time = 0;
     // map phase
@@ -219,10 +218,11 @@ int mapreduce_appbase::sched_run() {
         merge_ncore_ = ncore_;
 	run_phase(MERGE, merge_ncore_, merge_time);
     } else {
-	merge_ncore_ = std::min(merge_nsplit_ / 2, ncore_);
-	while (merge_nsplit_ > 1) {
+        reduce_bucket_manager_base *r = get_reduce_bucket_manager();
+	merge_ncore_ = std::min(int(r->size()) / 2, ncore_);
+	while (r->size() > 1) {
 	    run_phase(MERGE, merge_ncore_, merge_time);
-	    merge_nsplit_ = merge_ncore_;
+            r->trim(merge_ncore_);
 	    merge_ncore_ /= 2;
 	}
     }

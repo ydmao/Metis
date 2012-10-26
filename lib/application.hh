@@ -82,7 +82,6 @@ struct mapreduce_appbase {
   private:
     uint64_t nsample_;
     int merge_ncore_;
-    int merge_nsplit_;
 
     int ncore_;   
     uint64_t total_sample_time_;
