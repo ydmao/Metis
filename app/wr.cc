@@ -96,7 +96,7 @@ int main(int argc, TCHAR * argv[]) {
     app.sched_run();
     app.print_stats();
     if (!quiet)
-	print_top(&app.results_, ndisp);
+	print_top(&app.results_, ndisp, count(&app.results_));
     app.free_results();
     return 0;
 }

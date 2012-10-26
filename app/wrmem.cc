@@ -39,6 +39,7 @@
 #include <sched.h>
 #include "bench.hh"
 #include "wr.hh"
+#include "test_util.hh"
 
 #define DEFAULT_NDISP 10
 
@@ -91,7 +92,8 @@ int main(int argc, char *argv[]) {
 	MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(fdata != MAP_FAILED);
     uint64_t pos = 0;
-    for (uint64_t i = 0; i < inputsize / (wordlength + 1); ++i) {
+    size_t n = 0;
+    for (uint64_t i = 0; i < inputsize / (wordlength + 1); ++i, ++n) {
 	for (int j = 0; j < wordlength; ++j)
 	    fdata[pos++] = rnd(&seed) % 26 + 'A';
 	fdata[pos++] = ' ';
@@ -103,8 +105,10 @@ int main(int argc, char *argv[]) {
     app.set_group_task(reduce_tasks);
     app.sched_run();
     app.print_stats();
+    size_t nw = count(&app.results_);
+    CHECK_EQ(n, nw);
     if (!quiet)
-	print_top(&app.results_, ndisp);
+	print_top(&app.results_, ndisp, nw);
     app.free_results();
     return 0;
 }

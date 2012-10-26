@@ -36,12 +36,16 @@ struct wr : public map_group {
     defsplitter s_;
 };
 
-inline void print_top(xarray<keyvals_len_t> *wc_vals, size_t ndisp) {
-    size_t occurs = 0;
+inline size_t count(xarray<keyvals_len_t> *wc_vals) {
+    size_t nw = 0;
     for (size_t i = 0; i < wc_vals->size(); i++)
-	occurs += size_t(wc_vals->at(i).len);
+	nw += size_t(wc_vals->at(i).len);
+    return nw;
+}
+
+inline void print_top(xarray<keyvals_len_t> *wc_vals, size_t ndisp, size_t nw) {
     printf("\nwordreverseindex: results (TOP %zd from %zu keys, %zd words):\n",
-           ndisp, wc_vals->size(), occurs);
+           ndisp, wc_vals->size(), nw);
     ndisp = std::min(ndisp, wc_vals->size());
     for (size_t i = 0; i < ndisp; ++i) {
 	keyvals_len_t *w = &wc_vals->at(i);
