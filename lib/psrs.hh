@@ -27,22 +27,19 @@ struct psrs {
         assert(me == main_core && output_ == NULL && status == STOP);
         output_ = new C;
         output_->resize(output_size);
-        reset();
         return output_;
     }
-    psrs() : output_(NULL), status(STOP) {
+    psrs() : status(STOP) {
         bzero(ready, sizeof(ready));
-        reset();
+        deinit();
     }
   private:
-    void reset() {
+    void deinit() {
+        output_ = NULL;
 	bzero(pivots_, sizeof(pivots_));
 	bzero(subsize_, sizeof(subsize_));
 	bzero(partsize_, sizeof(partsize_));
  	bzero(lpairs_, sizeof(lpairs_));
-    }
-    void deinit() {
-        output_ = NULL;
     }
     void check_inited() {
         assert(output_ && status == STOP);
