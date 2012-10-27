@@ -33,22 +33,17 @@ void mergesort_impl(C *a, int nmya, int afirst, int astep, F &pcmp, C &sized_out
 }
 
 template <typename C, typename F>
-C *mergesort(xarray<C> &in, int ncpus, int lcpu, F &pcmp) {
-    return mergesort(in.array(), in.size(), ncpus, lcpu, pcmp);
-}
-
-template <typename C, typename F>
-C *mergesort(C *a, int na, int ncpus, int lcpu, F &pcmp) {
-    int nmya = na / ncpus + (lcpu < (na % ncpus));
+C *mergesort(xarray<C> &a, int astep, int afirst, F &pcmp) {
+    size_t nmya = a.size() / astep + (size_t(afirst) < (a.size() % astep));
     size_t np = 0;
-    for (int i = 0; i < nmya; i++)
-	np += a[lcpu + i * ncpus].size();
+    for (size_t i = 0; i < nmya; i++)
+	np += a[afirst + i * astep].size();
     C *out = new C(np);
     if (np == 0)
 	return out;
-    mergesort_impl(a, nmya, lcpu, ncpus, pcmp, *out);
-    dprintf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
- 	    lcpu, ncpus, na, np);
+    mergesort_impl(a.array(), nmya, afirst, astep, pcmp, *out);
+    dprintf("mergesort: afirst %d astep %d (collections %zd : nr-kvs %zu)\n",
+ 	    afirst, astep, a.size(), np);
     return out;
 }
 
