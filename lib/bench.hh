@@ -80,7 +80,7 @@ inline uint64_t read_pmc(uint32_t ecx) {
 }
 
 inline void mfence(void) {
-    __asm __volatile("mfence");
+    __asm __volatile("mfence" ::: "memory");
 }
 
 inline void compiler_barrier() {
