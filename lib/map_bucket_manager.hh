@@ -27,14 +27,14 @@ struct group_analyzer {};
 template <typename DT>
 struct group_analyzer<DT, true> {
     static void go(DT **a, int na) {
-        group_sorted(a, na, reduce_emit_functor::instance());
+        group_sorted(a, na, static_appbase::internal_reduce_emit);
     }
 };
 
 template <typename DT>
 struct group_analyzer<DT, false> {
     static void go(DT **a, int na) {
-        group_unsorted(a, na, reduce_emit_functor::instance(),
+        group_unsorted(a, na, static_appbase::internal_reduce_emit,
                        static_appbase::pair_comp<typename DT::element_type>);
     }
 };
@@ -118,7 +118,7 @@ void map_bucket_manager<S, DT, OPT>::psrs_output_and_reduce(int ncpus, int lcpu)
     // reduce the output of psrs
     C *myshare = pi_.do_psrs(output_, ncpus, lcpu, static_appbase::pair_comp<OPT>);
     if (myshare)
-        group_one_sorted(*myshare, reduce_emit_functor::instance());
+        group_one_sorted(*myshare, static_appbase::internal_reduce_emit);
     myshare->init();  // myshare doesn't own the output
     delete myshare;
     // barrier before freeing xo to make sure no one is accessing out anymore.

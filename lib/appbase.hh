@@ -135,6 +135,11 @@ struct static_appbase {
     static void map_values_move(keyvals_t *dst, keyvals_t *src) {
         return the_app_->map_values_move(dst, src);
     }
+    static void internal_reduce_emit(keyvals_t &p);
+    static void set_app(mapreduce_appbase *app) {
+        the_app_ = app;
+    }
+  private:
     static mapreduce_appbase *the_app_;
 };
 

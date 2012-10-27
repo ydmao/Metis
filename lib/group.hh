@@ -10,19 +10,6 @@
 #include <inc/compiler.h>
 #endif
 
-struct reduce_emit_functor {
-    void operator()(keyvals_t &p) const {
-        if (static_appbase::application_type() == atype_mapreduce)
-            static_cast<map_reduce *>(static_appbase::the_app_)->internal_reduce_emit(p);
-	else
-            static_cast<map_group *>(static_appbase::the_app_)->internal_reduce_emit(p);
-    }
-    static reduce_emit_functor &instance() {
-        static reduce_emit_functor in;
-        return in;
-    }
-};
-
 template <typename C, typename F>
 inline void group_one_sorted(C &a, F &f) {
     // group and apply functor

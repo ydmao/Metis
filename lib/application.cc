@@ -18,6 +18,13 @@
 extern JTLS int cur_lcpu;	// defined in lib/pthreadpool.c
 mapreduce_appbase *static_appbase::the_app_ = NULL;
 
+void static_appbase::internal_reduce_emit(keyvals_t &p) {
+    if (application_type() == atype_mapreduce)
+        static_cast<map_reduce *>(the_app_)->internal_reduce_emit(p);
+    else
+        static_cast<map_group *>(the_app_)->internal_reduce_emit(p);
+}
+
 namespace {
 void pprint(const char *key, uint64_t v, const char *delim) {
     std::cout << key << "\t" << v << delim;
@@ -175,7 +182,7 @@ size_t mapreduce_appbase::sched_sample() {
 }
 
 int mapreduce_appbase::sched_run() {
-    static_appbase::the_app_ = this;
+    static_appbase::set_app(this);
     assert(clean_);
     clean_ = false;
     const int max_ncore = get_core_count();

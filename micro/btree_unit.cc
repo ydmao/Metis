@@ -90,7 +90,7 @@ void test2() {
 
 int main(int argc, char *argv[]) {
     mock_app app;
-    static_appbase::the_app_ = &app;
+    static_appbase::set_app(&app);
     test1();
     test2();
     cerr << "PASS" << endl;
