@@ -39,10 +39,26 @@ struct  __attribute__ ((aligned(JOS_CLINE))) thread_pool_t {
     }
 };
 
-static thread_pool_t tp_[JOS_NCPU];
-static bool tp_inited_ = false;
 __thread int cur_lcpu = 0;
-static int ncore_ = 0;
+
+namespace {
+
+thread_pool_t tp_[JOS_NCPU];
+bool tp_inited_ = false;
+int ncore_ = 0;
+
+void *mthread_exit(void *) {
+    pthread_exit(NULL);
+}
+
+void *mthread_entry(void *args) {
+    cur_lcpu = ptr2int<int>(args);
+    assert(affinity_set(cpumap_physical_cpuid(cur_lcpu)) == 0);
+    while (true)
+        tp_[cur_lcpu].run_next_task();
+}
+
+}
 
 void mthread_create(pthread_t * tid, int lid, void *(*start_routine) (void *),
   	            void *arg) {
@@ -56,17 +72,10 @@ void mthread_create(pthread_t * tid, int lid, void *(*start_routine) (void *),
     }
 }
 
-void mthread_join(pthread_t tid, int lid, void **exitcode) {
+void mthread_join(pthread_t tid, int lid, void **retval) {
     tp_[lid].wait_finish();
-    if (exitcode)
-	*exitcode = 0;
-}
-
-static void *mthread_entry(void *args) {
-    cur_lcpu = ptr2int<int>(args);
-    assert(affinity_set(cpumap_physical_cpuid(cur_lcpu)) == 0);
-    while (true)
-        tp_[cur_lcpu].run_next_task();
+    if (retval)
+	*retval = 0;
 }
 
 void mthread_init(int ncore) {
@@ -85,18 +94,12 @@ void mthread_init(int ncore) {
 	    assert(pthread_create(&tp_[i].tid_, NULL, mthread_entry, int2ptr(i)) == 0);
 }
 
-static void *mthread_exit(void *) {
-    pthread_exit(NULL);
-}
-
 void mthread_finalize(void) {
     if (!tp_inited_)
         return;
-    for (int i = 0; i < ncore_; ++i) {
-	if (i == main_core)
-	    continue;
-	mthread_create(NULL, i, mthread_exit, NULL);
-    }
+    for (int i = 0; i < ncore_; ++i)
+	if (i != main_core)
+	    mthread_create(NULL, i, mthread_exit, NULL);
     for (int i = 0; i < ncore_; ++i)
 	if (i != main_core)
 	    pthread_join(tp_[i].tid_, NULL);
