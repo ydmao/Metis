@@ -17,7 +17,7 @@ struct map_bucket_manager_base {
     virtual void do_reduce_task(int col) = 0;
     virtual int ncol() const = 0;
     virtual int nrow() const = 0;
-    virtual void merge_output_and_reduce(int ncpus, int lcpu) = 0;
+    virtual void psrs_output_and_reduce(int ncpus, int lcpu) = 0;
     virtual size_t test_subsize() = 0;
 };
 
@@ -82,9 +82,9 @@ struct map_bucket_manager : public map_bucket_manager_base {
     int ncol() const {
         return cols_;
     }
-    void merge_output_and_reduce(int ncpus, int lcpu);
+    void psrs_output_and_reduce(int ncpus, int lcpu);
     size_t test_subsize();
-    typedef xarray<OPT> output_bucket_type;
+    typedef xarray<OPT> C;  // output bucket type
   private:
     DT *mapdt_bucket(int row, int col) {
         return &mapdt_[row * cols_ + col];
@@ -99,30 +99,28 @@ struct map_bucket_manager : public map_bucket_manager_base {
     const DT *mapdt_bucket(int row, int col) const {
         return &mapdt_[row * cols_ + col];
     } 
-
+    psrs<C> pi_;
     int rows_;
     int cols_;
     xarray<DT> mapdt_;  // intermediate ds holding key/value pairs at map phase
-    xarray<output_bucket_type> output_;
+    xarray<C> output_;
 };
 
 template <bool S, typename DT, typename OPT>
-void map_bucket_manager<S, DT, OPT>::merge_output_and_reduce(int ncpus, int lcpu) {
+void map_bucket_manager<S, DT, OPT>::psrs_output_and_reduce(int ncpus, int lcpu) {
     // make sure we are using psrs so that after merge_reduced_buckets,
     // the final results is already in reduce bucket 0
     const int use_psrs = USE_PSRS;
     assert(use_psrs);
-    typedef output_bucket_type C;
-    psrs<C> *pi = psrs<C>::instance();
-    C *out = initialize_psrs<C>(lcpu, sum_subarray(output_));
+    C *out = initialize_psrs<C>(pi_, lcpu, sum_subarray(output_));
     // reduce the output of psrs
-    C *myshare = pi->do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
+    C *myshare = pi_.do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
     if (myshare)
         group_one_sorted(*myshare, reduce_emit_functor::instance());
     myshare->init();  // myshare doesn't own the output
     delete myshare;
     // barrier before freeing xo to make sure no one is accessing out anymore.
-    pi->cpu_barrier(lcpu, ncpus);
+    pi_.cpu_barrier(lcpu, ncpus);
     if (lcpu == main_core) {
         out->shallow_free();
         delete out;
@@ -178,7 +176,7 @@ template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::prepare_merge(int row) {
     assert(cols_ == 1);
     DT *src = mapdt_bucket(row, 0);
-    output_bucket_type *dst = &output_[row];
+    C *dst = &output_[row];
     CHECK_EQ(size_t(0), dst->size());
     transfer(dst, src);
 }

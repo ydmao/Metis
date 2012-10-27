@@ -100,7 +100,7 @@ int mapreduce_appbase::merge_worker() {
     else {
         r->set_current_reduce_task(cur_lcpu);
         // must use psrs
-        m_->merge_output_and_reduce(merge_ncore_, cur_lcpu);
+        m_->psrs_output_and_reduce(merge_ncore_, cur_lcpu);
         // merge reduced buckets
 	r->merge_reduced_buckets(merge_ncore_, cur_lcpu);
     }

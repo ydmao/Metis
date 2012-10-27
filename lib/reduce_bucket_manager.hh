@@ -57,10 +57,9 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
             shallow_free_subarray(rb_, lcpu, ncpus);
         } else {
             // only main cpu has output
-            out = initialize_psrs<C>(lcpu, sum_subarray(rb_));
-            psrs<C> *pi = psrs<C>::instance();
+            out = initialize_psrs<C>(pi_, lcpu, sum_subarray(rb_));
             assert(out || lcpu != main_core);
-            C *myshare = pi->do_psrs(rb_, ncpus, lcpu, comparator::final_output_pair_comp);
+            C *myshare = pi_.do_psrs(rb_, ncpus, lcpu, comparator::final_output_pair_comp);
             myshare->init();
             delete myshare;
             // Let one CPU free the input buckets
@@ -82,6 +81,7 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
     }
     xarray<C> rb_; // reduce buckets
     pthread_key_t current_task_key_;
+    psrs<C> pi_;
 };
 
 #endif

@@ -10,10 +10,6 @@
 template <typename C>
 struct psrs {
     typedef typename C::element_type pair_type;
-    static psrs<C> *instance() {
-        static psrs<C> instance;
-        return &instance;
-    }
     void cpu_barrier(int me, int ncpus);
     /* Divide array[start, end] into subarrays using [pivots[fp], pivots[lp]],
      * so that subsize[at + i] is the first element that is > pivots[i]
@@ -32,12 +28,6 @@ struct psrs {
         total_len = output_->size();
         reset();
     }
-
-  private:
-    ~psrs() {
-        if (pivots)
-            free(pivots);
-    }
     psrs() {
         pivots = NULL;
         status = STOP;
@@ -45,6 +35,12 @@ struct psrs {
         bzero(ready, sizeof(ready));
         reset();
     }
+    ~psrs() {
+        if (pivots)
+            free(pivots);
+    }
+
+  private:
     void reset() {
         if (pivots)
             free(pivots);
@@ -269,12 +265,12 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp) {
 }
 
 template <typename C>
-inline C *initialize_psrs(int me, size_t output_size) {
+inline C *initialize_psrs(psrs<C> &pi, int me, size_t output_size) {
     if (me != main_core)
         return NULL;
     C *xo = new C;
     xo->resize(output_size);
-    psrs<C>::instance()->init(xo);
+    pi.init(xo);
     return xo;
 }
 
