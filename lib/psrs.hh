@@ -11,14 +11,6 @@ template <typename C>
 struct psrs {
     typedef typename C::element_type pair_type;
     void cpu_barrier(int me, int ncpus);
-    /* Divide array[start, end] into subarrays using [pivots[fp], pivots[lp]],
-     * so that subsize[at + i] is the first element that is > pivots[i]
-     */
-    void sublists(pair_type *base, int start, int end, int *subsize,
-                  const pair_type *pivots, int fp, int lp, pair_cmp_t pcmp);
-    C *copy_elem(xarray<C> &a, int dst_start, int dst_end);
-    void mergesort(pair_type **lpairs, int npairs, int *subsize, int me,
-                   pair_type *out, int ncpus, pair_cmp_t pcmp);
     C *do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp);
     C *init(int me, size_t output_size) {
         assert(me == main_core && output_ == NULL && status == STOP);
@@ -29,14 +21,24 @@ struct psrs {
     psrs() : status(STOP) {
         bzero(ready, sizeof(ready));
         deinit();
+        lpairs_.resize(JOS_NCPU);
     }
   private:
+    /* @brief: Divide a[start..end] into subarrays using [pivots[fp], pivots[lp]],
+     * so that subsize[at + i] is the first element that is > pivots[i]
+     */
+    void divide(C &a, int start, int end, int *subsize,
+                const pair_type *pivots, int fp, int lp, pair_cmp_t pcmp);
+    C *copy_elem(xarray<C> &a, int dst_start, int dst_end);
+    void mergesort(xarray<C *> &localpairs, int npairs, int *subsize, int me,
+                   pair_type *out, int ncpus, pair_cmp_t pcmp);
+
     void deinit() {
         output_ = NULL;
 	bzero(pivots_, sizeof(pivots_));
 	bzero(subsize_, sizeof(subsize_));
 	bzero(partsize_, sizeof(partsize_));
- 	bzero(lpairs_, sizeof(lpairs_));
+        lpairs_.zero();
     }
     void check_inited() {
         assert(output_ && status == STOP);
@@ -52,7 +54,7 @@ struct psrs {
     C *output_;
     int subsize_[JOS_NCPU * (JOS_NCPU + 1)];
     int partsize_[JOS_NCPU];
-    pair_type *lpairs_[JOS_NCPU];
+    xarray<C *> lpairs_;
     volatile int status;
 };
 
@@ -87,17 +89,17 @@ void psrs<C>::cpu_barrier(int me, int ncpus) {
 }
 
 template <typename C>
-void psrs<C>::sublists(pair_type *base, int start, int end, int *subsize, const pair_type *pivots,
-	               int fp, int lp, pair_cmp_t pcmp) {
+void psrs<C>::divide(C &a, int start, int end, int *subsize, const pair_type *pivots,
+	             int fp, int lp, pair_cmp_t pcmp) {
     int mid = (fp + lp) / 2;
     const pair_type *pv = &pivots[mid];
     // Find first element that is > pv
-    int pos = xsearch::upper_bound(pv, &base[start], end - start - 1, pcmp);
+    int pos = xsearch::upper_bound(pv, &a[start], end - start - 1, pcmp);
     pos += start;
     subsize[mid] = pos;
     if (fp < mid) {
 	if (start < pos)
-	    sublists(base, start, pos - 1, subsize, pivots, fp, mid - 1, pcmp);
+	    divide(a, start, pos - 1, subsize, pivots, fp, mid - 1, pcmp);
 	else {
 	    while (fp < mid)
 		subsize[fp++] = start;
@@ -105,7 +107,7 @@ void psrs<C>::sublists(pair_type *base, int start, int end, int *subsize, const 
     }
     if (mid < lp) {
 	if (pos <= end)
-	    sublists(base, pos, end, subsize, pivots, mid + 1, lp, pcmp);
+	    divide(a, pos, end, subsize, pivots, mid + 1, lp, pcmp);
 	else {
 	    mid++;
 	    while (mid <= lp)
@@ -115,20 +117,20 @@ void psrs<C>::sublists(pair_type *base, int start, int end, int *subsize, const 
 }
 
 template <typename C>
-void psrs<C>::mergesort(typename psrs<C>::pair_type **lpairs, int npairs, int *subsize,
+void psrs<C>::mergesort(xarray<C *> &per_core_pairs, int npairs, int *subsize,
                         int me, typename psrs<C>::pair_type *out,
-	                int ncpus, pair_cmp_t pcmp) {
+	                int ncore, pair_cmp_t pcmp) {
     C a[JOS_NCPU];
-    for (int i = 0; i < ncpus; ++i) {
-        int s = subsize[i * (ncpus + 1) + me];
-        int e = subsize[i * (ncpus + 1) + me + 1];
-        a[i].set_array(&lpairs[i][s], e - s);
+    for (int i = 0; i < ncore; ++i) {
+        int s = subsize[i * (ncore + 1) + me];
+        int e = subsize[i * (ncore + 1) + me + 1];
+        a[i].set_array(&per_core_pairs[i]->at(s), e - s);
     }
     C output;
     output.set_array(out, npairs);
-    mergesort_impl((C *)a, ncpus, 0, 1, pcmp, output);
+    mergesort_impl(a, ncore, 0, 1, pcmp, output);
     // don't free the array! You guys don't own it!
-    for (int i = 0; i < ncpus; ++i)
+    for (int i = 0; i < ncore; ++i)
         a[i].init();
     output.init();
 }
@@ -185,7 +187,7 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
     }
     C *localpairs = copy_elem(a, start, end);
     int copied = localpairs->size();
-    lpairs_[me] = localpairs->array();
+    lpairs_[me] = localpairs;
     // sort the subarray locally
     localpairs->sort(pcmp);
     if (ncpus == 1 || total_len < ncpus * ncpus * ncpus) {
@@ -217,8 +219,8 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
     // divide the local list into p sublists by the (p - 1) pivots received from main cpu
     subsize_[me * (ncpus + 1)] = 0;
     subsize_[me * (ncpus + 1) + ncpus] = copied;
-    sublists(localpairs->array(), 0, copied - 1, &subsize_[me * (ncpus + 1)],
-	     pivots_, 1, ncpus - 1, pcmp);
+    divide(*localpairs, 0, copied - 1, &subsize_[me * (ncpus + 1)],
+	   pivots_, 1, ncpus - 1, pcmp);
     cpu_barrier(me, ncpus);
     // decides the size of the me-th sublist
     partsize_[me] = 0;

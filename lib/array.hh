@@ -22,6 +22,9 @@ struct xarray {
         memmove(a_ + p, a_ + (p + 1), sizeof(T) * (n_ - p - 1));
         --n_;
     }
+    void zero() {
+        bzero(a_, sizeof(T) * size());
+    }
     void assign(const xarray<T> &a) {
         a_ = a.a_;
         n_ = a.n_;
