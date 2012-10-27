@@ -124,7 +124,7 @@ struct wc : public map_reduce {
 static void print_top(xarray<keyval_t> *wc_vals, size_t ndisp) {
     size_t occurs = 0;
     for (uint32_t i = 0; i < wc_vals->size(); i++)
-	occurs += size_t(wc_vals->at(i).val);
+	occurs += size_t(wc_vals->at(i)->val);
     printf("\nwordcount: results (TOP %zd from %zu keys, %zd words):\n",
            ndisp, wc_vals->size(), occurs);
 #ifdef HADOOP
@@ -133,15 +133,15 @@ static void print_top(xarray<keyval_t> *wc_vals, size_t ndisp) {
     ndisp = std::min(ndisp, wc_vals->size());
 #endif
     for (size_t i = 0; i < ndisp; i++) {
-	keyval_t *w = &wc_vals->at(i);
+	keyval_t *w = wc_vals->at(i);
 	printf("%15s - %d\n", (char *)w->key, ptr2int<unsigned>(w->val));
     }
 }
 
 static void output_all(xarray<keyval_t> *wc_vals, FILE *fout) {
     for (uint32_t i = 0; i < wc_vals->size(); i++) {
-	keyval_t &w = wc_vals->at(i);
-	fprintf(fout, "%18s - %lu\n", (char *)w.key,  (uintptr_t)w.val);
+	keyval_t *w = wc_vals->at(i);
+	fprintf(fout, "%18s - %lu\n", (char *)w->key,  (uintptr_t)w->val);
     }
 }
 

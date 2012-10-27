@@ -133,7 +133,7 @@ uint64_t btree_type::copy_traverse(xarray<keyvals_t> *dst, bool clear_leaf) {
     btnode_leaf *leaf = first_leaf();
     uint64_t n = 0;
     while (leaf) {
-	memcpy(&dst->at(n), leaf->e_, sizeof(keyvals_t) * leaf->nk_);
+	memcpy(dst->at(n), leaf->e_, sizeof(keyvals_t) * leaf->nk_);
 	n += leaf->nk_;
         if (clear_leaf)
             leaf->nk_ = 0;  // quickly delete all key/values from the leaf

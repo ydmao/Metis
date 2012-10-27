@@ -59,12 +59,12 @@ struct xarray {
     T &operator[](int index) {
         return a_[index];
     }
-    T &at(int index) {
-        return a_[index];
+    T *at(int index) {
+        return &a_[index];
     }
     T &back() {
         assert(size() && !multiplex());
-        return at(size() - 1);
+        return a_[size() - 1];
     }
     void push_back(const T &e) {
         make_room();

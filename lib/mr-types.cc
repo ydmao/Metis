@@ -30,8 +30,8 @@ bool keyvals_arr_t::map_insert_sorted_copy_on_new(void *key, void *val, size_t k
     int pos = 0;
     bool newkey = atomic_insert(&tmp, static_appbase::pair_comp<keyvals_t>, &pos);
     if (newkey)
-        at(pos).key = static_appbase::key_copy(key, keylen);
-    at(pos).map_value_insert(val);
+        at(pos)->key = static_appbase::key_copy(key, keylen);
+    at(pos)->map_value_insert(val);
     return newkey;
 }
 

@@ -117,7 +117,7 @@ void psrs<C>::mergesort(xarray<C *> &per_core_pairs, int npairs, int *subsize,
     for (int i = 0; i < ncore; ++i) {
         int s = subsize[i * (ncore + 1) + me];
         int e = subsize[i * (ncore + 1) + me + 1];
-        a[i].set_array(&per_core_pairs[i]->at(s), e - s);
+        a[i].set_array(per_core_pairs[i]->at(s), e - s);
     }
     C output;
     output.set_array(out, npairs);
@@ -146,7 +146,7 @@ C *psrs<C>::copy_elem(xarray<C> &a, int dst_start, int dst_end) {
 	    // local index of last elements to be copied
 	    int loc_end = std::min(dst_end, glb_end) - glb_start;
             int n = loc_end - loc_start + 1;
-            a[i].copy(&output->at(off), loc_start, n);
+            a[i].copy(output->at(off), loc_start, n);
 	    off += n;
 	}
 	glb_start = glb_end + 1;
@@ -190,7 +190,7 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
     const int interval = (localpairs->size() + ncpus - 1) / ncpus;
     for (size_t i = 0; i < size_t(ncpus - 1); ++i)
 	if ((i + 1) * interval < localpairs->size())
-            pivots_[me * (ncpus - 1) + i].assign(localpairs->at((i + 1) * interval));
+            pivots_[me * (ncpus - 1) + i].assign(*localpairs->at((i + 1) * interval));
 	else
             pivots_[me * (ncpus - 1) + i].assign(localpairs->back());
     cpu_barrier(me, ncpus);
@@ -223,10 +223,10 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
     for (int i = 0; i < me; ++i)
         output_offset += partsize_[i];
     mergesort(lpairs_, partsize_[me], subsize_,
-              me, &output_->at(output_offset), ncpus, pcmp);
+              me, output_->at(output_offset), ncpus, pcmp);
     cpu_barrier(me, ncpus);
     localpairs->shallow_free();
-    localpairs->set_array(&output_->at(output_offset), partsize_[me]);
+    localpairs->set_array(output_->at(output_offset), partsize_[me]);
     // apply a barrier before deinit to make sure no one is using output_
     cpu_barrier(me, ncpus);
     if (me == main_core)

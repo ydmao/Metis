@@ -82,7 +82,7 @@ int mapreduce_appbase::map_worker() {
         m_->rehash(cur_lcpu, sample_);
     int n, next;
     for (n = 0; (next = next_task()) < int(ma_.size()); ++n) {
-	map_function(&ma_.at(next));
+	map_function(ma_.at(next));
         if (sampling_)
 	    e_[cur_lcpu].task_finished();
     }
