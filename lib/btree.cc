@@ -19,9 +19,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
     if (!parent) {
 	btnode_internal *newroot = new btnode_internal;
 	newroot->nk_ = 1;
-	newroot->e_[0].k_ = key;
-	newroot->e_[0].v_ = left;
-	newroot->e_[1].v_ = right;
+        newroot->assign(0, left, key, right);
 	root_ = newroot;
 	left->parent_ = newroot;
 	right->parent_ = newroot;
@@ -33,8 +31,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
 	    parent->e_[i + 1].k_ = parent->e_[i].k_;
 	for (int i = parent->nk_; i >= ikey + 1; i--)
 	    parent->e_[i + 1].v_ = parent->e_[i].v_;
-	parent->e_[ikey].k_ = key;
-	parent->e_[ikey + 1].v_ = right;
+        parent->assign_right(ikey, key, right);
 	++parent->nk_;
 	right->parent_ = parent;
 	if (parent->need_split()) {
@@ -65,9 +62,9 @@ btnode_leaf *btree_type::get_leaf(void *key) {
 // left < splitkey <= right. Right is the new sibling
 int btree_type::map_insert_sorted_copy_on_new(void *k, void *v, size_t keylen, unsigned hash) {
     btnode_leaf *leaf = get_leaf(k);
-    bool found = false;
-    int pos = leaf->lower_bound(k, &found);
-    if (!found) {
+    int pos;
+    bool found;
+    if (!(found = leaf->lower_bound(k, &pos))) {
         void *ik = static_appbase::key_copy(k, keylen);
         leaf->insert(pos, ik, hash);
         ++ nk_;
@@ -82,9 +79,8 @@ int btree_type::map_insert_sorted_copy_on_new(void *k, void *v, size_t keylen, u
 
 void btree_type::map_insert_sorted_new_and_raw(keyvals_t *p) {
     btnode_leaf *leaf = get_leaf(p->key);
-    bool found = false;
-    int pos = leaf->lower_bound(p->key, &found);
-    assert(!found);
+    int pos;
+    assert(!leaf->lower_bound(p->key, &pos));  // must be new key
     leaf->insert(pos, p->key, 0);  // do not copy key
     ++ nk_;
     leaf->e_[pos] = *p;

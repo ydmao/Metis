@@ -45,11 +45,13 @@ struct btnode_leaf : public btnode_base {
         return right;
     }
 
-    int lower_bound(void *key, bool *bfound) {
+    bool lower_bound(void *key, int *p) {
+        bool found = false;
         keyvals_t tmp;
         tmp.key = key;
-        return xsearch::lower_bound(&tmp, e_, nk_,
-                          static_appbase::pair_comp<keyvals_t>, bfound);
+        *p = xsearch::lower_bound(&tmp, e_, nk_,
+                                  static_appbase::pair_comp<keyvals_t>, &found);
+        return found;
     }
 
     void insert(int pos, void *key, unsigned hash) {
@@ -92,7 +94,15 @@ struct btnode_internal : public btnode_base {
         nk_ = order;
         return nn;
     }
-
+    void assign(int p, btnode_base *left, void *key, btnode_base *right) {
+        e_[p].v_ = left;
+        e_[p].k_ = key;
+        e_[p + 1].v_ = right;
+    }
+    void assign_right(int p, void *key, btnode_base *right) {
+        e_[p].k_ = key;
+        e_[p + 1].v_ = right;
+    }
     btnode_base *upper_bound(void *key) {
         int pos = upper_bound_pos(key);
         return e_[pos].v_;
