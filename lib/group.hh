@@ -1,5 +1,5 @@
 #ifndef GROUP_HH_
-#define GROUP_HH_
+#define GROUP_HH_ 1
 
 #include "mr-types.hh"
 #include "bench.hh"

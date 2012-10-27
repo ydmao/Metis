@@ -1,5 +1,5 @@
-#ifndef PROFILE_H
-#define PROFILE_H
+#ifndef PROFILE_HH_
+#define PROFILE_HH_ 1
 
 #include <inttypes.h>
 

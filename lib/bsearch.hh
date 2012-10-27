@@ -1,5 +1,5 @@
-#ifndef BSEARCH_H
-#define BSEARCH_H
+#ifndef BSEARCH_HH_
+#define BSEARCH_HH_
 
 namespace xsearch {
 

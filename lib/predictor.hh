@@ -1,5 +1,5 @@
-#ifndef PREDICTOR_H
-#define PREDICTOR_H
+#ifndef PREDICTOR_HH_
+#define PREDICTOR_HH_ 1
 
 #include "mr-types.hh"
 

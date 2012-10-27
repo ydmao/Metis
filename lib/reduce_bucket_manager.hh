@@ -1,5 +1,5 @@
-#ifndef RBKTSMGR_H
-#define RBKTSMGR_H
+#ifndef REDUCE_BUCKET_MANAGER_HH_
+#define REDUCE_BUCKET_MANAGER_HH_ 1
 
 #include "mr-types.hh"
 #include "psrs.hh"

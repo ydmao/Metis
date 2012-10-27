@@ -1,5 +1,5 @@
-#ifndef XBTREE_HH_
-#define XBTREE_HH_
+#ifndef BTREE_HH_
+#define BTREE_HH_ 1
 
 #include "bsearch.hh"
 #include "appbase.hh"

@@ -1,5 +1,5 @@
-#ifndef BENCH_H
-#define BENCH_H
+#ifndef BENCH_HH_
+#define BENCH_HH_ 1
 
 #include <stdint.h>
 #include <stdlib.h>

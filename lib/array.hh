@@ -1,5 +1,5 @@
-#ifndef XARRAY_HH_
-#define XARRAY_HH_
+#ifndef ARRAY_HH_
+#define ARRAY_HH_ 1
 
 #include <algorithm>
 #include "bsearch.hh"

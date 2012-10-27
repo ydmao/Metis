@@ -1,5 +1,5 @@
-#ifndef JOS_INC_KDEBUG_H
-#define JOS_INC_KDEBUG_H
+#ifndef JOS_INC_KDEBUG_HH_
+#define JOS_INC_KDEBUG_HH_ 1
 
 /* From Corey inc/kdebug.h */
 

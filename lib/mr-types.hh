@@ -1,5 +1,5 @@
-#ifndef MR_TYPES_H
-#define MR_TYPES_H
+#ifndef MR_TYPES_HH_
+#define MR_TYPES_HH_
 
 #include <stdlib.h>
 #include <inttypes.h>

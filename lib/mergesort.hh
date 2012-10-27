@@ -1,5 +1,5 @@
-#ifndef MERGESORT_H
-#define MERGESORT_H
+#ifndef MERGESORT_HH_
+#define MERGESORT_HH_
 
 #include "bench.hh"
 #include "mr-types.hh"

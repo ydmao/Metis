@@ -1,5 +1,5 @@
-#ifndef PSRS_H
-#define PSRS_H
+#ifndef PSRS_HH_
+#define PSRS_HH_ 1
 
 #include <algorithm>
 #include "bench.hh"

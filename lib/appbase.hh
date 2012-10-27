@@ -1,5 +1,5 @@
-#ifndef APPBASE_H
-#define APPBASE_H
+#ifndef APPBASE_HH_
+#define APPBASE_HH_ 1
 
 #include "mr-types.hh"
 #include "profile.hh"

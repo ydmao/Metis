@@ -1,5 +1,5 @@
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#ifndef APPLICATION_HH_
+#define APPLICATION_HH_ 1
 
 #include "mr-types.hh"
 #include "profile.hh"

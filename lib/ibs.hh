@@ -1,5 +1,5 @@
-#ifndef IBS_HH
-#define IBS_HH
+#ifndef IBS_HH_
+#define IBS_HH_ 1
 
 #include <inttypes.h>
 

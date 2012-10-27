@@ -1,5 +1,5 @@
-#ifndef MAP_BUCKET_MANAGER_HH
-#define MAP_BUCKET_MANAGER_HH 1
+#ifndef MAP_BUCKET_MANAGER_HH_
+#define MAP_BUCKET_MANAGER_HH_ 1
 
 #include "array.hh"
 #include "group.hh"

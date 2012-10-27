@@ -1,5 +1,5 @@
 #ifndef TEST_UTIL_HH_
-#define TEST_UTIL_HH_
+#define TEST_UTIL_HH_ 1
 
 #include <iostream>
 #include <assert.h>

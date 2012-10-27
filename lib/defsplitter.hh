@@ -1,5 +1,5 @@
-#ifndef DEFSPLITTER_HH
-#define DEFSPLITTER_HH
+#ifndef DEFSPLITTER_HH_
+#define DEFSPLITTER_HH_ 1
 #include <string.h>
 #include <pthread.h>
 #include <algorithm>
