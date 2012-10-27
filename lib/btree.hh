@@ -20,17 +20,18 @@ struct btnode_base {
 };
 
 struct btnode_leaf : public btnode_base {
-    keyvals_t e_[2 * order + 2];
+    static const int fanout = 2 * order + 2;
+    keyvals_t e_[fanout];
     btnode_leaf *next_;
     ~btnode_leaf() {
         for (int i = 0; i < nk_; ++i)
             e_[i].reset();
-        for (int i = nk_; i < 2 * order + 2; ++i)
+        for (int i = nk_; i < fanout; ++i)
             e_[i].init();
     }
 
     btnode_leaf() : btnode_base(), next_(NULL) {
-        for (int i = 0; i < 2 * order + 2; ++i)
+        for (int i = 0; i < fanout; ++i)
             e_[i].init();
     }
     btnode_leaf *split() {
@@ -61,12 +62,13 @@ struct btnode_leaf : public btnode_base {
     }
 
     bool need_split() const {
-        return nk_ == (order * 2 + 2);
+        return nk_ == fanout;
     }
 };
 
 
 struct btnode_internal : public btnode_base {
+    static const int fanout = 2 * order + 2;
     struct xpair {
         xpair(void *k) : k_(k) {} 
         xpair() : k_(), v_() {} 
@@ -77,7 +79,7 @@ struct btnode_internal : public btnode_base {
         btnode_base *v_;
     };
 
-    xpair e_[2 * order + 2];
+    xpair e_[fanout];
     btnode_internal() : btnode_base() {
         bzero(e_, sizeof(e_));
     }
@@ -98,6 +100,9 @@ struct btnode_internal : public btnode_base {
     int upper_bound_pos(void *key) {
         xpair tmp(key);
         return xsearch::upper_bound(&tmp, e_, nk_, static_appbase::pair_comp<xpair>);
+    }
+    bool need_split() const {
+        return nk_ == fanout - 1;
     }
 };
 

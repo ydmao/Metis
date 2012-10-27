@@ -25,7 +25,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
 	root_ = newroot;
 	left->parent_ = newroot;
 	right->parent_ = newroot;
-	nlevel_++;
+	++nlevel_;
     } else {
 	int ikey = parent->upper_bound_pos(key);
 	// insert newkey at ikey, values at ikey + 1
@@ -37,7 +37,7 @@ void btree_type::insert_internal(void *key, btnode_base *left, btnode_base *righ
 	parent->e_[ikey + 1].v_ = right;
 	++parent->nk_;
 	right->parent_ = parent;
-	if (parent->nk_ == 2 * order + 1) {
+	if (parent->need_split()) {
 	    void *newkey = parent->e_[order].k_;
 	    btnode_internal *newparent = parent->split();
 	    // push up newkey
