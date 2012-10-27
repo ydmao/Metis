@@ -79,6 +79,7 @@ void test2() {
         kvs.key = (void *)i;
         kvs.push_back((void *) (i + 1));
         bt.map_insert_sorted_new_and_raw(&kvs);
+        kvs.init();
         check_tree(bt);
         check_tree_copy(bt);
         CHECK_EQ(size_t(i), bt.size());
