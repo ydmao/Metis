@@ -1,5 +1,4 @@
 #include "btree.hh"
-#include "comparator.hh"
 #include "application.hh"
 #include <string.h>
 #include <stdlib.h>
@@ -7,6 +6,13 @@
 #ifdef JOS_USER
 #include <inc/compiler.h>
 #endif
+
+
+int btnode_internal::xpair_compare(const void *p1, const void *p2) {
+    const xpair_type *x1 = (const xpair_type *)p1;
+    const xpair_type *x2 = (const xpair_type *)p2;
+    return the_app_->key_compare(x1->k_, x2->k_);
+}
 
 void btree_type::init() {
     nk_ = 0;

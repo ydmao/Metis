@@ -1,7 +1,6 @@
 #include "btree.hh"
 #include "application.hh"
 #include "test_util.hh"
-#include "comparator.hh"
 #include <assert.h>
 #include <iostream>
 using namespace std;

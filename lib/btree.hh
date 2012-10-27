@@ -2,7 +2,7 @@
 #define XBTREE_HH_
 
 #include "bsearch.hh"
-#include "comparator.hh"
+#include "appbase.hh"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,7 +48,7 @@ struct btnode_leaf : public btnode_base {
         keyvals_t tmp;
         tmp.key = key;
         return xsearch::lower_bound(&tmp, e_, nk_,
-                          comparator::raw_comp<keyvals_t>::impl, bfound);
+                          mapreduce_appbase::pair_comp<keyvals_t>, bfound);
     }
 
     void insert(int pos, void *key, unsigned hash) {
@@ -91,11 +91,7 @@ struct btnode_internal : public btnode_base {
         int pos = upper_bound_pos(key);
         return e_[pos].v_;
     }
-    static int xpair_compare(const void *p1, const void *p2) {
-        const xpair_type *x1 = (const xpair_type *)p1;
-        const xpair_type *x2 = (const xpair_type *)p2;
-        return comparator::key_compare(x1->k_, x2->k_);
-    }
+    static int xpair_compare(const void *p1, const void *p2);
     int upper_bound_pos(void *key) {
         xpair<void *, btnode_base *> tmp;
         tmp.k_ = key;
