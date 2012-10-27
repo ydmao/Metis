@@ -10,8 +10,8 @@
 #include <inc/compiler.h>
 #endif
 
-template <typename C, typename F>
-inline void group_one_sorted(C &a, F &f) {
+template <typename C, typename F, typename KF>
+inline void group_one_sorted(C &a, F &f, KF &kf) {
     // group and apply functor
     size_t n = a.size();
     keyvals_t kvs;
@@ -19,17 +19,19 @@ inline void group_one_sorted(C &a, F &f) {
 	kvs.key = a[i].key;
         kvs.map_value_move(&a[i]);
         ++i;
-        for (; i < n && !static_appbase::key_compare(kvs.key, a[i].key); ++i)
+        for (; i < n && !static_appbase::key_compare(kvs.key, a[i].key); ++i) {
+            kf(a[i].key);
 	    kvs.map_value_move(&a[i]);
+        }
         f(kvs);
     }
 }
 
-template <typename C, typename F, typename PC>
-inline void group_unsorted(C **a, int na, F &f, PC pc) {
+template <typename C, typename F, typename PC, typename KF>
+inline void group_unsorted(C **a, int na, F &f, PC &pc, KF &kf) {
     if (na == 1) {
         a[0]->sort(pc);
-        group_one_sorted(*a[0], f);
+        group_one_sorted(*a[0], f, kf);
     }
     if (na <= 1)
         return;
@@ -41,12 +43,12 @@ inline void group_unsorted(C **a, int na, F &f, PC pc) {
     for (int i = 0; i < na; i++)
         one->append(*a[i]);
     one->sort(pc);
-    group_one_sorted(*one, f);
+    group_one_sorted(*one, f, kf);
     delete one;
 }
 
-template <typename C, typename F>
-inline void group_sorted(C **nodes, int n, F &f) {
+template <typename C, typename F, typename KF>
+inline void group_sorted(C **nodes, int n, F &f, KF &kf) {
     if (!n)
         return;
     typename C::iterator it[JOS_NCPU];
@@ -76,14 +78,17 @@ inline void group_sorted(C **nodes, int n, F &f) {
 	    break;
         // Merge all the values with the same mimimum key.
 	dst.key = it[min_idx]->key;
-	for (int i = 0; i < n; i++) {
+	for (int i = 0; i < n; ++i) {
 	    if (marks[i] != m)
 		continue;
-	    do {
+	    dst.map_value_move(&(*it[i]));
+            ++it[i];
+	    for (; it[i] != nodes[i]->end() &&
+                   static_appbase::key_compare(dst.key, it[i]->key) == 0; ++it[i]) {
+                kf(it[i]->key);
+                it[i]->key = NULL;
 		dst.map_value_move(&(*it[i]));
-                ++it[i];
-	    } while (it[i] != nodes[i]->end() &&
-                     static_appbase::key_compare(dst.key, it[i]->key) == 0);
+	    }
 	}
         f(dst);
     }

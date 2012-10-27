@@ -139,6 +139,9 @@ struct static_appbase {
     static void set_app(mapreduce_appbase *app) {
         the_app_ = app;
     }
+    static void key_free(void *k) {
+        the_app_->key_free(k);
+    }
   private:
     static mapreduce_appbase *the_app_;
 };

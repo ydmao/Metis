@@ -43,7 +43,7 @@ void keyvals_arr_t::map_insert_sorted_new_and_raw(keyvals_t *p) {
 
 void keyval_arr_t::transfer(xarray<keyvals_t> *dst) {
     append_functor f(dst);
-    group_one_sorted(*this, f);
+    group_one_sorted(*this, f, static_appbase::key_free);
     this->init();
 }
 
