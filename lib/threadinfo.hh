@@ -3,18 +3,19 @@
 
 #include <pthread.h>
 #include <assert.h>
+#include <stdlib.h>
 
 struct threadinfo {
     static threadinfo *current() {
         threadinfo *ti = (threadinfo *)pthread_getspecific(key_);
         if (!ti) {
-            ti = new threadinfo;
+            ti = (threadinfo *)malloc(sizeof(threadinfo));
             pthread_setspecific(key_, ti);
         }
         return ti;
     }
     static void initialize() {
-        assert(pthread_key_create(&key_, free_threadinfo) == 0);
+        assert(pthread_key_create(&key_, free) == 0);
         created_ = true;
     }
     static bool initialized() {
@@ -24,9 +25,6 @@ struct threadinfo {
     int cur_reduce_task_;
     int cur_core_;
   private:
-    static void free_threadinfo(void *ti) {
-        delete (threadinfo *)ti;
-    }
     static bool created_;
     static pthread_key_t key_;
 };
