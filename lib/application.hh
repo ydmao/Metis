@@ -7,7 +7,6 @@
 #include "predictor.hh"
 #include "reduce_bucket_manager.hh"
 
-struct reduce_bucket_manager_base;
 struct map_bucket_manager_base;
 
 struct mapreduce_appbase {
@@ -27,7 +26,7 @@ struct mapreduce_appbase {
     /* @brief: default partition function that partition keys into reduce/group buckets */
     virtual unsigned partition(void *k, int length) {
         size_t h = 5381;
-        char *x = (char *) k;
+        const char *x = (const char *) k;
         for (int i = 0; i < length; ++i)
 	    h = ((h << 5) + h) + unsigned(x[i]);
         return h % unsigned(-1);
