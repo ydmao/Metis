@@ -19,9 +19,6 @@ struct keyval_t {
     keyval_t() {
         init();
     }
-    ~keyval_t() {
-        reset();
-    }
     explicit keyval_t(void *k) {
         set(k, NULL, 0);
     }
@@ -34,6 +31,10 @@ struct keyval_t {
     keyval_t(void *k, void *v) {
         set(k, v, 0);
     }
+    ~keyval_t() {
+        reset();
+    }
+
     void assign(const keyval_t &a) {
         set(a.key, a.val, a.hash);
     }
@@ -55,9 +56,6 @@ struct keyvals_len_t {
     void *key;
     void **vals;
     uint64_t len;
-    ~keyvals_len_t() {
-        reset();
-    }
     keyvals_len_t() {
         init();
     }
@@ -66,6 +64,9 @@ struct keyvals_len_t {
     }
     keyvals_len_t(void *k, void **v, uint64_t l) {
         set(k, v, l);
+    }
+    ~keyvals_len_t() {
+        reset();
     }
     void assign(const keyvals_len_t &a) {
         set(a.key, a.vals, a.len);
@@ -97,6 +98,14 @@ struct keyvals_t : public xarray<void *> {
     keyvals_t() {
         init();
     }
+    explicit keyvals_t(void *k) {
+        init();
+        set(k, 0);
+    }
+    keyvals_t(void *k, unsigned h) {
+        reset();
+        set(k, h);
+    }
     ~keyvals_t() {
         reset();
     }
@@ -107,14 +116,6 @@ struct keyvals_t : public xarray<void *> {
     void reset() {
         set(0, 0);
         xarray<void *>::clear();
-    }
-    explicit keyvals_t(void *k) {
-        init();
-        set(k, 0);
-    }
-    keyvals_t(void *k, unsigned h) {
-        reset();
-        set(k, h);
     }
     void assign(const keyvals_t &a) {
         set(a.key, a.hash);
@@ -132,14 +133,14 @@ struct keyvals_t : public xarray<void *> {
 };
 
 struct keyval_arr_t : public xarray<keyval_t> {
-    bool map_append_copy(void *key, void *val, size_t keylen, unsigned hash);
+    bool map_append_copy(void *k, void *v, size_t keylen, unsigned hash);
     void map_append_raw(keyval_t *p);
     void transfer(xarray<keyvals_t> *dst);
     using xarray<keyval_t>::transfer;
 };
 
 struct keyvals_arr_t : public xarray<keyvals_t> {
-    bool map_insert_sorted_copy_on_new(void *key, void *val, size_t keylen, unsigned hash);
+    bool map_insert_sorted_copy_on_new(void *k, void *v, size_t keylen, unsigned hash);
     void map_insert_sorted_new_and_raw(keyvals_t *p);
 };
 
