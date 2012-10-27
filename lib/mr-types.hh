@@ -150,8 +150,6 @@ enum task_type_t {
     MR_PHASES,
 };
 
-typedef int (*pair_cmp_t)(const void *, const void *);
-
 /* suggested number of map tasks per core. */
 enum { def_nsplits_per_core = 16 };
 

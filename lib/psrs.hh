@@ -10,7 +10,8 @@
 template <typename C>
 struct psrs {
     void cpu_barrier(int me, int ncpus);
-    C *do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp);
+    template <typename F>
+    C *do_psrs(xarray<C> &a, int ncpus, int me, F &pcmp);
     C *init(int me, size_t output_size) {
         assert(me == main_core && output_ == NULL && status_ == STOP);
         return (output_ = new C(output_size));
@@ -24,11 +25,13 @@ struct psrs {
     /* @brief: Divide a[start..end] into subarrays using [pivots[fp], pivots[lp]],
      * so that subsize[at + i] is the first element that is > pivots[i]
      */
+    template <typename F>
     void divide(C &a, int start, int end, int *subsize,
-                const pair_type *pivots, int fp, int lp, pair_cmp_t pcmp);
+                const pair_type *pivots, int fp, int lp, F &pcmp);
     C *copy_elem(xarray<C> &a, int dst_start, int dst_end);
+    template <typename F>
     void mergesort(xarray<C *> &localpairs, int npairs, int *subsize, int me,
-                   pair_type *out, int ncpus, pair_cmp_t pcmp);
+                   pair_type *out, int ncpus, F &pcmp);
 
     void deinit() {
         output_ = NULL;
@@ -81,9 +84,9 @@ void psrs<C>::cpu_barrier(int me, int ncore) {
     }
 }
 
-template <typename C>
+template <typename C> template <typename F>
 void psrs<C>::divide(C &a, int start, int end, int *subsize, const pair_type *pivots,
-	             int fp, int lp, pair_cmp_t pcmp) {
+	             int fp, int lp, F &pcmp) {
     int mid = (fp + lp) / 2;
     const pair_type *pv = &pivots[mid];
     // Find first element that is > pv
@@ -109,10 +112,10 @@ void psrs<C>::divide(C &a, int start, int end, int *subsize, const pair_type *pi
     }
 }
 
-template <typename C>
+template <typename C> template <typename F>
 void psrs<C>::mergesort(xarray<C *> &per_core_pairs, int npairs, int *subsize,
                         int me, typename psrs<C>::pair_type *out,
-	                int ncore, pair_cmp_t pcmp) {
+	                int ncore, F &pcmp) {
     C a[JOS_NCPU];
     for (int i = 0; i < ncore; ++i) {
         int s = subsize[i * (ncore + 1) + me];
@@ -158,8 +161,8 @@ C *psrs<C>::copy_elem(xarray<C> &a, int dst_start, int dst_end) {
 /* @brief: Sort the elements of an array of collections. 
  * @return: A equal share of the output that this core get. Note that the caller
  *          does not own the returned elements. */
-template <typename C>
-C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
+template <typename C> template <typename F>
+C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, F &pcmp) {
     if (me == main_core)
 	check_inited();
     cpu_barrier(me, ncpus);
