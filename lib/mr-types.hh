@@ -130,25 +130,21 @@ struct keyvals_t : public xarray<void *> {
 struct keyval_arr_t : public xarray<keyval_t> {
     bool map_append_copy(void *key, void *val, size_t keylen, unsigned hash);
     void map_append_raw(keyval_t *p);
+    void transfer(xarray<keyvals_t> *dst);
+    using xarray<keyval_t>::transfer;
 };
-
-void transfer(xarray<keyvals_t> *dst, xarray<keyvals_t> *src);
-void transfer(xarray<keyval_t> *dst, xarray<keyval_t> *src);
-void transfer(xarray<keyvals_t> *dst, xarray<keyval_t> *src);
-struct btree_type;
-void transfer(xarray<keyvals_t> *dst, btree_type *src);
 
 struct keyvals_arr_t : public xarray<keyvals_t> {
     bool map_insert_sorted_copy_on_new(void *key, void *val, size_t keylen, unsigned hash);
     void map_insert_sorted_new_and_raw(keyvals_t *p);
 };
 
-typedef enum {
+enum task_type_t {
     MAP,
     REDUCE,
     MERGE,
     MR_PHASES,
-} task_type_t;
+};
 
 typedef int (*pair_cmp_t)(const void *, const void *);
 

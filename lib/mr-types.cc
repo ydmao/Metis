@@ -44,21 +44,14 @@ void keyvals_arr_t::map_insert_sorted_new_and_raw(keyvals_t *p) {
     assert(newkey);
 }
 
-void transfer(xarray<keyvals_t> *dst, xarray<keyval_t> *src) {
+void keyval_arr_t::transfer(xarray<keyvals_t> *dst) {
     append_functor f(dst);
-    group_one_sorted(*src, f);
-    src->init();
+    group_one_sorted(*this, f);
+    this->init();
 }
 
 void transfer(xarray<keyvals_t> *dst, btree_type *src) {
     src->transfer(dst);
 }
 
-void transfer(xarray<keyvals_t> *dst, xarray<keyvals_t> *src) {
-    src->transfer(dst);
-}
-
-void transfer(xarray<keyval_t> *dst, xarray<keyval_t> *src) {
-    src->transfer(dst);
-}
 

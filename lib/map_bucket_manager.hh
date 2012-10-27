@@ -180,7 +180,7 @@ void map_bucket_manager<S, DT, OPT>::prepare_merge(int row) {
     DT *src = mapdt_bucket(row, 0);
     C *dst = &output_[row];
     CHECK_EQ(size_t(0), dst->size());
-    transfer(dst, src);
+    src->transfer(dst);
 }
 
 template <bool S, typename DT, typename OPT>
