@@ -57,7 +57,8 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
             shallow_free_subarray(rb_, lcpu, ncpus);
         } else {
             // only main cpu has output
-            out = initialize_psrs<C>(pi_, lcpu, sum_subarray(rb_));
+            if (lcpu == main_core)
+                out = pi_.init(lcpu, sum_subarray(rb_));
             assert(out || lcpu != main_core);
             C *myshare = pi_.do_psrs(rb_, ncpus, lcpu, comparator::final_output_pair_comp);
             myshare->init();

@@ -112,7 +112,9 @@ void map_bucket_manager<S, DT, OPT>::psrs_output_and_reduce(int ncpus, int lcpu)
     // the final results is already in reduce bucket 0
     const int use_psrs = USE_PSRS;
     assert(use_psrs);
-    C *out = initialize_psrs<C>(pi_, lcpu, sum_subarray(output_));
+    C *out = NULL;
+    if (lcpu == main_core)
+        out = pi_.init(lcpu, sum_subarray(output_));
     // reduce the output of psrs
     C *myshare = pi_.do_psrs(output_, ncpus, lcpu, comparator::raw_comp<OPT>::impl);
     if (myshare)

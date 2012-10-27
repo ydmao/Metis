@@ -23,32 +23,23 @@ struct psrs {
     C *do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
         return do_psrs(a.array(), a.size(), ncpus, me, pcmp);
     }
-    void init(C *xo) {
-        output_ = xo;
-        total_len = output_->size();
+    C *init(int me, size_t output_size) {
+        assert(me == main_core && output_ == NULL && status == STOP);
+        output_ = new C;
+        output_->resize(output_size);
         reset();
+        return output_;
     }
-    psrs() {
-        pivots = NULL;
-        status = STOP;
-        deinit();
+    psrs() : output_(NULL), status(STOP) {
         bzero(ready, sizeof(ready));
         reset();
     }
-    ~psrs() {
-        if (pivots)
-            free(pivots);
-    }
-
   private:
     void reset() {
-        if (pivots)
-            free(pivots);
-	pivots = safe_malloc<pair_type>(JOS_NCPU * (JOS_NCPU - 1));
-	memset(pivots, 0, JOS_NCPU * (JOS_NCPU - 1) * C::elem_size());
-	memset(subsize, 0, sizeof(subsize));
-	memset(partsize, 0, sizeof(partsize));
- 	memset(lpairs, 0, sizeof(lpairs));
+	bzero(pivots_, sizeof(pivots_));
+	bzero(subsize_, sizeof(subsize_));
+	bzero(partsize_, sizeof(partsize_));
+ 	bzero(lpairs_, sizeof(lpairs_));
     }
     void deinit() {
         output_ = NULL;
@@ -63,12 +54,11 @@ struct psrs {
         volatile int v;
     } ready[JOS_NCPU];
 
-    int total_len;
-    pair_type *pivots;
+    pair_type pivots_[JOS_NCPU * (JOS_NCPU - 1)];
     C *output_;
-    int subsize[JOS_NCPU * (JOS_NCPU + 1)];
-    int partsize[JOS_NCPU];
-    pair_type *lpairs[JOS_NCPU];
+    int subsize_[JOS_NCPU * (JOS_NCPU + 1)];
+    int partsize_[JOS_NCPU];
+    pair_type *lpairs_[JOS_NCPU];
     volatile int status;
 };
 
@@ -190,6 +180,7 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp) {
 	check_inited();
     cpu_barrier(me, ncpus);
     // get the [start, end] subarray
+    const int total_len = output_->size();
     int w = (total_len + ncpus - 1) / ncpus;
     int start = w * me;
     int end = w * (me + 1) - 1;
@@ -203,7 +194,7 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp) {
     }
     C *localpairs = copy_elems(a, n, start, end);
     int copied = localpairs->size();
-    lpairs[me] = localpairs->array();
+    lpairs_[me] = localpairs->array();
     // sort the subarray locally
     localpairs->sort(pcmp);
     if (ncpus == 1 || total_len < ncpus * ncpus * ncpus) {
@@ -218,60 +209,49 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp) {
     // sends (p - 1) local pivots to main cpu
     for (int i = 0; i < ncpus - 1; i++) {
 	if ((i + 1) * rsize < copied)
-            pivots[me * (ncpus - 1) + i].assign(localpairs->at((i + 1) * rsize));
+            pivots_[me * (ncpus - 1) + i].assign(localpairs->at((i + 1) * rsize));
 	else
-            pivots[me * (ncpus - 1) + i].assign(localpairs->at(copied - 1));
+            pivots_[me * (ncpus - 1) + i].assign(localpairs->at(copied - 1));
     }
     cpu_barrier(me, ncpus);
     if (me == main_core) {
 	// sort p * (p - 1) pivots.
-	qsort(pivots, ncpus * (ncpus - 1), sizeof(pair_type), pcmp);
+	qsort(pivots_, ncpus * (ncpus - 1), sizeof(pair_type), pcmp);
 	// select (p - 1) pivots into pivots[1 : (p - 1)]
 	for (int i = 0; i < ncpus - 1; i++)
-            pivots[i + 1] = pivots[i * ncpus + ncpus / 2];
+            pivots_[i + 1] = pivots_[i * ncpus + ncpus / 2];
 	cpu_barrier(me, ncpus);
     } else
 	cpu_barrier(me, ncpus);
     // divide the local list into p sublists by the (p - 1) pivots received from main cpu
-    subsize[me * (ncpus + 1)] = 0;
-    subsize[me * (ncpus + 1) + ncpus] = copied;
-    sublists(localpairs->array(), 0, copied - 1, &subsize[me * (ncpus + 1)],
-	     pivots, 1, ncpus - 1, pcmp);
+    subsize_[me * (ncpus + 1)] = 0;
+    subsize_[me * (ncpus + 1) + ncpus] = copied;
+    sublists(localpairs->array(), 0, copied - 1, &subsize_[me * (ncpus + 1)],
+	     pivots_, 1, ncpus - 1, pcmp);
     cpu_barrier(me, ncpus);
     // decides the size of the me-th sublist
-    partsize[me] = 0;
-    for (int i = 0; i < ncpus; i++) {
-	int start = subsize[i * (ncpus + 1) + me];
-	int end = subsize[i * (ncpus + 1) + me + 1];
-	partsize[me] += end - start;
+    partsize_[me] = 0;
+    for (int i = 0; i < ncpus; ++i) {
+	int start = subsize_[i * (ncpus + 1) + me];
+	int end = subsize_[i * (ncpus + 1) + me + 1];
+	partsize_[me] += end - start;
     }
     cpu_barrier(me, ncpus);
     // merge each partition in parallel
     // determines the position in the final results for local partition
     int output_offset = 0;
     for (int i = 0; i < me; ++i)
-        output_offset += partsize[i];
-    mergesort(reinterpret_cast<pair_type **>(lpairs),
-              partsize[me], reinterpret_cast<int *>(subsize),
+        output_offset += partsize_[i];
+    mergesort(lpairs_, partsize_[me], subsize_,
               me, &output_->at(output_offset), ncpus, pcmp);
     cpu_barrier(me, ncpus);
     localpairs->shallow_free();
-    localpairs->set_array(&output_->at(output_offset), partsize[me]);
+    localpairs->set_array(&output_->at(output_offset), partsize_[me]);
     // apply a barrier before deinit to make sure no one is using output_
     cpu_barrier(me, ncpus);
     if (me == main_core)
         deinit();
     return localpairs;
-}
-
-template <typename C>
-inline C *initialize_psrs(psrs<C> &pi, int me, size_t output_size) {
-    if (me != main_core)
-        return NULL;
-    C *xo = new C;
-    xo->resize(output_size);
-    pi.init(xo);
-    return xo;
 }
 
 #endif
