@@ -65,15 +65,19 @@ struct btnode_leaf : public btnode_base {
     }
 };
 
-template <typename K, typename V>
-struct xpair {
-    K k_;
-    V v_;
-};
 
 struct btnode_internal : public btnode_base {
-    typedef xpair<void *, btnode_base *> xpair_type;
-    xpair_type e_[2 * order + 2];
+    struct xpair {
+        xpair(void *k) : k_(k) {} 
+        xpair() : k_(), v_() {} 
+        union {
+            void *k_;
+            void *key;
+        };
+        btnode_base *v_;
+    };
+
+    xpair e_[2 * order + 2];
     btnode_internal() : btnode_base() {
         memset(e_, 0, sizeof(e_));
     }
@@ -91,11 +95,9 @@ struct btnode_internal : public btnode_base {
         int pos = upper_bound_pos(key);
         return e_[pos].v_;
     }
-    static int xpair_compare(const void *p1, const void *p2);
     int upper_bound_pos(void *key) {
-        xpair<void *, btnode_base *> tmp;
-        tmp.k_ = key;
-        return xsearch::upper_bound(&tmp, e_, nk_, xpair_compare);
+        xpair tmp(key);
+        return xsearch::upper_bound(&tmp, e_, nk_, static_appbase::pair_comp<xpair>);
     }
 };
 

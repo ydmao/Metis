@@ -7,12 +7,6 @@
 #include <inc/compiler.h>
 #endif
 
-int btnode_internal::xpair_compare(const void *p1, const void *p2) {
-    const xpair_type *x1 = (const xpair_type *)p1;
-    const xpair_type *x2 = (const xpair_type *)p2;
-    return static_appbase::key_compare(x1->k_, x2->k_);
-}
-
 void btree_type::init() {
     nk_ = 0;
     nlevel_ = 0;
