@@ -130,14 +130,16 @@ struct app_impl_base : public mapreduce_appbase {
     }
 
     void set_final_result() {
-        reduce_bucket_manager<T>::instance()->transfer(0, &results_);
+        rb_.transfer(0, &results_);
     }
     int internal_final_output_compare(const void *p1, const void *p2) {
         return final_output_compare((T *)p1, (T *)p2);
     }
   protected:
+    reduce_bucket_manager<T> rb_;
+
     reduce_bucket_manager_base *get_reduce_bucket_manager() {
-        return reduce_bucket_manager<T>::instance();
+        return &rb_;
     }
     bool skip_reduce_or_group_phase() {
         if (at == atype_maponly)
@@ -156,7 +158,7 @@ struct app_impl_base : public mapreduce_appbase {
         assert(!results_.size());
     }
     void reset() {
-        reduce_bucket_manager<T>::instance()->reset();
+        rb_.reset();
         mapreduce_appbase::reset();
     }
 };

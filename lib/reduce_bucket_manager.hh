@@ -17,10 +17,6 @@ struct reduce_bucket_manager_base {
 
 template <typename T>
 struct reduce_bucket_manager : public reduce_bucket_manager_base {
-    static reduce_bucket_manager *instance() {
-        static reduce_bucket_manager instance;
-        return &instance;
-    }
     void init(int n) {
         rb_.resize(n);
         for (int i = 0; i < n; ++i)
@@ -84,7 +80,6 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
     int current_task() {
         return intptr_t(pthread_getspecific(current_task_key_));
     }
-    reduce_bucket_manager() {}
     xarray<C> rb_; // reduce buckets
     pthread_key_t current_task_key_;
 };

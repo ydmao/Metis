@@ -295,7 +295,7 @@ void map_reduce::internal_reduce_emit(keyvals_t &p) {
     if (has_value_modifier()) {
         assert(p.size() == 1);
         keyval_t x(p.key, p.multiplex_value());
-	reduce_bucket_manager<keyval_t>::instance()->emit(x);
+	rb_.emit(x);
         x.init();
         p.init();
     } else {
@@ -338,7 +338,7 @@ void map_reduce::map_values_move(keyvals_t *dst, keyvals_t *src) {
 /** === map_group === */
 void map_group::internal_reduce_emit(keyvals_t &p) {
     keyvals_len_t x(p.key, p.array(), p.size());
-    reduce_bucket_manager<keyvals_len_t>::instance()->emit(x);
+    rb_.emit(x);
     x.init();
     p.init();
 }
