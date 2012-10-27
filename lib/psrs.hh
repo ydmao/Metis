@@ -44,7 +44,7 @@ struct psrs {
     enum { STOP, START };
     union {
         char __pad[JOS_CLINE];
-        volatile int v;
+        volatile bool v;
     } ready_[JOS_NCPU];
 
     pair_type pivots_[JOS_NCPU * (JOS_NCPU - 1)];
@@ -60,11 +60,11 @@ void psrs<C>::cpu_barrier(int me, int ncore) {
     if (me != main_core) {
 	while (status_ != START)
             ;
-	ready_[me].v = 1;
+	ready_[me].v = true;
 	mfence();
 	while (status_ != STOP)
             ;
-	ready_[me].v = 0;
+	ready_[me].v = false;
     } else {
 	status_ = START;
 	mfence();
