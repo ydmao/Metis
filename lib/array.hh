@@ -164,9 +164,7 @@ struct xarray {
                 a_ = reinterpret_cast<T *>(malloc(c * sizeof(T)));
             else
                 a_ = reinterpret_cast<T *>(realloc(a_, c * sizeof(T)));
-            printf("setting to %p\n", a_);
         } else if (capacity_) {
-            printf("freeing %p\n", a_);
             free(a_);
             a_ = NULL;
         }

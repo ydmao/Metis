@@ -6,6 +6,17 @@
 
 extern mapreduce_appbase *the_app_;
 
+struct append_functor {
+    append_functor(xarray<keyvals_t> *x) : x_(x) {}
+    void operator()(keyvals_t &kvs) {
+	// kvs.vals is owned by callee
+        x_->push_back(kvs);
+        kvs.init();
+    }
+  private:
+    xarray<keyvals_t> *x_;
+};
+
 bool keyval_arr_t::map_append_copy(void *key, void *val, size_t keylen, unsigned hash) {
     void *ik = the_app_->key_copy(key, keylen);
     keyval_t tmp(ik, val, hash);

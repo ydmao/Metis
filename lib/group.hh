@@ -1,9 +1,8 @@
-#ifndef REDUCE_H
-#define REDUCE_H
+#ifndef GROUP_HH_
+#define GROUP_HH_
 
 #include "mr-types.hh"
 #include "value_helper.hh"
-#include "reduce_bucket_manager.hh"
 #include "bench.hh"
 #include "application.hh"
 #include <assert.h>
@@ -23,17 +22,6 @@ struct reduce_emit_functor {
         static reduce_emit_functor in;
         return in;
     }
-};
-
-struct append_functor {
-    append_functor(xarray<keyvals_t> *x) : x_(x) {}
-    void operator()(keyvals_t &kvs) {
-	// kvs.vals is owned by callee
-        x_->push_back(kvs);
-        kvs.init();
-    }
-  private:
-    xarray<keyvals_t> *x_;
 };
 
 template <typename C, typename F>
