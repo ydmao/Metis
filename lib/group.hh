@@ -2,7 +2,6 @@
 #define GROUP_HH_
 
 #include "mr-types.hh"
-#include "value_helper.hh"
 #include "bench.hh"
 #include "application.hh"
 #include <assert.h>
@@ -31,10 +30,10 @@ inline void group_one_sorted(C &a, F &f) {
     keyvals_t kvs;
     for (size_t i = 0; i < n;) {
 	kvs.key = a[i].key;
-        map_values_mv(&kvs, &a[i]);
+        kvs.map_value_move(&a[i]);
         ++i;
         for (; i < n && !comparator::key_compare(kvs.key, a[i].key); ++i)
-	    map_values_mv(&kvs, &a[i]);
+	    kvs.map_value_move(&a[i]);
         f(kvs);
     }
 }
@@ -94,7 +93,7 @@ inline void group_sorted(C **nodes, int n, F &f) {
 	    if (marks[i] != m)
 		continue;
 	    do {
-		map_values_mv(&dst, &(*it[i]));
+		dst.map_value_move(&(*it[i]));
                 ++it[i];
 	    } while (it[i] != nodes[i]->end() &&
                      comparator::key_compare(dst.key, it[i]->key) == 0);

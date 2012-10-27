@@ -1,4 +1,3 @@
-#include "value_helper.hh"
 #include "btree.hh"
 #include "comparator.hh"
 #include "application.hh"
@@ -74,7 +73,7 @@ int btree_type::map_insert_sorted_copy_on_new(void *key, void *val, size_t keyle
         leaf->insert(pos, ik, hash);
         ++ nk_;
     }
-    map_values_insert(&leaf->e_[pos], val);
+    leaf->e_[pos].map_value_insert(val);
     if (leaf->need_split()) {
 	btnode_leaf *right = leaf->split();
         insert_internal(right->e_[0].key, leaf, right);

@@ -1,6 +1,5 @@
 LIB_SRCS := pthreadpool.cc		\
 	    profile.cc		\
-	    value_helper.cc		\
 	    ibs.cc			\
 	    cpumap.cc		\
             btree.cc    \

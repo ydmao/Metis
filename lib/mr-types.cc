@@ -1,6 +1,5 @@
 #include "mr-types.hh"
 #include "comparator.hh"
-#include "value_helper.hh"
 #include "group.hh"
 #include "btree.hh"
 
@@ -34,7 +33,7 @@ bool keyvals_arr_t::map_insert_sorted_copy_on_new(void *key, void *val, size_t k
     bool newkey = atomic_insert(&tmp, comparator::raw_comp<keyvals_t>::impl, &pos);
     if (newkey)
         at(pos).key = the_app_->key_copy(key, keylen);
-    map_values_insert(&at(pos), val);
+    at(pos).map_value_insert(val);
     return newkey;
 }
 
@@ -50,8 +49,21 @@ void keyval_arr_t::transfer(xarray<keyvals_t> *dst) {
     this->init();
 }
 
-void transfer(xarray<keyvals_t> *dst, btree_type *src) {
-    src->transfer(dst);
+void keyvals_t::map_value_insert(void *v) {
+    the_app_->map_values_insert(this, v);
 }
 
+void keyvals_t::map_value_move(keyval_t *src) {
+    map_value_insert(src->val);
+    src->reset();
+}
 
+void keyvals_t::map_value_move(keyvals_t *src) {
+    the_app_->map_values_move(this, src);
+}
+
+void keyvals_t::map_value_move(keyvals_len_t *src) {
+    assert(the_app_->application_type() == atype_mapgroup);  // must be mapgroup
+    append(src->vals, src->len);
+    src->reset();
+}

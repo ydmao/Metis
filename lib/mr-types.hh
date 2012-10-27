@@ -120,6 +120,10 @@ struct keyvals_t : public xarray<void *> {
         set(a.key, a.hash);
         xarray<void *>::assign(a);
     }
+    void map_value_insert(void *v);
+    void map_value_move(keyval_t *src);
+    void map_value_move(keyvals_t *src);
+    void map_value_move(keyvals_len_t *src);
   private:
     void set(void *k, unsigned h) {
         key = k;
