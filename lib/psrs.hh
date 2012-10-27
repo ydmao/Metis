@@ -16,13 +16,10 @@ struct psrs {
      */
     void sublists(pair_type *base, int start, int end, int *subsize,
                   const pair_type *pivots, int fp, int lp, pair_cmp_t pcmp);
-    C *copy_elems(C *arr_colls, int ncolls, int dst_start, int dst_end);
+    C *copy_elem(xarray<C> &a, int dst_start, int dst_end);
     void mergesort(pair_type **lpairs, int npairs, int *subsize, int me,
                    pair_type *out, int ncpus, pair_cmp_t pcmp);
-    C *do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp);
-    C *do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
-        return do_psrs(a.array(), a.size(), ncpus, me, pcmp);
-    }
+    C *do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp);
     C *init(int me, size_t output_size) {
         assert(me == main_core && output_ == NULL && status == STOP);
         output_ = new C;
@@ -141,23 +138,22 @@ void psrs<C>::mergesort(typename psrs<C>::pair_type **lpairs, int npairs, int *s
  * the global array into one.
  */
 template <typename C>
-C *psrs<C>::copy_elems(C *arr_colls, int ncolls, int dst_start, int dst_end) {
+C *psrs<C>::copy_elem(xarray<C> &a, int dst_start, int dst_end) {
     C *output = new C;
     output->resize(dst_end - dst_start + 1);
     int glb_start = 0;		// global index of first elements of current array
     int glb_end = 0;		// global index of last elements of current array
     int copied = 0;
-    for (int i = 0; i < ncolls; ++i) {
-	C *parr = &arr_colls[i];
-	if (!parr->size())
+    for (size_t i = 0; i < a.size(); ++i) {
+	if (!a[i].size())
 	    continue;
-	glb_end = glb_start + parr->size() - 1;
+	glb_end = glb_start + a[i].size() - 1;
 	if (glb_start <= dst_end && glb_end >= dst_start) {
 	    // local index of first elements to be copied
 	    int loc_start = std::max(dst_start, glb_start) - glb_start;
 	    // local index of last elements to be copied
 	    int loc_end = std::min(dst_end, glb_end) - glb_start;
-            memcpy(&(*output)[copied], &(*parr)[loc_start],
+            memcpy(&output->at(copied), &a[i].at(loc_start),
                    (loc_end - loc_start + 1) * C::elem_size());
 	    copied += loc_end - loc_start + 1;
 	}
@@ -172,24 +168,22 @@ C *psrs<C>::copy_elems(C *arr_colls, int ncolls, int dst_start, int dst_end) {
  * otherwise, put the output into the first array of acolls;
  */
 template <typename C>
-C *psrs<C>::do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp) {
+C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
     if (me == main_core)
 	check_inited();
     cpu_barrier(me, ncpus);
     // get the [start, end] subarray
     const int total_len = output_->size();
-    int w = (total_len + ncpus - 1) / ncpus;
+    const int w = (total_len + ncpus - 1) / ncpus;
     int start = w * me;
-    int end = w * (me + 1) - 1;
-    if (end >= total_len)
-	end = total_len - 1;
+    int end = std::min(w * (me + 1), total_len) - 1;
     if (total_len < ncpus * ncpus * ncpus) {
 	if (me != main_core)
 	    return new C;
 	start = 0;
 	end = total_len - 1;
     }
-    C *localpairs = copy_elems(a, n, start, end);
+    C *localpairs = copy_elem(a, start, end);
     int copied = localpairs->size();
     lpairs_[me] = localpairs->array();
     // sort the subarray locally
@@ -229,9 +223,9 @@ C *psrs<C>::do_psrs(C *a, int n, int ncpus, int me, pair_cmp_t pcmp) {
     // decides the size of the me-th sublist
     partsize_[me] = 0;
     for (int i = 0; i < ncpus; ++i) {
-	int start = subsize_[i * (ncpus + 1) + me];
-	int end = subsize_[i * (ncpus + 1) + me + 1];
-	partsize_[me] += end - start;
+	int s = subsize_[i * (ncpus + 1) + me];
+	int e = subsize_[i * (ncpus + 1) + me + 1];
+	partsize_[me] += e - s;
     }
     cpu_barrier(me, ncpus);
     // merge each partition in parallel
