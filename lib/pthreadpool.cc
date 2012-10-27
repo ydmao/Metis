@@ -43,7 +43,7 @@ struct  __attribute__ ((aligned(JOS_CLINE))) thread_pool_t {
 namespace {
 
 thread_pool_t tp_[JOS_NCPU];
-bool tp_inited_ = false;
+bool tp_created_ = false;
 int ncore_ = 0;
 
 void *mthread_exit(void *) {
@@ -62,7 +62,7 @@ void *mthread_entry(void *args) {
 
 void mthread_create(pthread_t * tid, int lid, void *(*start_routine) (void *),
   	            void *arg) {
-    assert(tp_inited_);
+    assert(tp_created_);
     if (lid == main_core)
 	start_routine(arg);
     else {
@@ -79,14 +79,14 @@ void mthread_join(pthread_t tid, int lid, void **retval) {
 }
 
 void mthread_init(int ncore) {
-    if (tp_inited_)
+    if (tp_created_)
         return;
     threadinfo *ti = threadinfo::current();
     cpumap_init();
     ncore_ = ncore;
     ti->cur_core_ = main_core;
     assert(affinity_set(cpumap_physical_cpuid(main_core)) == 0);
-    tp_inited_ = true;
+    tp_created_ = true;
     bzero(tp_, sizeof(tp_));
     for (int i = 0; i < ncore_; ++i)
 	if (i == main_core)
@@ -96,7 +96,7 @@ void mthread_init(int ncore) {
 }
 
 void mthread_finalize(void) {
-    if (!tp_inited_)
+    if (!tp_created_)
         return;
     for (int i = 0; i < ncore_; ++i)
 	if (i != main_core)
@@ -104,5 +104,5 @@ void mthread_finalize(void) {
     for (int i = 0; i < ncore_; ++i)
 	if (i != main_core)
 	    pthread_join(tp_[i].tid_, NULL);
-    tp_inited_ = false;
+    tp_created_ = false;
 }
