@@ -1,5 +1,5 @@
 #include "btree.hh"
-#include "application.hh"
+#include "appbase.hh"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>

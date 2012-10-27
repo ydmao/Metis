@@ -3,7 +3,7 @@
 
 #include "mr-types.hh"
 #include "bench.hh"
-#include "application.hh"
+#include "appbase.hh"
 #include <assert.h>
 #include <string.h>
 #ifdef JOS_USER
