@@ -65,9 +65,9 @@ btnode_leaf *btree_type::get_leaf(void *key) {
 // left < splitkey <= right. Right is the new sibling
 int btree_type::map_insert_sorted_copy_on_new(void *key, void *val, size_t keylen, unsigned hash) {
     btnode_leaf *leaf = get_leaf(key);
-    bool bfound = false;
-    int pos = leaf->lower_bound(key, &bfound);
-    if (!bfound) {
+    bool found = false;
+    int pos = leaf->lower_bound(key, &found);
+    if (!found) {
         void *ik = static_appbase::key_copy(key, keylen);
         leaf->insert(pos, ik, hash);
         ++ nk_;
@@ -77,7 +77,7 @@ int btree_type::map_insert_sorted_copy_on_new(void *key, void *val, size_t keyle
 	btnode_leaf *right = leaf->split();
         insert_internal(right->e_[0].key, leaf, right);
     }
-    return !bfound;
+    return !found;
 }
 
 void btree_type::map_insert_sorted_new_and_raw(keyvals_t *k) {
