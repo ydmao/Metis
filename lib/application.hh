@@ -49,7 +49,6 @@ struct mapreduce_appbase {
     void reduce_emit(void *key, void *val);
 
     /* internal use only */
-    reduce_bucket_manager_base *get_reduce_bucket_manager();
     virtual int application_type() = 0;
     virtual int internal_final_output_compare(const void *p1, const void *p2) = 0;
     virtual void map_values_insert(keyvals_t *kvs, void *v) {
@@ -60,6 +59,7 @@ struct mapreduce_appbase {
         src->reset();
     }
   protected:
+    virtual reduce_bucket_manager_base *get_reduce_bucket_manager() = 0;
     /* @breif: prepare the application for the next iteraton.
        Everything should be cleaned up, except for that the application should
        free the results. */
@@ -136,6 +136,9 @@ struct app_impl_base : public mapreduce_appbase {
         return final_output_compare((T *)p1, (T *)p2);
     }
   protected:
+    reduce_bucket_manager_base *get_reduce_bucket_manager() {
+        return reduce_bucket_manager<T>::instance();
+    }
     bool skip_reduce_or_group_phase() {
         if (at == atype_maponly)
             return true;

@@ -98,6 +98,7 @@ int mapreduce_appbase::merge_worker() {
     if (application_type() == atype_maponly || !skip_reduce_or_group_phase())
 	r->merge_reduced_buckets(merge_ncore_, cur_lcpu);
     else {
+        r->set_current_reduce_task(cur_lcpu);
         // must use psrs
         m_->merge_output_and_reduce(merge_ncore_, cur_lcpu);
         // merge reduced buckets
@@ -272,13 +273,6 @@ void mapreduce_appbase::reduce_emit(void *k, void *v) {
     expected_type *x = static_cast<expected_type *>(rb);
     assert(x);
     x->emit(keyval_t(k, v));
-}
-
-reduce_bucket_manager_base *mapreduce_appbase::get_reduce_bucket_manager() {
-    if (application_type() == atype_mapgroup)
-        return reduce_bucket_manager<keyvals_len_t>::instance();
-    else
-        return reduce_bucket_manager<keyval_t>::instance();
 }
 
 void mapreduce_appbase::reset() {
