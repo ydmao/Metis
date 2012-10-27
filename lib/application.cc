@@ -246,7 +246,7 @@ void mapreduce_appbase::print_stats(void) {
     cprint("Sample:", total_sample_time_, SEP);
     cprint("Map:", total_map_time_, SEP);
     cprint("Reduce:", total_reduce_time_, SEP);
-    cprint("Merge:%", total_merge_time_, SEP);
+    cprint("Merge:", total_merge_time_, SEP);
     cprint("Sum:", sum_time, SEP);
     cprint("Real:", total_real_time_, "\n");
 
