@@ -37,7 +37,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sched.h>
-#define TCHAR char
 #include "application.hh"
 #include "defsplitter.hh"
 #include "bench.hh"
@@ -159,7 +158,7 @@ static void usage(char *prog) {
     exit(EXIT_FAILURE);
 }
 
-int main(int argc, TCHAR * argv[]) {
+int main(int argc, char *argv[]) {
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0;
     int quiet = 0;
     int c;

@@ -58,7 +58,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sched.h>
-#define TCHAR char
 #include "mm.hh"
 #include "bench.hh"
 

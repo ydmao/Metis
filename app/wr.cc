@@ -37,7 +37,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sched.h>
-#define TCHAR char
 #include "wr.hh"
 #include "bench.hh"
 #ifdef JOS_USER
@@ -47,7 +46,7 @@
 
 #define DEFAULT_NDISP 10
 
-static void usage(char *prog) {
+static void usage(const char *prog) {
     printf("usage: %s <filename> [options]\n", prog);
     printf("options:\n");
     printf
@@ -61,7 +60,7 @@ static void usage(char *prog) {
     exit(EXIT_FAILURE);
 }
 
-int main(int argc, TCHAR * argv[]) {
+int main(int argc, char *argv[]) {
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0, quiet = 0;
     int c;
     if (argc < 2)
