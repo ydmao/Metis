@@ -137,7 +137,7 @@ inline int fill_core_array(uint32_t *cid, uint32_t n) {
 }
 
 inline void lfence(void) {
-    __asm __volatile("lfence");
+    __asm __volatile("lfence" ::: "memory");
 }
 
 inline int atomic_add32_ret(int *cnt) {
