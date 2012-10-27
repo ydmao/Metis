@@ -43,10 +43,9 @@ C *mergesort(C *a, int na, int ncpus, int lcpu, F &pcmp) {
     size_t np = 0;
     for (int i = 0; i < nmya; i++)
 	np += a[lcpu + i * ncpus].size();
-    C *out = new C;
+    C *out = new C(np);
     if (np == 0)
 	return out;
-    out->resize(np);
     mergesort_impl(a, nmya, lcpu, ncpus, pcmp, *out);
     dprintf("merge_worker: cpu %d total_cpu %d (collections %d : nr-kvs %zu)\n",
  	    lcpu, ncpus, na, np);

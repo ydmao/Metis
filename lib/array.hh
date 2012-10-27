@@ -9,6 +9,10 @@ struct xarray_iterator;
 
 template <typename T>
 struct xarray {
+    explicit xarray(size_t n) {
+        init();
+        resize(n);
+    }
     xarray() {
         init();
     }
@@ -57,6 +61,10 @@ struct xarray {
     }
     T &at(int index) {
         return a_[index];
+    }
+    T &back() {
+        assert(size() && !multiplex());
+        return at(size() - 1);
     }
     void push_back(const T &e) {
         make_room();
@@ -133,9 +141,8 @@ struct xarray {
         a_ = NULL;
         capacity_ = 0;
     }
-    size_t copy(T *dst) const {
-        memcpy(dst, a_, n_ * sizeof(T));
-        return n_;
+    void copy(T *dst, ssize_t off, size_t n) const {
+        memcpy(dst, &a_[off], n * sizeof(T));
     }
     size_t transfer(xarray<T> *dst) {
         assert(dst->size() == 0);

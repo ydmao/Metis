@@ -9,21 +9,18 @@
 
 template <typename C>
 struct psrs {
-    typedef typename C::element_type pair_type;
     void cpu_barrier(int me, int ncpus);
     C *do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp);
     C *init(int me, size_t output_size) {
-        assert(me == main_core && output_ == NULL && status == STOP);
-        output_ = new C;
-        output_->resize(output_size);
-        return output_;
+        assert(me == main_core && output_ == NULL && status_ == STOP);
+        return (output_ = new C(output_size));
     }
-    psrs() : status(STOP) {
-        bzero(ready, sizeof(ready));
+    psrs() : lpairs_(JOS_NCPU), status_(STOP) {
+        bzero(ready_, sizeof(ready_));
         deinit();
-        lpairs_.resize(JOS_NCPU);
     }
   private:
+    typedef typename C::element_type pair_type;
     /* @brief: Divide a[start..end] into subarrays using [pivots[fp], pivots[lp]],
      * so that subsize[at + i] is the first element that is > pivots[i]
      */
@@ -41,50 +38,46 @@ struct psrs {
         lpairs_.zero();
     }
     void check_inited() {
-        assert(output_ && status == STOP);
+        assert(output_ && status_ == STOP);
     }
 
     enum { STOP, START };
     union {
         char __pad[JOS_CLINE];
         volatile int v;
-    } ready[JOS_NCPU];
+    } ready_[JOS_NCPU];
 
     pair_type pivots_[JOS_NCPU * (JOS_NCPU - 1)];
     C *output_;
     int subsize_[JOS_NCPU * (JOS_NCPU + 1)];
     int partsize_[JOS_NCPU];
     xarray<C *> lpairs_;
-    volatile int status;
+    volatile int status_;
 };
 
 template <typename C>
-void psrs<C>::cpu_barrier(int me, int ncpus) {
+void psrs<C>::cpu_barrier(int me, int ncore) {
     if (me != main_core) {
-	while (status != START)
+	while (status_ != START)
             ;
-	ready[me].v = 1;
+	ready_[me].v = 1;
 	mfence();
-	while (status != STOP)
+	while (status_ != STOP)
             ;
-	ready[me].v = 0;
+	ready_[me].v = 0;
     } else {
-	status = START;
+	status_ = START;
 	mfence();
-	for (int i = 0; i < ncpus; ++i) {
-	    if (i == main_core)
-		continue;
-	    while (!ready[i].v)
-                ;
-	}
-	status = STOP;
+	for (int i = 0; i < ncore; ++i)
+	    if (i != main_core)
+	        while (!ready_[i].v)
+                    ;
+	status_ = STOP;
 	mfence();
-	for (int i = 0; i < ncpus; ++i) {
-	    if (i == main_core)
-		continue;
-	    while (ready[i].v)
-                ;
-	}
+	for (int i = 0; i < ncore; ++i)
+	    if (i != main_core)
+	        while (ready_[i].v)
+                    ;
     }
 }
 
@@ -135,17 +128,14 @@ void psrs<C>::mergesort(xarray<C *> &per_core_pairs, int npairs, int *subsize,
     output.init();
 }
 
-/* Suppose all elements in all arrays of arr_parr are indexed globally.
- * Then this function copies the [needed_start, needed_end] range of
- * the global array into one.
- */
+/* @brief: Consider all elements in all arrays of @a as a single array.  Then
+ * this function return the [dst_start, dst_end] sub-array. */
 template <typename C>
 C *psrs<C>::copy_elem(xarray<C> &a, int dst_start, int dst_end) {
-    C *output = new C;
-    output->resize(dst_end - dst_start + 1);
-    int glb_start = 0;		// global index of first elements of current array
-    int glb_end = 0;		// global index of last elements of current array
-    int copied = 0;
+    C *output = new C(dst_end - dst_start + 1);
+    int glb_start = 0;		// global index of first element of current array
+    int glb_end = 0;		// global index of last element of current array
+    size_t off = 0;
     for (size_t i = 0; i < a.size(); ++i) {
 	if (!a[i].size())
 	    continue;
@@ -155,20 +145,19 @@ C *psrs<C>::copy_elem(xarray<C> &a, int dst_start, int dst_end) {
 	    int loc_start = std::max(dst_start, glb_start) - glb_start;
 	    // local index of last elements to be copied
 	    int loc_end = std::min(dst_end, glb_end) - glb_start;
-            memcpy(&output->at(copied), &a[i].at(loc_start),
-                   (loc_end - loc_start + 1) * C::elem_size());
-	    copied += loc_end - loc_start + 1;
+            int n = loc_end - loc_start + 1;
+            a[i].copy(&output->at(off), loc_start, n);
+	    off += n;
 	}
 	glb_start = glb_end + 1;
     }
-    assert(copied == dst_end - dst_start + 1);
+    assert(off == output->size());
     return output;
 }
 
-/* sort the elements of an array of collections.
- * If doreduce, reduce on each partition and put the elements into rbuckets;
- * otherwise, put the output into the first array of acolls;
- */
+/* @brief: Sort the elements of an array of collections. 
+ * @return: A equal share of the output that this core get. Note that the caller
+ *          does not own the returned elements. */
 template <typename C>
 C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
     if (me == main_core)
@@ -186,7 +175,6 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
 	end = total_len - 1;
     }
     C *localpairs = copy_elem(a, start, end);
-    int copied = localpairs->size();
     lpairs_[me] = localpairs;
     // sort the subarray locally
     localpairs->sort(pcmp);
@@ -198,29 +186,28 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, pair_cmp_t pcmp) {
         deinit();
         return localpairs;
     }
-    int rsize = (copied + ncpus - 1) / ncpus;
     // sends (p - 1) local pivots to main cpu
-    for (int i = 0; i < ncpus - 1; i++) {
-	if ((i + 1) * rsize < copied)
-            pivots_[me * (ncpus - 1) + i].assign(localpairs->at((i + 1) * rsize));
+    const int interval = (localpairs->size() + ncpus - 1) / ncpus;
+    for (size_t i = 0; i < size_t(ncpus - 1); ++i)
+	if ((i + 1) * interval < localpairs->size())
+            pivots_[me * (ncpus - 1) + i].assign(localpairs->at((i + 1) * interval));
 	else
-            pivots_[me * (ncpus - 1) + i].assign(localpairs->at(copied - 1));
-    }
+            pivots_[me * (ncpus - 1) + i].assign(localpairs->back());
     cpu_barrier(me, ncpus);
     if (me == main_core) {
 	// sort p * (p - 1) pivots.
 	qsort(pivots_, ncpus * (ncpus - 1), sizeof(pair_type), pcmp);
 	// select (p - 1) pivots into pivots[1 : (p - 1)]
-	for (int i = 0; i < ncpus - 1; i++)
+	for (int i = 0; i < ncpus - 1; ++i)
             pivots_[i + 1] = pivots_[i * ncpus + ncpus / 2];
 	cpu_barrier(me, ncpus);
     } else
 	cpu_barrier(me, ncpus);
     // divide the local list into p sublists by the (p - 1) pivots received from main cpu
     subsize_[me * (ncpus + 1)] = 0;
-    subsize_[me * (ncpus + 1) + ncpus] = copied;
-    divide(*localpairs, 0, copied - 1, &subsize_[me * (ncpus + 1)],
-	   pivots_, 1, ncpus - 1, pcmp);
+    subsize_[me * (ncpus + 1) + ncpus] = localpairs->size();
+    divide(*localpairs, 0, localpairs->size() - 1,
+           &subsize_[me * (ncpus + 1)], pivots_, 1, ncpus - 1, pcmp);
     cpu_barrier(me, ncpus);
     // decides the size of the me-th sublist
     partsize_[me] = 0;
