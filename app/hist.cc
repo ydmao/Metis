@@ -248,7 +248,7 @@ int main(int argc, char *argv[]) {
 	green_keys[i] = 2000 + i;
 	red_keys[i] = 3000 + i;
     }
-
+    mapreduce_appbase::initialize();
     hist app(&mf[*data_pos], imgdata_bytes, map_tasks);
     app.set_reduce_task(reduce_tasks);
     app.set_ncore(nprocs);
@@ -278,5 +278,6 @@ int main(int argc, char *argv[]) {
 	prev = pix_val;
     }
     app.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
 	    break;
 	}
     }
-
+    mapreduce_appbase::initialize();
     lr app(argv[1], map_tasks);
     app.set_ncore(nprocs);
     cond_printf(!quiet, "Linear regression: running...\n");
@@ -232,5 +232,6 @@ int main(int argc, char *argv[]) {
 	printf("\tSXY  = %lld\n", SXY_ll);
     }
     app.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

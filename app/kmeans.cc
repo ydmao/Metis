@@ -345,6 +345,7 @@ int main(int argc, char **argv) {
 	    exit(EXIT_FAILURE);
 	}
     }
+    mapreduce_appbase::initialize();
     kmeans app;
     init_kmeans(app.kd_, map_tasks);
     app.set_reduce_task(reduce_tasks);
@@ -380,5 +381,6 @@ int main(int argc, char **argv) {
     free(app.kd_.clusters);
     free(app.kd_.means);
     pthread_mutex_destroy(&lock);
+    mapreduce_appbase::deinitialize();
     return 0;
 }

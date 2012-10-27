@@ -38,7 +38,8 @@ struct mapreduce_appbase {
     void set_ncore(int ncore) {
         ncore_ = ncore;
     }
-    void join();
+    static void initialize();
+    static void deinitialize();
     int sched_run();
     void print_stats();
     /* @brief: called in user defined map function. If keycopy function is

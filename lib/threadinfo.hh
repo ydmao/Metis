@@ -14,15 +14,20 @@ struct threadinfo {
         return ti;
     }
     static void initialize() {
-        static bool created = false;
-        if (created)
-            return;
-        assert(pthread_key_create(&key_, NULL) == 0);
-        created = true;
+        assert(pthread_key_create(&key_, free_threadinfo) == 0);
+        created_ = true;
     }
+    static bool initialized() {
+        return created_;
+    }
+
     int cur_reduce_task_;
     int cur_core_;
   private:
+    static void free_threadinfo(void *ti) {
+        delete (threadinfo *)ti;
+    }
+    static bool created_;
     static pthread_key_t key_;
 };
 

@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
     }
     memset(&fdata[pos], 0, inputsize - pos);
 
+    mapreduce_appbase::initialize();
     wr app(fdata, inputsize, map_tasks);
     app.set_ncore(nprocs);
     app.set_group_task(reduce_tasks);
@@ -110,5 +111,6 @@ int main(int argc, char *argv[]) {
     if (!quiet)
 	print_top(&app.results_, ndisp, nw);
     app.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

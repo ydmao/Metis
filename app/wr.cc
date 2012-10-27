@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
 	}
     }
 
+    mapreduce_appbase::initialize();
     wr app(argv[1], map_tasks);
     app.set_ncore(nprocs);
     app.set_group_task(reduce_tasks);
@@ -97,5 +98,6 @@ int main(int argc, char *argv[]) {
     if (!quiet)
 	print_top(&app.results_, ndisp, count(&app.results_));
     app.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

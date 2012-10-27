@@ -291,6 +291,8 @@ int main(int argc, char *argv[]) {
     compute_hashes(key2, key2_final);
     compute_hashes(key3, key3_final);
     compute_hashes(key4, key4_final);
+
+    mapreduce_appbase::initialize();
     sm app;
     app.set_ncore(nprocs);
     app.set_reduce_task(reduce_tasks);
@@ -312,5 +314,6 @@ int main(int argc, char *argv[]) {
     /*echeck(munmap(fdata_encrypt, finfo_encrypt.st_size + 1) < 0);
        echeck(close(fd_encrypt) < 0); */
     app.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

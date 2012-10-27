@@ -363,6 +363,7 @@ int main(int argc, char **argv) {
     pca_data_.next_start_row = pca_data_.next_cov_row = 0;
     pca_data_.mean = NULL;
 
+    mapreduce_appbase::initialize();
     pca_mean m;
     m.set_ncore(nprocs);
 #ifndef MAPONLY
@@ -408,5 +409,6 @@ int main(int argc, char **argv) {
     free(pca_data_.matrix);
     m.free_results();
     cov.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

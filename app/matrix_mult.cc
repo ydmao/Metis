@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 	    matrix_A_ptr[i * matrix_len + j] = rand();
 	    matrix_B_ptr[i * matrix_len + j] = rand();
 	}
-
+    mapreduce_appbase::initialize();
     mm app(block_based ? 0 : map_tasks, block_based);
 
     app.d_.matrix_len = matrix_len;
@@ -109,5 +109,6 @@ int main(int argc, char *argv[]) {
     free(matrix_B_ptr);
     free(fdata_out);
     app.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

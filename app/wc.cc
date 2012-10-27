@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 	    break;
 	}
     }
-
+    mapreduce_appbase::initialize();
     /* get input file */
     wc app(fn, map_tasks);
     app.set_ncore(nprocs);
@@ -216,5 +216,6 @@ int main(int argc, char *argv[]) {
 	fclose(fout);
     }
     app.free_results();
+    mapreduce_appbase::deinitialize();
     return 0;
 }

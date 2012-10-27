@@ -44,6 +44,13 @@ mapreduce_appbase::mapreduce_appbase()
 
 mapreduce_appbase::~mapreduce_appbase() {
     reset();
+}
+
+void mapreduce_appbase::initialize() {
+    threadinfo::initialize();
+}
+
+void mapreduce_appbase::deinitialize() {
     mthread_finalize();
 }
 
@@ -184,7 +191,7 @@ size_t mapreduce_appbase::sched_sample() {
 }
 
 int mapreduce_appbase::sched_run() {
-    threadinfo::initialize();
+    assert(threadinfo::initialized() && "Call mapreduce_apppase::initialize first");
     static_appbase::set_app(this);
     assert(clean_);
     clean_ = false;
