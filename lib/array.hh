@@ -221,8 +221,6 @@ struct xarray_iterator {
     size_t i_;
 };
 
-typedef xarray<void *> xarray_base;
-
 template <typename T>
 inline size_t sum_subarray(xarray<xarray<T> > &a) {
     size_t n = 0;
