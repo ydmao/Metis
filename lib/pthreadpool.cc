@@ -2,6 +2,7 @@
 #include "mr-types.hh"
 #include "bench.hh"
 #include "cpumap.hh"
+#include "threadinfo.hh"
 #include <assert.h>
 #include <string.h>
 
@@ -39,8 +40,6 @@ struct  __attribute__ ((aligned(JOS_CLINE))) thread_pool_t {
     }
 };
 
-__thread int cur_lcpu = 0;
-
 namespace {
 
 thread_pool_t tp_[JOS_NCPU];
@@ -52,10 +51,11 @@ void *mthread_exit(void *) {
 }
 
 void *mthread_entry(void *args) {
-    cur_lcpu = ptr2int<int>(args);
-    assert(affinity_set(cpumap_physical_cpuid(cur_lcpu)) == 0);
+    threadinfo *ti = threadinfo::current();
+    ti->cur_core_ = ptr2int<int>(args);
+    assert(affinity_set(cpumap_physical_cpuid(ti->cur_core_)) == 0);
     while (true)
-        tp_[cur_lcpu].run_next_task();
+        tp_[ti->cur_core_].run_next_task();
 }
 
 }
@@ -81,9 +81,10 @@ void mthread_join(pthread_t tid, int lid, void **retval) {
 void mthread_init(int ncore) {
     if (tp_inited_)
         return;
+    threadinfo *ti = threadinfo::current();
     cpumap_init();
     ncore_ = ncore;
-    cur_lcpu = main_core;
+    ti->cur_core_ = main_core;
     assert(affinity_set(cpumap_physical_cpuid(main_core)) == 0);
     tp_inited_ = true;
     bzero(tp_, sizeof(tp_));

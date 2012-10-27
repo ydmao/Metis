@@ -14,7 +14,6 @@ enum { pmc_enabled = 0 };
 
 static uint64_t app_tot[JOS_NCPU];
 static uint64_t kcmp_tot[JOS_NCPU];
-extern __thread int cur_lcpu;
 enum { pmc0, pmc1, pmc2, pmc3, ibslat, ibscnt, tsc, app_tsc, app_kcmp,
     app_pmc1,
     statcnt
@@ -51,7 +50,8 @@ __read_pmc(int ecx)
 }
 
 void prof_enterkcmp() {
-    stats[MAP][cur_lcpu].v[app_kcmp]++;
+    threadinfo *ti = threadinfo::current();
+    stats[MAP][ti->cur_core_].v[app_kcmp]++;
 }
 
 void prof_leavekcmp() {
@@ -66,9 +66,10 @@ void prof_enterapp() {
 
 void prof_leaveapp() {
     if (profile_app) {
-	stats[curphase][cur_lcpu].v[app_tsc] +=
+        threadinfo *ti = threadinfo::current();
+	stats[curphase][ti->cur_core_].v[app_tsc] +=
 	    (read_tsc() - pmcs_start.v[app_tsc]);
-	stats[curphase][cur_lcpu].v[app_pmc1] +=
+	stats[curphase][ti->cur_core_].v[app_pmc1] +=
 	    (__read_pmc(1) - pmcs_start.v[app_pmc1]);
     }
 }

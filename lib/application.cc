@@ -15,7 +15,6 @@
 #include "btree.hh"
 #include "array.hh"
 
-extern JTLS int cur_lcpu;	// defined in lib/pthreadpool.c
 mapreduce_appbase *static_appbase::the_app_ = NULL;
 
 void static_appbase::internal_reduce_emit(keyvals_t &p) {
@@ -78,16 +77,17 @@ map_bucket_manager_base *mapreduce_appbase::create_map_bucket_manager(int nrow, 
 };
 
 int mapreduce_appbase::map_worker() {
+    threadinfo *ti = threadinfo::current();
     if (!sampling_ && sample_)
-        m_->rehash(cur_lcpu, sample_);
+        m_->rehash(ti->cur_core_, sample_);
     int n, next;
     for (n = 0; (next = next_task()) < int(ma_.size()); ++n) {
 	map_function(ma_.at(next));
         if (sampling_)
-	    e_[cur_lcpu].task_finished();
+	    e_[ti->cur_core_].task_finished();
     }
     if (!sampling_ && skip_reduce_or_group_phase())
-        m_->prepare_merge(cur_lcpu);
+        m_->prepare_merge(ti->cur_core_);
     return n;
 }
 
@@ -102,21 +102,23 @@ int mapreduce_appbase::reduce_worker() {
 
 int mapreduce_appbase::merge_worker() {
     reduce_bucket_manager_base *r = get_reduce_bucket_manager();
+    threadinfo *ti = threadinfo::current();
     if (application_type() == atype_maponly || !skip_reduce_or_group_phase())
-	r->merge_reduced_buckets(merge_ncore_, cur_lcpu);
+	r->merge_reduced_buckets(merge_ncore_, ti->cur_core_);
     else {
-        r->set_current_reduce_task(cur_lcpu);
+        r->set_current_reduce_task(ti->cur_core_);
         // must use psrs
-        m_->psrs_output_and_reduce(merge_ncore_, cur_lcpu);
+        m_->psrs_output_and_reduce(merge_ncore_, ti->cur_core_);
         // merge reduced buckets
-	r->merge_reduced_buckets(merge_ncore_, cur_lcpu);
+	r->merge_reduced_buckets(merge_ncore_, ti->cur_core_);
     }
     return 1;
 }
 
 void *mapreduce_appbase::base_worker(void *x) {
     mapreduce_appbase *app = (mapreduce_appbase *)x;
-    prof_worker_start(app->phase_, cur_lcpu);
+    threadinfo *ti = threadinfo::current();
+    prof_worker_start(app->phase_, ti->cur_core_);
     int n = 0;
     const char *name = NULL;
     switch (app->phase_) {
@@ -136,8 +138,8 @@ void *mapreduce_appbase::base_worker(void *x) {
         assert(0);
     }
     dprintf("total %d %s tasks executed in thread %ld(%d)\n",
-	    n, name, pthread_self(), cur_lcpu);
-    prof_worker_end(app->phase_, cur_lcpu);
+	    n, name, pthread_self(), ti->cur_core_);
+    prof_worker_end(app->phase_, ti->cur_core_);
     return 0;
 }
 
@@ -182,6 +184,7 @@ size_t mapreduce_appbase::sched_sample() {
 }
 
 int mapreduce_appbase::sched_run() {
+    threadinfo::initialize();
     static_appbase::set_app(this);
     assert(clean_);
     clean_ = false;
@@ -269,9 +272,10 @@ void mapreduce_appbase::print_stats(void) {
 
 void mapreduce_appbase::map_emit(void *k, void *v, int keylen) {
     unsigned hash = partition(k, keylen);
-    bool newkey = (sampling_ ? sample_ : m_)->emit(cur_lcpu, k, v, keylen, hash);
+    threadinfo *ti = threadinfo::current();
+    bool newkey = (sampling_ ? sample_ : m_)->emit(ti->cur_core_, k, v, keylen, hash);
     if (sampling_)
-        e_[cur_lcpu].onepair(newkey);
+        e_[ti->cur_core_].onepair(newkey);
 }
 
 void mapreduce_appbase::reduce_emit(void *k, void *v) {

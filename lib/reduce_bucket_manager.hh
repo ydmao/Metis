@@ -4,6 +4,7 @@
 #include "mr-types.hh"
 #include "psrs.hh"
 #include "appbase.hh"
+#include "threadinfo.hh"
 
 struct reduce_bucket_manager_base {
     virtual ~reduce_bucket_manager_base() {}
@@ -21,7 +22,6 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
         rb_.resize(n);
         for (int i = 0; i < n; ++i)
             rb_[i].init();
-        assert(pthread_key_create(&current_task_key_, NULL) == 0);
         set_current_reduce_task(0);
     }
     void reset() {
@@ -42,8 +42,7 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
     }
     void set_current_reduce_task(int ir) {
         assert(size_t(ir) < rb_.size());
-        assert(pthread_setspecific(current_task_key_,
-                                   (void *)intptr_t(ir)) == 0);
+        threadinfo::current()->cur_reduce_task_ = ir;
     }
     /** @brief: merge the output buckets of reduce phase, i.e. the final output.
         For psrs, the result is stored in rb_[0]; for mergesort, the result are
@@ -79,10 +78,9 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
     }
   private:
     int current_task() {
-        return intptr_t(pthread_getspecific(current_task_key_));
+        return threadinfo::current()->cur_reduce_task_;
     }
     xarray<C> rb_; // reduce buckets
-    pthread_key_t current_task_key_;
     psrs<C> pi_;
 };
 

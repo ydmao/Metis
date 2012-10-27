@@ -4,7 +4,8 @@ LIB_SRCS := pthreadpool.cc		\
 	    cpumap.cc		\
             btree.cc    \
             mr-types.cc \
-            application.cc
+            application.cc \
+            threadinfo.cc
 
 LIB_OBJS := $(patsubst %.cc, $(O)/%.o, $(LIB_SRCS))
 LIB_OBJS := $(patsubst %.S, $(O)/%.o, $(LIB_OBJS))
