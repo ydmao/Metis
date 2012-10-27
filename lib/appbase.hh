@@ -7,9 +7,10 @@
 #include "predictor.hh"
 
 struct mapreduce_appbase;
-extern mapreduce_appbase *the_app_;
 struct map_bucket_manager_base;
 struct reduce_bucket_manager_base;
+
+struct static_appbase;
 
 struct mapreduce_appbase {
     mapreduce_appbase();
@@ -58,16 +59,8 @@ struct mapreduce_appbase {
         dst->append(*src);
         src->reset();
     }
-    static int xfinal_output_pair_compare(const void *p1, const void *p2) {
-        return the_app_->internal_final_output_compare(p1, p2);
-    }
-    template <typename T>
-    static int pair_comp(const void *p1, const void *p2) {
-        const T *x1 = reinterpret_cast<const T *>(p1);
-        const T *x2 = reinterpret_cast<const T *>(p2);
-        return the_app_->key_compare(x1->key, x2->key);
-    }
   protected:
+    friend class static_appbase;
     virtual int internal_final_output_compare(const void *p1, const void *p2) = 0;
     virtual reduce_bucket_manager_base *get_reduce_bucket_manager() = 0;
     /* @breif: prepare the application for the next iteraton.
@@ -115,6 +108,34 @@ struct mapreduce_appbase {
     map_bucket_manager_base *sample_;
     bool sampling_;
     predictor e_[JOS_NCPU];
+};
+
+struct static_appbase {
+    static int final_output_pair_comp(const void *p1, const void *p2) {
+        return the_app_->internal_final_output_compare(p1, p2);
+    }
+    template <typename T>
+    static int pair_comp(const void *p1, const void *p2) {
+        const T *x1 = reinterpret_cast<const T *>(p1);
+        const T *x2 = reinterpret_cast<const T *>(p2);
+        return the_app_->key_compare(x1->key, x2->key);
+    }
+    static int key_compare(const void *k1, const void *k2) {
+        return the_app_->key_compare(k1, k2);
+    }
+    static void *key_copy(void *k, size_t keylen) {
+        return the_app_->key_copy(k, keylen);
+    }
+    static int application_type() {
+        return the_app_->application_type();
+    }
+    static void map_values_insert(keyvals_t *dst, void *v) {
+        return the_app_->map_values_insert(dst, v);
+    }
+    static void map_values_move(keyvals_t *dst, keyvals_t *src) {
+        return the_app_->map_values_move(dst, src);
+    }
+    static mapreduce_appbase *the_app_;
 };
 
 #endif

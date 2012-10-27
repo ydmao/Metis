@@ -48,7 +48,7 @@ struct btnode_leaf : public btnode_base {
         keyvals_t tmp;
         tmp.key = key;
         return xsearch::lower_bound(&tmp, e_, nk_,
-                          mapreduce_appbase::pair_comp<keyvals_t>, bfound);
+                          static_appbase::pair_comp<keyvals_t>, bfound);
     }
 
     void insert(int pos, void *key, unsigned hash) {

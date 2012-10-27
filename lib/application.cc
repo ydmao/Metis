@@ -16,7 +16,7 @@
 #include "array.hh"
 
 extern JTLS int cur_lcpu;	// defined in lib/pthreadpool.c
-mapreduce_appbase *the_app_ = NULL;
+mapreduce_appbase *static_appbase::the_app_ = NULL;
 
 namespace {
 void pprint(const char *key, uint64_t v, const char *delim) {
@@ -175,7 +175,7 @@ size_t mapreduce_appbase::sched_sample() {
 }
 
 int mapreduce_appbase::sched_run() {
-    the_app_ = this;
+    static_appbase::the_app_ = this;
     assert(clean_);
     clean_ = false;
     const int max_ncore = get_core_count();

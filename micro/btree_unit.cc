@@ -87,11 +87,9 @@ void test2() {
     check_tree_copy_and_free(bt);
 }
 
-extern mapreduce_appbase *the_app_;
-
 int main(int argc, char *argv[]) {
     mock_app app;
-    the_app_ = &app;
+    static_appbase::the_app_ = &app;
     test1();
     test2();
     cerr << "PASS" << endl;

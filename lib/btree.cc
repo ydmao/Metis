@@ -7,11 +7,10 @@
 #include <inc/compiler.h>
 #endif
 
-
 int btnode_internal::xpair_compare(const void *p1, const void *p2) {
     const xpair_type *x1 = (const xpair_type *)p1;
     const xpair_type *x2 = (const xpair_type *)p2;
-    return the_app_->key_compare(x1->k_, x2->k_);
+    return static_appbase::key_compare(x1->k_, x2->k_);
 }
 
 void btree_type::init() {
@@ -75,7 +74,7 @@ int btree_type::map_insert_sorted_copy_on_new(void *key, void *val, size_t keyle
     bool bfound = false;
     int pos = leaf->lower_bound(key, &bfound);
     if (!bfound) {
-        void *ik = the_app_->key_copy(key, keylen);
+        void *ik = static_appbase::key_copy(key, keylen);
         leaf->insert(pos, ik, hash);
         ++ nk_;
     }

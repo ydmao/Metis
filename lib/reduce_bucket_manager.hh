@@ -53,7 +53,7 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
         const int use_psrs = USE_PSRS;
         if (!use_psrs) {
             out = mergesort(rb_, ncpus, lcpu,
-                            mapreduce_appbase::xfinal_output_pair_compare);
+                            static_appbase::final_output_pair_comp);
             shallow_free_subarray(rb_, lcpu, ncpus);
         } else {
             // only main cpu has output
@@ -61,7 +61,7 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
                 out = pi_.init(lcpu, sum_subarray(rb_));
             assert(out || lcpu != main_core);
             C *myshare = pi_.do_psrs(rb_, ncpus, lcpu,
-                                     mapreduce_appbase::xfinal_output_pair_compare);
+                                     static_appbase::final_output_pair_comp);
             myshare->init();
             delete myshare;
             // Let one CPU free the input buckets
