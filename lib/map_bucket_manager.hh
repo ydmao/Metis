@@ -167,10 +167,10 @@ void map_bucket_manager<S, DT, OPT>::rehash(int row, map_bucket_manager_base *a)
 }
 
 template <bool S, typename DT, typename OPT>
-bool map_bucket_manager<S, DT, OPT>::emit(int row, void *key, void *val,
-                                       size_t keylen, unsigned hash) {
+bool map_bucket_manager<S, DT, OPT>::emit(int row, void *k, void *v,
+                                          size_t keylen, unsigned hash) {
     DT *dst = mapdt_bucket(row, hash % cols_);
-    return map_insert_analyzer<DT, S>::copy_on_new(dst, key, val, keylen, hash);
+    return map_insert_analyzer<DT, S>::copy_on_new(dst, k, v, keylen, hash);
 }
 
 /** @brief: Copy the intermediate DS into an xarray<OPT> */
