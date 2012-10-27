@@ -55,7 +55,7 @@ struct btnode_leaf : public btnode_base {
         if (pos < nk_)
             memmove(&e_[pos + 1], &e_[pos], sizeof(e_[0]) * (nk_ - pos));
         ++ nk_;
-        memset(&e_[pos], 0, sizeof(e_[pos]));
+        e_[pos].init();
         e_[pos].key = key;
         e_[pos].hash = hash;
     }
@@ -79,7 +79,7 @@ struct btnode_internal : public btnode_base {
 
     xpair e_[2 * order + 2];
     btnode_internal() : btnode_base() {
-        memset(e_, 0, sizeof(e_));
+        bzero(e_, sizeof(e_));
     }
     virtual ~btnode_internal() {}
 
