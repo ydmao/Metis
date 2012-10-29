@@ -175,4 +175,22 @@ inline int affinity_set(int cpu) {
     return sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
+// prefetch instruction
+inline void prefetch(const void *ptr) {
+#ifdef NOPREFETCH
+    (void) ptr;
+#else
+    typedef struct { char x[64]; } cacheline_t;
+    asm volatile("prefetcht0 %0" : : "m" (*(const cacheline_t *)ptr));
+#endif
+}
+inline void prefetchnta(const void *ptr) {
+#ifdef NOPREFETCH
+    (void) ptr;
+#else
+    typedef struct { char x[64]; } cacheline_t;
+    asm volatile("prefetchnta %0" : : "m" (*(const cacheline_t *)ptr));
+#endif
+}
+
 #endif
