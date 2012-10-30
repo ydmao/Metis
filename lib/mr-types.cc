@@ -41,7 +41,7 @@ void keyval_arr_t::map_append_raw(keyval_t *t) {
 
 bool keyvals_arr_t::map_insert_sorted_copy_on_new(void *key, void *val, size_t keylen, unsigned hash) {
     keyvals_t tmp(key, hash);
-    int pos = 0;
+    size_t pos = 0;
     bool newkey = atomic_insert(&tmp, static_appbase::pair_comp<keyvals_t>, &pos);
     if (newkey)
         at(pos)->key = static_appbase::key_copy(key, keylen);
@@ -50,7 +50,7 @@ bool keyvals_arr_t::map_insert_sorted_copy_on_new(void *key, void *val, size_t k
 }
 
 void keyvals_arr_t::map_insert_sorted_new_and_raw(keyvals_t *p) {
-    int pos = 0;
+    size_t pos = 0;
     bool newkey = atomic_insert(p, static_appbase::pair_comp<keyvals_t>, &pos);
     assert(newkey);
 }

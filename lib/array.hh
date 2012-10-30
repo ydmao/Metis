@@ -70,10 +70,10 @@ struct xarray {
            set_capacity(n);
         n_ = n;
     }
-    T &operator[](int index) {
+    T &operator[](size_t index) {
         return a_[index];
     }
-    T *at(int index) {
+    T *at(size_t index) {
         return &a_[index];
     }
     T &back() {
@@ -94,7 +94,7 @@ struct xarray {
         return iterator(this, n_);
     }
     template <typename F>
-    int lower_bound(const T *key, const F &cmp, bool *bfound) {
+    size_t lower_bound(const T *key, const F &cmp, bool *bfound) {
         *bfound = false;
         if (!a_)
             return 0;
@@ -108,9 +108,9 @@ struct xarray {
         ++n_;
     }
     template <typename F>
-    bool atomic_insert(const T *e, const F &cmp, int *ppos = NULL) {
+    bool atomic_insert(const T *e, const F &cmp, size_t *ppos = NULL) {
         bool bfound = false;
-        int pos = lower_bound(e, cmp, &bfound);
+        size_t pos = lower_bound(e, cmp, &bfound);
         if (ppos)
             *ppos = pos;
         if (bfound)
@@ -118,7 +118,7 @@ struct xarray {
         insert(pos, e);
         return true;
     }
-    void set_array(T *e, int n) {
+    void set_array(T *e, size_t n) {
         set_capacity(0);
         a_ = e;
         n_ = n;
@@ -208,7 +208,7 @@ struct xarray {
 
 template <typename T>
 struct xarray_iterator {
-    xarray_iterator(xarray<T> *p, int i) : p_(p), i_(i) {}
+    xarray_iterator(xarray<T> *p, size_t i) : p_(p), i_(i) {}
     explicit xarray_iterator(xarray<T> *p) : p_(p), i_(0) {}
     xarray_iterator() : p_(NULL), i_(0) {}
     xarray_iterator(const xarray_iterator &a) : p_(a.p_), i_(a.i_) {}
@@ -252,7 +252,7 @@ inline size_t sum_subarray(xarray<xarray<T> > &a) {
 
 template <typename T>
 inline void shallow_free_subarray(xarray<xarray<T> > &a,
-                                  int first = 0, int step = 1) {
+                                  size_t first = 0, size_t step = 1) {
     for (size_t i = first; i < a.size(); i += step)
         a[i].shallow_free();
 }
