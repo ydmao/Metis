@@ -200,10 +200,11 @@ size_t mapreduce_appbase::sched_sample() {
     run_phase(MAP, ncore_, total_sample_time_);
     const size_t predicted_nkey = predict_nkey(e_, ncore_, nma);
     size_t predicted_ntask = predicted_nkey / expected_keys_per_bucket;
+    predicted_ntask = std::max(predicted_ntask, size_t(ncore_) * min_group_or_reduce_task_per_core);
+    predicted_ntask = std::min(predicted_ntask, size_t(ncore_) * max_group_or_reduce_task_per_core);
     ma_.trim(nma, true);
     sampling_ = false;
-    return prime_lower_bound(std::max(predicted_ntask,
-                                      size_t(ncore_ * default_group_or_reduce_task_per_core)));
+    return prime_lower_bound(predicted_ntask);
 }
 
 int mapreduce_appbase::sched_run() {

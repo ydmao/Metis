@@ -94,7 +94,8 @@ struct mapreduce_appbase {
     map_bucket_manager_base *create_map_bucket_manager(int nrow, int ncol);
 
     int nreduce_or_group_task_;
-    enum { default_group_or_reduce_task_per_core = 16 };
+    enum { min_group_or_reduce_task_per_core = 16,
+           max_group_or_reduce_task_per_core = 100 };
     enum { default_sample_hashtable_size = 10000 };
     enum { sample_percent = 5 };
     enum { combiner_threshold = 8 };
