@@ -99,6 +99,7 @@ map_bucket_manager_base *mapreduce_appbase::create_map_bucket_manager(int nrow, 
 
 int mapreduce_appbase::map_worker() {
     threadinfo *ti = threadinfo::current();
+    (sampling_ ? sample_ : m_)->real_init(ti->cur_core_);
     if (!sampling_ && sample_)
         m_->rehash(ti->cur_core_, sample_);
     int n, next;

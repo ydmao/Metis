@@ -23,6 +23,7 @@
 struct map_bucket_manager_base {
     virtual ~map_bucket_manager_base() {}
     virtual void init(int rows, int cols) = 0;
+    virtual void real_init(int row) = 0;
     virtual void reset(void) = 0;
     virtual void rehash(int row, map_bucket_manager_base *backup) = 0;
     virtual bool emit(int row, void *key, void *val, size_t keylen,
@@ -32,7 +33,6 @@ struct map_bucket_manager_base {
     virtual int ncol() const = 0;
     virtual int nrow() const = 0;
     virtual void psrs_output_and_reduce(int ncpus, int lcpu) = 0;
-    virtual size_t test_subsize() = 0;
 };
 
 template <typename DT, bool S>
@@ -86,6 +86,7 @@ struct map_insert_analyzer<DT, false> {
 template <bool S, typename DT, typename OPT>
 struct map_bucket_manager : public map_bucket_manager_base {
     void init(int rows, int cols);
+    void real_init(int row);
     void reset(void);
     void rehash(int row, map_bucket_manager_base *backup);
     bool emit(int row, void *key, void *val, size_t keylen,
@@ -99,26 +100,18 @@ struct map_bucket_manager : public map_bucket_manager_base {
         return cols_;
     }
     void psrs_output_and_reduce(int ncpus, int lcpu);
-    size_t test_subsize();
     typedef xarray<OPT> C;  // output bucket type
   private:
     DT *mapdt_bucket(int row, int col) {
-        return &mapdt_[row * cols_ + col];
+        return mapdt_[row]->at(col);
     }
     ~map_bucket_manager() {
-        for (size_t i = 0; i < output_.size(); ++i)
-            output_[i].shallow_free();
-        for (size_t i = 0; i < mapdt_.size(); ++i)
-            mapdt_[i].shallow_free();
-
+        reset();
     }
-    const DT *mapdt_bucket(int row, int col) const {
-        return &mapdt_[row * cols_ + col];
-    } 
     psrs<C> pi_;
     int rows_;
     int cols_;
-    xarray<DT> mapdt_;  // intermediate ds holding key/value pairs at map phase
+    xarray<xarray<DT> *> mapdt_;  // intermediate ds holding key/value pairs at map phase
     xarray<C> output_;
 };
 
@@ -150,22 +143,31 @@ void map_bucket_manager<S, DT, OPT>::psrs_output_and_reduce(int ncpus, int lcpu)
 
 template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::init(int rows, int cols) {
-    mapdt_.resize(rows * cols);
+    mapdt_.resize(rows);
     output_.resize(rows * cols);
-    for (size_t i = 0; i < mapdt_.size(); ++i) {
-        mapdt_[i].init();
+    for (size_t i = 0; i < output_.size(); ++i)
         output_[i].init();
-    }
     rows_ = rows;
     cols_ = cols;
 }
 
 template <bool S, typename DT, typename OPT>
+void map_bucket_manager<S, DT, OPT>::real_init(int row) {
+    mapdt_[row] = safe_malloc<xarray<DT> >();
+    mapdt_[row]->init();
+    mapdt_[row]->resize(cols_);
+    for (int i = 0; i < cols_; ++i)
+        mapdt_[row]->at(i)->init();
+}
+
+template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::reset() {
-    for (size_t i = 0; i < mapdt_.size(); ++i) {
-        mapdt_[i].shallow_free();
+    for (size_t i = 0; i < output_.size(); ++i)
         output_[i].shallow_free();
-    }
+    for (int i = 0; i < rows_; ++i)
+        for (int j = 0; j < cols_; ++j)
+            mapdt_bucket(i, j)->shallow_free();
+    mapdt_.resize(0);
 }
 
 template <bool S, typename DT, typename OPT>
@@ -210,11 +212,4 @@ void map_bucket_manager<S, DT, OPT>::do_reduce_task(int col) {
         a[i]->shallow_free();
 }
 
-template <bool S, typename DT, typename OPT>
-size_t map_bucket_manager<S, DT, OPT>::test_subsize() {
-    size_t n = 0;
-    for (size_t i = 0; i < mapdt_.size(); ++i)
-        n += mapdt_[i].size();
-    return n;
-}
 #endif
