@@ -70,15 +70,11 @@ void mapreduce_appbase::deinitialize() {
 
 map_bucket_manager_base *mapreduce_appbase::create_map_bucket_manager(int nrow, int ncol) {
     enum { index_append, index_btree, index_array };
-#ifdef FORCE_APPEND
-    int index = index_append;
-#else
-    int index = (application_type() == atype_maponly) ? index_append : index_btree;
-#endif
+    int index = (application_type() == atype_maponly) ? index_append : DEFAULT_MAP_DS;
     map_bucket_manager_base *m = NULL;
     switch (index) {
     case index_append:
-#ifdef SINGLE_APPEND_GROUP_MERGE_FIRST
+#ifdef SINGLE_APPEND_GROUP_FIRST
         m = new map_bucket_manager<false, keyval_arr_t, keyvals_t>;
 #else
         m = new map_bucket_manager<false, keyval_arr_t, keyval_t>;
