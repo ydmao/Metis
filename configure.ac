@@ -29,7 +29,7 @@ AC_SUBST([MEM_ALLOCATOR])
 dnl map data structure. Configurable if not forced to use append according to metis mode
 AC_ARG_ENABLE([map-ds],
               [AS_HELP_STRING([--enable-map-ds=ARG],
-                              [default data structure for map phase: btree, array, append,
+                              [default data structure for map phase: btree, array, append.
                                default: btree])],
               [ac_cv_map_ds=$enableval], [ac_cv_map_ds=btree])
 
