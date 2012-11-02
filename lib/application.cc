@@ -318,6 +318,7 @@ void mapreduce_appbase::reset() {
     }
     bzero(e_, sizeof(e_));
     clean_ = true;
+    nsample_ = 0;
 }
 
 
