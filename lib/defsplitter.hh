@@ -35,7 +35,7 @@ struct mmap_file {
             assert(close(fd_) == 0);
         }
     }
-    char &operator[](int i) {
+    char &operator[](off_t i) {
         return d_[i];
     }
     size_t size_;
