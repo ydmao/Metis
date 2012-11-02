@@ -46,11 +46,10 @@ struct app_impl_base : public mapreduce_appbase {
         results_.shallow_free();
     }
 
+  protected:
     void set_final_result() {
         rb_.transfer(0, &results_);
     }
-
-  protected:
     int internal_final_output_compare(const void *p1, const void *p2) {
         return final_output_compare((T *)p1, (T *)p2);
     }
@@ -108,6 +107,8 @@ struct map_reduce : public app_impl_base<keyval_t, atype_mapreduce> {
     virtual bool has_value_modifier() const {
         return false;
     }
+  protected:
+    friend class static_appbase;
     void internal_reduce_emit(keyvals_t &p);
     void map_values_insert(keyvals_t *kvs, void *val);
     void map_values_move(keyvals_t *dst, keyvals_t *src);
@@ -119,6 +120,8 @@ struct map_group : public app_impl_base<keyvals_len_t, atype_mapgroup> {
     void set_group_task(int group_task) {
         nreduce_or_group_task_ = group_task;
     }
+  protected:
+    friend class static_appbase;
     void internal_reduce_emit(keyvals_t &p);
 };
 

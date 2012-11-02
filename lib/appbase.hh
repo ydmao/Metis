@@ -65,7 +65,8 @@ struct mapreduce_appbase {
        reduce function; otherwise, the output is not guaranteed to ordered. */
     void reduce_emit(void *key, void *val);
 
-    /* internal use only */
+  protected:
+    friend class static_appbase;
     virtual int application_type() = 0;
     virtual void map_values_insert(keyvals_t *kvs, void *v) {
         kvs->push_back(v);
@@ -74,8 +75,6 @@ struct mapreduce_appbase {
         dst->append(*src);
         src->reset();
     }
-  protected:
-    friend class static_appbase;
     virtual int internal_final_output_compare(const void *p1, const void *p2) = 0;
     virtual reduce_bucket_manager_base *get_reduce_bucket_manager() = 0;
     /* @breif: prepare the application for the next iteraton.
