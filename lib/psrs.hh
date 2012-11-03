@@ -180,6 +180,7 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, F &pcmp) {
     if (me == main_core)
 	check_inited();
     cpu_barrier(me, ncpus);
+
     // get the [start, end] subarray
     const int total_len = output_->size();
     const int w = (total_len + ncpus - 1) / ncpus;
@@ -211,21 +212,23 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, F &pcmp) {
 	else
             pivots_[me * (ncpus - 1) + i].assign(localpairs->back());
     cpu_barrier(me, ncpus);
+
     if (me == main_core) {
 	// sort p * (p - 1) pivots.
 	qsort(pivots_, ncpus * (ncpus - 1), sizeof(pair_type), pcmp);
 	// select (p - 1) pivots into pivots[1 : (p - 1)]
 	for (int i = 0; i < ncpus - 1; ++i)
             pivots_[i + 1] = pivots_[i * ncpus + ncpus / 2];
-	cpu_barrier(me, ncpus);
-    } else
-	cpu_barrier(me, ncpus);
+    }
+    cpu_barrier(me, ncpus);
+
     // divide the local list into p sublists by the (p - 1) pivots received from main cpu
     subsize_[me * (ncpus + 1)] = 0;
     subsize_[me * (ncpus + 1) + ncpus] = localpairs->size();
     divide(*localpairs, 0, localpairs->size() - 1,
            &subsize_[me * (ncpus + 1)], pivots_, 1, ncpus - 1, pcmp);
     cpu_barrier(me, ncpus);
+
     // decides the size of the me-th sublist
     partsize_[me] = 0;
     for (int i = 0; i < ncpus; ++i) {
@@ -234,6 +237,7 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, F &pcmp) {
 	partsize_[me] += e - s;
     }
     cpu_barrier(me, ncpus);
+
     // merge each partition in parallel
     // determines the position in the final results for local partition
     int output_offset = 0;
@@ -242,10 +246,12 @@ C *psrs<C>::do_psrs(xarray<C> &a, int ncpus, int me, F &pcmp) {
     mergesort(lpairs_, partsize_[me], subsize_,
               me, output_->at(output_offset), ncpus, pcmp);
     cpu_barrier(me, ncpus);
+
     localpairs->shallow_free();
     localpairs->set_array(output_->at(output_offset), partsize_[me]);
     // apply a barrier before deinit to make sure no one is using output_
     cpu_barrier(me, ncpus);
+
     if (me == main_core)
         deinit();
     return localpairs;
