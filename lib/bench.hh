@@ -140,16 +140,6 @@ inline uint32_t get_core_count(void) {
     return r;
 }
 
-inline int fill_core_array(uint32_t *cid, uint32_t n) {
-    uint32_t z = get_core_count();
-    if (n < z)
-	return -1;
-
-    for (uint32_t i = 0; i < z; ++i)
-	cid[i] = i;
-    return z;
-}
-
 inline void lfence(void) {
     __asm __volatile("lfence" ::: "memory");
 }
