@@ -20,7 +20,7 @@
 #include <assert.h>
 #include <string.h>
 
-struct  __attribute__ ((aligned(JOS_CLINE))) thread_pool_t {
+struct  __attribute__ ((aligned(JOS_CLINE))) athread_type {
     void *volatile a_;
     void *(*volatile f_) (void *);
     volatile char pending_;
@@ -56,7 +56,7 @@ struct  __attribute__ ((aligned(JOS_CLINE))) thread_pool_t {
 
 namespace {
 
-thread_pool_t tp_[JOS_NCPU];
+athread_type tp_[JOS_NCPU];
 bool tp_created_ = false;
 int ncore_ = 0;
 
