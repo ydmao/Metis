@@ -163,9 +163,7 @@ void *mapreduce_appbase::base_worker(void *x) {
 
 void mapreduce_appbase::run_phase(int phase, int ncore, uint64_t &t, int first_task) {
     uint64_t t0 = read_tsc();
-    prof_phase_stat st;
-    bzero(&st, sizeof(st));
-    prof_phase_init(&st);
+    prof_phase_init();
     pthread_t tid[JOS_NCPU];
     phase_ = phase;
     next_task_ = first_task;
@@ -181,7 +179,7 @@ void mapreduce_appbase::run_phase(int phase, int ncore, uint64_t &t, int first_t
 	void *ret;
 	mthread_join(tid[i], i, &ret);
     }
-    prof_phase_end(&st);
+    prof_phase_end();
     t += read_tsc() - t0;
 }
 

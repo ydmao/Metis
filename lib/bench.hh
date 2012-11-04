@@ -52,6 +52,14 @@ inline T *safe_malloc(int n = 1) {
     return (T *)x;
 }
 
+inline uint64_t tv2us(const timeval &v) {
+    return uint64_t(v.tv_sec) * 1000000 + v.tv_usec;
+}
+
+inline uint64_t tv2ms(const timeval &v) {
+    return tv2us(v) / 1000;
+}
+
 #define cond_printf(__exp, __fmt, __args...) \
 do { \
     if (__exp) \
