@@ -52,13 +52,13 @@ Scalability on Linux
 --------------------
 As our previous work of 
 [An analysis of Linux scalability to Many Cores](http://pdos.csail.mit.edu/mosbench/) shows, Metis can take advantage of Linux
-super pages to reduce the contentions on page faults. To enable feature, Metis
+super pages to reduce the contentions on page faults. To enable this feature, Metis
 currently relies on the use of flow allocator, which will allocate memory from OS
 in super pages.
 
-Note there was a scalability bottleneck in Linux kernel's hugepage
-allocator. We haven't checked yet whether Linux has fixed the scalability
-problem. If you are interested, take a look at the patch in the
+Note that there was a scalability bottleneck in Linux kernel's hugepage
+allocator. We haven't checked yet whether Linux has fixed it or not.
+If you are interested, take a look at the patch in the
 linux-patches directory about the problem and our 'fix'.
 
 Other configuration
