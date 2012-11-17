@@ -19,7 +19,7 @@ Some example MapReduce applications are included.  For a list:
     $ ls app/*.c
     foo.c wc.c wr.c ...
 
-To build and run the example foo.c do:
+To build and run the example foo.c:
 
     $ ./configure
     $ make
@@ -28,15 +28,14 @@ To build and run the example foo.c do:
 Memory allocator
 ----------------
 
-To build Metis with scalable memory allocator such as jemalloc and flow.  Flow
-is our re-implementation of [Streamflow](http://people.cs.vt.edu/~scschnei/streamflow/).
-Flow may be open-sourced in future.
-
 To link with a specific memory allocator,
 
     $ ./configure --with-malloc=<jemalloc|flow>
     $ make clean
     $ make
+
+Flow is our re-implementation of [Streamflow](http://people.cs.vt.edu/~scschnei/streamflow/),
+and may be open-sourced in future.
 
 Running Test
 ------------
