@@ -16,7 +16,7 @@
 #define BTREE_HH_ 1
 
 #include "bsearch.hh"
-#include "appbase.hh"
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,23 +24,26 @@
 
 enum { order = 3 };
 
-template <typename PAIR>
+template <typename PARAM>
 struct btnode_internal;
 
-template <typename PAIR>
+template <typename PARAM>
 struct btnode_base {
-    btnode_internal<PAIR> *parent_;
+    btnode_internal<PARAM> *parent_;
     short nk_;
     btnode_base() : parent_(NULL), nk_(0) {}
     virtual ~btnode_base() {}
 };
 
-template <typename PAIR>
-struct btnode_leaf : public btnode_base<PAIR> {
+template <typename PARAM>
+struct btnode_leaf : public btnode_base<PARAM> {
     static const int fanout = 2 * order + 2;
-    typedef btnode_leaf<PAIR> self_type;
+    typedef typename PARAM::pair_type PAIR;
+    typedef btnode_leaf<PARAM> self_type;
+    typedef btnode_base<PARAM> base_type;
+    typedef typename PARAM::util_type util_type;
+
     typedef decltype(((PAIR *)0)->key_) key_type;
-    typedef btnode_base<PAIR> base_type;
     using base_type::nk_;
 
     PAIR e_[fanout];
@@ -72,7 +75,7 @@ struct btnode_leaf : public btnode_base<PAIR> {
         PAIR tmp;
         tmp.key_ = key;
         *p = xsearch::lower_bound(&tmp, e_, nk_,
-                                  static_appbase::pair_comp<PAIR>, &found);
+                                  util_type::template pair_comp<PAIR>, &found);
         return found;
     }
 
@@ -90,22 +93,25 @@ struct btnode_leaf : public btnode_base<PAIR> {
     }
 };
 
-template <typename PAIR>
-struct btnode_internal : public btnode_base<PAIR> {
+template <typename PARAM>
+struct btnode_internal : public btnode_base<PARAM> {
     static const int fanout = 2 * order + 2;
-    typedef btnode_internal<PAIR> self_type;
+    typedef typename PARAM::pair_type PAIR;
+    typedef btnode_internal<PARAM> self_type;
+    typedef btnode_base<PARAM> base_type;
+    typedef typename PARAM::util_type util_type;
+
     typedef decltype(((PAIR *)0)->key_) key_type;
-    typedef btnode_base<PAIR> base_type;
     using base_type::nk_;
 
-    struct xpair {
-        xpair(const key_type &k) : key_(k) {} 
-        xpair() : key_(), v_() {} 
+    struct internal_pair {
+        internal_pair(const key_type &k) : key_(k) {} 
+        internal_pair() : key_(), v_() {} 
         key_type key_;
         base_type *v_;
     };
 
-    xpair e_[fanout];
+    internal_pair e_[fanout];
     btnode_internal() {
         bzero(e_, sizeof(e_));
     }
@@ -132,22 +138,30 @@ struct btnode_internal : public btnode_base<PAIR> {
         return e_[pos].v_;
     }
     int upper_bound_pos(const key_type &key) {
-        xpair tmp(key);
-        return xsearch::upper_bound(&tmp, e_, nk_, static_appbase::pair_comp<xpair>);
+        internal_pair tmp(key);
+        return xsearch::upper_bound(&tmp, e_, nk_, util_type::template pair_comp<internal_pair>);
     }
     bool need_split() const {
         return nk_ == fanout - 1;
     }
 };
 
+template <typename PAIR_TYPE, typename UTIL_TYPE>
+struct btree_param {
+    typedef PAIR_TYPE pair_type;
+    typedef UTIL_TYPE util_type;
+};
 
-template <typename PAIR>
+template <typename PARAM>
 struct btree_type {
-    typedef PAIR element_type;
-    typedef btnode_leaf<PAIR> leaf_node_type;
-    typedef typename btnode_leaf<PAIR>::key_type key_type;
-    typedef btnode_internal<PAIR> internal_node_type;
-    typedef btnode_base<PAIR> base_node_type;
+    typedef typename PARAM::pair_type element_type;
+    typedef element_type PAIR;
+    typedef typename PARAM::util_type util_type;
+
+    typedef btnode_leaf<PARAM> leaf_node_type;
+    typedef typename btnode_leaf<PARAM>::key_type key_type;
+    typedef btnode_internal<PARAM> internal_node_type;
+    typedef btnode_base<PARAM> base_node_type;
 
     void init();
     /* @brief: free the tree, but not the values */
@@ -158,8 +172,10 @@ struct btree_type {
        @return true if it is a new key */
     int map_insert_sorted_copy_on_new(const key_type &key, void *val, size_t keylen, unsigned hash);
     size_t size() const;
-    uint64_t transfer(xarray<PAIR> *dst);
-    uint64_t copy(xarray<PAIR> *dst);
+    template <typename C>
+    uint64_t transfer(C *dst);
+    template <typename C>
+    uint64_t copy(C *dst);
 
     /* @brief: return the number of values in the tree */
     uint64_t test_get_nvalue() {
@@ -216,7 +232,8 @@ struct btree_type {
     size_t nk_;
     short nlevel_;
     base_node_type *root_;
-    uint64_t copy_traverse(xarray<PAIR> *dst, bool clear_leaf);
+    template <typename C>
+    uint64_t copy_traverse(C *dst, bool clear_leaf);
 
     /* @brief: insert @key at position @pos into leaf node @leaf,
      * and set the value of that key to empty */
@@ -230,16 +247,16 @@ struct btree_type {
     leaf_node_type *get_leaf(const key_type &key);
 };
 
-template <typename PAIR>
-void btree_type<PAIR>::init() {
+template <typename P>
+void btree_type<P>::init() {
     nk_ = 0;
     nlevel_ = 0;
     root_ = NULL;
 }
 
 // left < key <= right. Right is the new sibling
-template <typename PAIR>
-void btree_type<PAIR>::insert_internal(const key_type &key, base_node_type *left, base_node_type *right) {
+template <typename P>
+void btree_type<P>::insert_internal(const key_type &key, base_node_type *left, base_node_type *right) {
     auto parent = left->parent_;
     if (!parent) {
 	auto newroot = new internal_node_type;
@@ -271,8 +288,8 @@ void btree_type<PAIR>::insert_internal(const key_type &key, base_node_type *left
     }
 }
 
-template <typename PAIR>
-btnode_leaf<PAIR> *btree_type<PAIR>::get_leaf(const key_type &key) {
+template <typename P>
+btnode_leaf<P> *btree_type<P>::get_leaf(const key_type &key) {
     if (!nlevel_) {
 	root_ = new leaf_node_type;
 	nlevel_ = 1;
@@ -286,14 +303,13 @@ btnode_leaf<PAIR> *btree_type<PAIR>::get_leaf(const key_type &key) {
 }
 
 // left < splitkey <= right. Right is the new sibling
-template <typename PAIR>
-int btree_type<PAIR>::map_insert_sorted_copy_on_new(const key_type &k, void *v, size_t keylen, unsigned hash) {
+template <typename P>
+int btree_type<P>::map_insert_sorted_copy_on_new(const key_type &k, void *v, size_t keylen, unsigned hash) {
     auto leaf = get_leaf(k);
     int pos;
     bool found;
     if (!(found = leaf->lower_bound(k, &pos))) {
-        void *ik = static_appbase::key_copy(k, keylen);
-        leaf->insert(pos, ik, hash);
+        leaf->insert(pos, util_type::key_copy(k, keylen), hash);
         ++ nk_;
     }
     leaf->e_[pos].map_value_insert(v);
@@ -304,8 +320,8 @@ int btree_type<PAIR>::map_insert_sorted_copy_on_new(const key_type &k, void *v, 
     return !found;
 }
 
-template <typename PAIR>
-void btree_type<PAIR>::map_insert_sorted_new_and_raw(PAIR *p) {
+template <typename P>
+void btree_type<P>::map_insert_sorted_new_and_raw(PAIR *p) {
     auto leaf = get_leaf(p->key_);
     int pos;
     assert(!leaf->lower_bound(p->key_, &pos));  // must be new key
@@ -318,50 +334,50 @@ void btree_type<PAIR>::map_insert_sorted_new_and_raw(PAIR *p) {
     }
 }
 
-template <typename PAIR>
-size_t btree_type<PAIR>::size() const {
+template <typename P>
+size_t btree_type<P>::size() const {
     return nk_;
 }
 
-template <typename PAIR>
-void btree_type<PAIR>::delete_level(base_node_type *node, int level) {
+template <typename P>
+void btree_type<P>::delete_level(base_node_type *node, int level) {
     for (int i = 0; level > 1 && i <= node->nk_; ++i)
         delete_level(static_cast<internal_node_type *>(node)->e_[i].v_, level - 1);
     delete node;
 }
 
-template <typename PAIR>
-void btree_type<PAIR>::shallow_free() {
+template <typename P>
+void btree_type<P>::shallow_free() {
     if (!nlevel_)
         return;
     delete_level(root_, nlevel_);
     init();
 }
 
-template <typename PAIR>
-typename btree_type<PAIR>::iterator btree_type<PAIR>::begin() {
+template <typename P>
+typename btree_type<P>::iterator btree_type<P>::begin() {
     return iterator(first_leaf());
 }
 
-template <typename PAIR>
-typename btree_type<PAIR>::iterator btree_type<PAIR>::end() {
-    return btree_type<PAIR>::iterator(NULL);
+template <typename P>
+typename btree_type<P>::iterator btree_type<P>::end() {
+    return btree_type<P>::iterator(NULL);
 }
 
-template <typename PAIR>
-uint64_t btree_type<PAIR>::copy(xarray<PAIR> *dst) {
+template <typename P> template <typename C>
+uint64_t btree_type<P>::copy(C *dst) {
     return copy_traverse(dst, false);
 }
 
-template <typename PAIR>
-uint64_t btree_type<PAIR>::transfer(xarray<PAIR> *dst) {
+template <typename P> template <typename C>
+uint64_t btree_type<P>::transfer(C *dst) {
     uint64_t n = copy_traverse(dst, true);
     shallow_free();
     return n;
 }
 
-template <typename PAIR>
-uint64_t btree_type<PAIR>::copy_traverse(xarray<PAIR> *dst, bool clear_leaf) {
+template <typename P> template <typename C>
+uint64_t btree_type<P>::copy_traverse(C *dst, bool clear_leaf) {
     assert(dst->size() == 0);
     if (!nlevel_)
 	return 0;
@@ -379,8 +395,8 @@ uint64_t btree_type<PAIR>::copy_traverse(xarray<PAIR> *dst, bool clear_leaf) {
     return n;
 }
 
-template <typename PAIR>
-btnode_leaf<PAIR> *btree_type<PAIR>::first_leaf() const {
+template <typename P>
+btnode_leaf<P> *btree_type<P>::first_leaf() const {
     if (!nk_)
         return NULL;
     auto node = root_;

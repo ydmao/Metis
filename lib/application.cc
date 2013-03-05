@@ -81,7 +81,8 @@ map_bucket_manager_base *mapreduce_appbase::create_map_bucket_manager(int nrow, 
 #endif
         break;
     case index_btree:
-        m = new map_bucket_manager<true, btree_type<keyvals_t>, keyvals_t>;
+        typedef btree_param<keyvals_t, static_appbase> btree_param_type;
+        m = new map_bucket_manager<true, btree_type<btree_param_type>, keyvals_t>;
         break;
     case index_array:
         m = new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;

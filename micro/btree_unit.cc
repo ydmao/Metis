@@ -34,9 +34,12 @@ struct mock_app : public map_only {
     }
 };
 
-void check_tree(btree_type<keyvals_t> &bt) {
+typedef btree_param<keyvals_t, static_appbase> btree_param_type;
+typedef btree_type<btree_param_type> this_btree;
+
+void check_tree(this_btree &bt) {
     int64_t i = 1;
-    btree_type<keyvals_t>::iterator it = bt.begin();
+    auto it = bt.begin();
     while (it != bt.end()) {
         CHECK_EQ(i, int64_t(it->key_));
         CHECK_EQ(1, int64_t(it->size()));
@@ -47,7 +50,7 @@ void check_tree(btree_type<keyvals_t> &bt) {
     assert(size_t(i) == (bt.size() + 1));
 }
 
-void check_tree_copy(btree_type<keyvals_t> &bt) {
+void check_tree_copy(this_btree &bt) {
     xarray<keyvals_t> dst;
     bt.copy(&dst);
     for (int64_t i = 1; i <= int64_t(bt.size()); ++i) {
@@ -58,7 +61,7 @@ void check_tree_copy(btree_type<keyvals_t> &bt) {
     }
 }
 
-void check_tree_copy_and_free(btree_type<keyvals_t> &bt) {
+void check_tree_copy_and_free(this_btree &bt) {
     xarray<keyvals_t> dst;
     bt.copy(&dst);
     bt.shallow_free();
@@ -71,7 +74,7 @@ void check_tree_copy_and_free(btree_type<keyvals_t> &bt) {
 }
 
 void test1() {
-    btree_type<keyvals_t> bt;
+    this_btree bt;
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);
@@ -84,7 +87,7 @@ void test1() {
 }
 
 void test2() {
-    btree_type<keyvals_t> bt;
+    this_btree bt;
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);
