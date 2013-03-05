@@ -34,7 +34,8 @@ struct mock_app : public map_only {
     }
 };
 
-typedef btree_param<keyvals_t, static_appbase> btree_param_type;
+typedef btree_param<keyvals_t, static_appbase::key_comparator, 
+                    static_appbase::key_copy_type, static_appbase::value_apply_type> btree_param_type;
 typedef btree_type<btree_param_type> this_btree;
 
 void check_tree(this_btree &bt) {

@@ -31,7 +31,7 @@ template <typename PARAM>
 struct btnode_base {
     btnode_internal<PARAM> *parent_;
     short nk_;
-    btnode_base() : parent_(NULL), nk_(0) {}
+    inline btnode_base() : parent_(NULL), nk_(0) {}
     virtual ~btnode_base() {}
 };
 
@@ -41,7 +41,6 @@ struct btnode_leaf : public btnode_base<PARAM> {
     typedef typename PARAM::pair_type PAIR;
     typedef btnode_leaf<PARAM> self_type;
     typedef btnode_base<PARAM> base_type;
-    typedef typename PARAM::util_type util_type;
 
     typedef decltype(((PAIR *)0)->key_) key_type;
     using base_type::nk_;
@@ -55,11 +54,11 @@ struct btnode_leaf : public btnode_base<PARAM> {
             e_[i].init();
     }
 
-    btnode_leaf() : base_type(), next_(NULL) {
+    inline btnode_leaf() : base_type(), next_(NULL) {
         for (int i = 0; i < fanout; ++i)
             e_[i].init();
     }
-    self_type *split() {
+    inline self_type *split() {
         auto right = new self_type;
         memcpy(right->e_, &e_[order + 1], sizeof(e_[0]) * (1 + order));
         right->nk_ = order + 1;
@@ -70,16 +69,16 @@ struct btnode_leaf : public btnode_base<PARAM> {
         return right;
     }
 
-    bool lower_bound(const key_type &key, int *p) {
+    inline bool lower_bound(const key_type &key, int *p) {
         bool found = false;
+        typename PARAM::key_comparator_type comparator;
         PAIR tmp;
         tmp.key_ = key;
-        *p = xsearch::lower_bound(&tmp, e_, nk_,
-                                  util_type::template pair_comp<PAIR>, &found);
+        *p = xsearch::lower_bound(&tmp, e_, nk_, comparator, &found);
         return found;
     }
 
-    void insert(int pos, const key_type &key, unsigned hash) {
+    inline void insert(int pos, const key_type &key, unsigned hash) {
         if (pos < nk_)
             memmove(&e_[pos + 1], &e_[pos], sizeof(e_[0]) * (nk_ - pos));
         ++ nk_;
@@ -88,7 +87,7 @@ struct btnode_leaf : public btnode_base<PARAM> {
         e_[pos].hash = hash;
     }
 
-    bool need_split() const {
+    inline bool need_split() const {
         return nk_ == fanout;
     }
 };
@@ -99,7 +98,6 @@ struct btnode_internal : public btnode_base<PARAM> {
     typedef typename PARAM::pair_type PAIR;
     typedef btnode_internal<PARAM> self_type;
     typedef btnode_base<PARAM> base_type;
-    typedef typename PARAM::util_type util_type;
 
     typedef decltype(((PAIR *)0)->key_) key_type;
     using base_type::nk_;
@@ -112,70 +110,82 @@ struct btnode_internal : public btnode_base<PARAM> {
     };
 
     internal_pair e_[fanout];
-    btnode_internal() {
+    inline btnode_internal() {
         bzero(e_, sizeof(e_));
     }
-    virtual ~btnode_internal() {}
+    ~btnode_internal() {}
 
-    self_type *split() {
+    inline self_type *split() {
         auto nn = new self_type;
         nn->nk_ = order;
         memcpy(nn->e_, &e_[order + 1], sizeof(e_[0]) * (order + 1));
         nk_ = order;
         return nn;
     }
-    void assign(int p, base_type *left, const key_type &key, base_type *right) {
+    inline void assign(int p, base_type *left, const key_type &key, base_type *right) {
         e_[p].v_ = left;
         e_[p].key_ = key;
         e_[p + 1].v_ = right;
     }
-    void assign_right(int p, const key_type &key, base_type *right) {
+    inline void assign_right(int p, const key_type &key, base_type *right) {
         e_[p].key_ = key;
         e_[p + 1].v_ = right;
     }
-    base_type *upper_bound(const key_type &key) {
+    inline base_type *upper_bound(const key_type &key) {
         int pos = upper_bound_pos(key);
         return e_[pos].v_;
     }
-    int upper_bound_pos(const key_type &key) {
+    inline int upper_bound_pos(const key_type &key) {
+        typename PARAM::key_comparator_type comparator;
         internal_pair tmp(key);
-        return xsearch::upper_bound(&tmp, e_, nk_, util_type::template pair_comp<internal_pair>);
+        return xsearch::upper_bound(&tmp, e_, nk_, comparator);
     }
-    bool need_split() const {
+    inline bool need_split() const {
         return nk_ == fanout - 1;
     }
 };
 
-template <typename PAIR_TYPE, typename UTIL_TYPE>
+template <typename PAIR_TYPE, typename KEY_COMPARE, typename KEY_COPY, typename VALUE_APPLY>
 struct btree_param {
     typedef PAIR_TYPE pair_type;
-    typedef UTIL_TYPE util_type;
+    typedef KEY_COMPARE key_comparator_type;
+    typedef KEY_COPY key_copy_type;
+    typedef VALUE_APPLY value_apply_type;
 };
 
 template <typename PARAM>
 struct btree_type {
     typedef typename PARAM::pair_type element_type;
     typedef element_type PAIR;
-    typedef typename PARAM::util_type util_type;
+    typedef typename PARAM::key_copy_type key_copy_type;
+    typedef typename PARAM::value_apply_type value_apply_type;
 
     typedef btnode_leaf<PARAM> leaf_node_type;
     typedef typename btnode_leaf<PARAM>::key_type key_type;
     typedef btnode_internal<PARAM> internal_node_type;
     typedef btnode_base<PARAM> base_node_type;
 
-    void init();
+    inline void init();
     /* @brief: free the tree, but not the values */
-    void shallow_free();
-    void map_insert_sorted_new_and_raw(PAIR *kvs);
+    inline void shallow_free();
+    /* @brief: insert a new key/value pair. Assertion failure if already existed */
+    inline void insert(PAIR *kv);
 
+    inline void map_insert_sorted_new_and_raw(PAIR *kv) {
+        insert(kv);
+    }
     /* @brief: insert key/val pair into the tree
        @return true if it is a new key */
-    int map_insert_sorted_copy_on_new(const key_type &key, void *val, size_t keylen, unsigned hash);
-    size_t size() const;
+    template <typename V>
+    inline int map_insert_sorted_copy_on_new(const key_type &key, const V &val, size_t keylen, unsigned hash);
+
+    inline size_t size() const;
+
     template <typename C>
-    uint64_t transfer(C *dst);
+    inline uint64_t transfer(C *dst);
+
     template <typename C>
-    uint64_t copy(C *dst);
+    inline uint64_t copy(C *dst);
 
     /* @brief: return the number of values in the tree */
     uint64_t test_get_nvalue() {
@@ -303,16 +313,16 @@ btnode_leaf<P> *btree_type<P>::get_leaf(const key_type &key) {
 }
 
 // left < splitkey <= right. Right is the new sibling
-template <typename P>
-int btree_type<P>::map_insert_sorted_copy_on_new(const key_type &k, void *v, size_t keylen, unsigned hash) {
+template <typename P> template <typename V>
+int btree_type<P>::map_insert_sorted_copy_on_new(const key_type &k, const V &v, size_t keylen, unsigned hash) {
     auto leaf = get_leaf(k);
     int pos;
     bool found;
     if (!(found = leaf->lower_bound(k, &pos))) {
-        leaf->insert(pos, util_type::key_copy(k, keylen), hash);
+        leaf->insert(pos, key_copy_type()(k, keylen), hash);
         ++ nk_;
     }
-    leaf->e_[pos].map_value_insert(v);
+    value_apply_type()(&leaf->e_[pos], !found, v);
     if (leaf->need_split()) {
 	auto right = leaf->split();
         insert_internal(right->e_[0].key_, leaf, right);
@@ -321,7 +331,7 @@ int btree_type<P>::map_insert_sorted_copy_on_new(const key_type &k, void *v, siz
 }
 
 template <typename P>
-void btree_type<P>::map_insert_sorted_new_and_raw(PAIR *p) {
+void btree_type<P>::insert(PAIR *p) {
     auto leaf = get_leaf(p->key_);
     int pos;
     assert(!leaf->lower_bound(p->key_, &pos));  // must be new key

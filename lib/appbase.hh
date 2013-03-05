@@ -129,6 +129,22 @@ struct static_appbase {
     static int final_output_pair_comp(const void *p1, const void *p2) {
         return the_app_->internal_final_output_compare(p1, p2);
     }
+    struct key_comparator {
+        template <typename T>
+        int operator()(const T *p1, const T *p2) const {
+            return static_appbase::key_compare(p1->key_, p2->key_);
+        }
+    };
+    struct value_apply_type {
+        void operator()(keyvals_t *p, bool insert, void *v) const {
+            p->map_value_insert(v);
+        }
+    };
+    struct key_copy_type {
+        void *operator()(void *key, size_t keylen) const {
+            return static_appbase::key_copy(key, keylen);
+        }
+    };
     template <typename T>
     static int pair_comp(const void *p1, const void *p2) {
         const T *x1 = reinterpret_cast<const T *>(p1);
