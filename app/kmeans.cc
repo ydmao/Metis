@@ -198,7 +198,7 @@ void kmeans::find_clusters(int **points, keyval_t *means, int *clusters, int siz
 	}
 	//printf("Emitting [%d,%d]\n", *((int *)means[min_idx].key), *(points[i]));
 	prof_leaveapp();
-	map_emit(means[min_idx].key, (void *)points[i], sizeof(means[min_idx].key));
+	map_emit(means[min_idx].key_, (void *)points[i], sizeof(means[min_idx].key_));
 	prof_enterapp();
     }
 }
@@ -304,9 +304,9 @@ static void init_kmeans(kmeans_data_t &kd, int nsplit) {
     kd.means = safe_malloc<keyval_t>(num_means);
     for (int i = 0; i < num_means; ++i) {
 	kd.means[i].val = safe_malloc<int>(dim);
-	kd.means[i].key = safe_malloc<int>();
+	kd.means[i].key_ = safe_malloc<int>();
 	memcpy(kd.means[i].val, kd.points[i], sizeof(int) * dim);
-	((int *) kd.means[i].key)[0] = i;
+	((int *) kd.means[i].key_)[0] = i;
     }
 
     kd.next_point = 0;
@@ -363,7 +363,7 @@ int main(int argc, char **argv) {
 	}
         app.sched_run();
 	for (size_t i = 0; i < app.results_.size(); ++i) {
-	    int mean_idx = *((int *)app.results_[i].key);
+	    int mean_idx = *((int *)app.results_[i].key_);
 	    free(app.kd_.means[mean_idx].val);
 	    app.kd_.means[mean_idx] = app.results_[i];
 	}
@@ -375,7 +375,7 @@ int main(int argc, char **argv) {
     free(inbuf_start);
     free(app.kd_.points);
     for (int i = 0; i < num_means; i++) {
-	free(app.kd_.means[i].key);
+	free(app.kd_.means[i].key_);
 	free(app.kd_.means[i].val);
     }
     free(app.kd_.clusters);

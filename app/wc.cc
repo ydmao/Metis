@@ -102,16 +102,16 @@ struct wc : public map_reduce {
     }
     int final_output_compare(const keyval_t *kv1, const keyval_t *kv2) {
 #ifdef HADOOP
-	return strcmp((char *) kv1->key, (char *) kv2->key);
+	return strcmp((char *) kv1->key_, (char *) kv2->key_);
 #else
         if (alphanumeric)
-	    return strcmp((char *) kv1->key, (char *) kv2->key);
+	    return strcmp((char *) kv1->key_, (char *) kv2->key_);
         size_t i1 = (size_t) kv1->val;
         size_t i2 = (size_t) kv2->val;
         if (i1 != i2)
 	    return i2 - i1;
         else
-	    return strcmp((char *) kv1->key, (char *) kv2->key);
+	    return strcmp((char *) kv1->key_, (char *) kv2->key_);
 #endif
     }
     bool has_value_modifier() const {
@@ -134,14 +134,14 @@ static void print_top(xarray<keyval_t> *wc_vals, size_t ndisp) {
 #endif
     for (size_t i = 0; i < ndisp; i++) {
 	keyval_t *w = wc_vals->at(i);
-	printf("%15s - %d\n", (char *)w->key, ptr2int<unsigned>(w->val));
+	printf("%15s - %d\n", (char *)w->key_, ptr2int<unsigned>(w->val));
     }
 }
 
 static void output_all(xarray<keyval_t> *wc_vals, FILE *fout) {
     for (uint32_t i = 0; i < wc_vals->size(); i++) {
 	keyval_t *w = wc_vals->at(i);
-	fprintf(fout, "%18s - %lu\n", (char *)w->key,  (uintptr_t)w->val);
+	fprintf(fout, "%18s - %lu\n", (char *)w->key_,  (uintptr_t)w->val);
     }
 }
 

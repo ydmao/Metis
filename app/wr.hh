@@ -49,7 +49,7 @@ inline void print_top(xarray<keyvals_len_t> *wc_vals, size_t ndisp, size_t nw) {
     ndisp = std::min(ndisp, wc_vals->size());
     for (size_t i = 0; i < ndisp; ++i) {
 	keyvals_len_t *w = wc_vals->at(i);
-	printf("%15s - %d\n", (char *) w->key, unsigned(w->len));
+	printf("%15s - %d\n", (char *) w->key_, unsigned(w->len));
     }
 }
 

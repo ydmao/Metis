@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
     cond_printf(!quiet, "----------\n\n");
     for (size_t i = 0; i < app.results_.size(); ++i) {
 	keyval_t *curr = &app.results_[i];
-	pix_val = *((short *) curr->key);
+	pix_val = *((short *) curr->key_);
 	freq = (long) curr->val;
 
 	if (pix_val - prev > 700) {

@@ -30,11 +30,11 @@ inline void group_one_sorted(C &a, F &f, KF &kf) {
     size_t n = a.size();
     keyvals_t kvs;
     for (size_t i = 0; i < n;) {
-	kvs.key = a[i].key;
+	kvs.key_ = a[i].key_;
         kvs.map_value_move(&a[i]);
         ++i;
-        for (; i < n && !static_appbase::key_compare(kvs.key, a[i].key); ++i) {
-            kf(a[i].key);
+        for (; i < n && !static_appbase::key_compare(kvs.key_, a[i].key_); ++i) {
+            kf(a[i].key_);
 	    kvs.map_value_move(&a[i]);
         }
         f(kvs);
@@ -80,7 +80,7 @@ inline void group_sorted(C **nodes, int n, F &f, KF &kf) {
 		continue;
 	    int cmp = 0;
 	    if (min_idx >= 0)
-		cmp = static_appbase::key_compare(it[min_idx]->key, it[i]->key);
+		cmp = static_appbase::key_compare(it[min_idx]->key_, it[i]->key_);
 	    if (min_idx < 0 || cmp > 0) {
 		++ m;
 		marks[i] = m;
@@ -91,16 +91,16 @@ inline void group_sorted(C **nodes, int n, F &f, KF &kf) {
 	if (min_idx < 0)
 	    break;
         // Merge all the values with the same mimimum key.
-	dst.key = it[min_idx]->key;
+	dst.key_ = it[min_idx]->key_;
 	for (int i = 0; i < n; ++i) {
 	    if (marks[i] != m)
 		continue;
 	    dst.map_value_move(&(*it[i]));
             ++it[i];
 	    for (; it[i] != nodes[i]->end() &&
-                   static_appbase::key_compare(dst.key, it[i]->key) == 0; ++it[i]) {
-                kf(it[i]->key);
-                it[i]->key = NULL;
+                   static_appbase::key_compare(dst.key_, it[i]->key_) == 0; ++it[i]) {
+                kf(it[i]->key_);
+                it[i]->key_ = NULL;
 		dst.map_value_move(&(*it[i]));
 	    }
 	}

@@ -36,11 +36,11 @@ struct app_impl_base : public mapreduce_appbase {
     }
     /* @brief: set the optional output compare function */
     virtual int final_output_compare(const T *p1, const T *p2) {
-        return this->key_compare(p1->key, p2->key);
+        return this->key_compare(p1->key_, p2->key_);
     }
     void free_results() {
         for (size_t i = 0; i < results_.size(); ++i) {
-            this->key_free(results_[i].key);
+            this->key_free(results_[i].key_);
             results_[i].reset();
         }
         results_.shallow_free();

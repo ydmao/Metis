@@ -27,7 +27,7 @@ struct split_t {
 };
 
 struct keyval_t {
-    void *key;
+    void *key_;
     void *val;
     unsigned hash;
     keyval_t() {
@@ -48,9 +48,8 @@ struct keyval_t {
     ~keyval_t() {
         reset();
     }
-
     void assign(const keyval_t &a) {
-        set(a.key, a.val, a.hash);
+        set(a.key_, a.val, a.hash);
     }
     void init() {
         set(NULL, NULL, 0);
@@ -60,14 +59,14 @@ struct keyval_t {
     }
   private:
     void set(void *k, void *v, unsigned h) {
-        key = k;
+        key_ = k;
         val = v;
         hash = h;
     }
 };
 
 struct keyvals_len_t {
-    void *key;
+    void *key_;
     void **vals;
     uint64_t len;
     keyvals_len_t() {
@@ -83,7 +82,7 @@ struct keyvals_len_t {
         reset();
     }
     void assign(const keyvals_len_t &a) {
-        set(a.key, a.vals, a.len);
+        set(a.key_, a.vals, a.len);
     }
     void init() {
         set(NULL, NULL, 0);
@@ -96,7 +95,7 @@ struct keyvals_len_t {
     }
   private:
     void set(void *k, void **v, uint64_t l) {
-        key = k;
+        key_ = k;
         vals = v;
         len = l;
     }
@@ -107,7 +106,7 @@ struct keyvals_len_arr_t: public xarray<keyvals_len_t> {
 };
 
 struct keyvals_t : public xarray<void *> {
-    void *key;			/* put key at the same offset with keyval_t */
+    void *key_;			/* put key at the same offset with keyval_t */
     unsigned hash;
     keyvals_t() {
         init();
@@ -132,7 +131,7 @@ struct keyvals_t : public xarray<void *> {
         xarray<void *>::clear();
     }
     void assign(const keyvals_t &a) {
-        set(a.key, a.hash);
+        set(a.key_, a.hash);
         xarray<void *>::assign(a);
     }
     void map_value_insert(void *v);
@@ -141,7 +140,7 @@ struct keyvals_t : public xarray<void *> {
     void map_value_move(keyvals_len_t *src);
   private:
     void set(void *k, unsigned h) {
-        key = k;
+        key_ = k;
         hash = h;
     }
 };

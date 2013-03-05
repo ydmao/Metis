@@ -81,7 +81,7 @@ map_bucket_manager_base *mapreduce_appbase::create_map_bucket_manager(int nrow, 
 #endif
         break;
     case index_btree:
-        m = new map_bucket_manager<true, btree_type, keyvals_t>;
+        m = new map_bucket_manager<true, btree_type<keyvals_t>, keyvals_t>;
         break;
     case index_array:
         m = new map_bucket_manager<true, keyvals_arr_t, keyvals_t>;
@@ -324,12 +324,12 @@ void mapreduce_appbase::reset() {
 void map_reduce::internal_reduce_emit(keyvals_t &p) {
     if (has_value_modifier()) {
         assert(p.size() == 1);
-        keyval_t x(p.key, p.multiplex_value());
+        keyval_t x(p.key_, p.multiplex_value());
 	rb_.emit(x);
         x.init();
         p.init();
     } else {
-        reduce_function(p.key, p.array(), p.size());
+        reduce_function(p.key_, p.array(), p.size());
         p.trim(0);
     }
 }
@@ -344,7 +344,7 @@ void map_reduce::map_values_insert(keyvals_t *kvs, void *v) {
     }
     kvs->push_back(v);
     if (kvs->size() >= combiner_threshold) {
-	size_t newn = combine_function(kvs->key, kvs->array(), kvs->size());
+	size_t newn = combine_function(kvs->key_, kvs->array(), kvs->size());
         assert(newn <= kvs->size());
         kvs->trim(newn);
     }
@@ -367,7 +367,7 @@ void map_reduce::map_values_move(keyvals_t *dst, keyvals_t *src) {
 
 /** === map_group === */
 void map_group::internal_reduce_emit(keyvals_t &p) {
-    keyvals_len_t x(p.key, p.array(), p.size());
+    keyvals_len_t x(p.key_, p.array(), p.size());
     rb_.emit(x);
     x.init();
     p.init();

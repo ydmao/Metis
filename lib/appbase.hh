@@ -133,7 +133,7 @@ struct static_appbase {
     static int pair_comp(const void *p1, const void *p2) {
         const T *x1 = reinterpret_cast<const T *>(p1);
         const T *x2 = reinterpret_cast<const T *>(p2);
-        return the_app_->key_compare(x1->key, x2->key);
+        return the_app_->key_compare(x1->key_, x2->key_);
     }
     static int key_compare(const void *k1, const void *k2) {
         return the_app_->key_compare(k1, k2);
