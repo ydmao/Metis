@@ -58,7 +58,7 @@ sanity_data:
 	mkdir -p $(DTOP)
 	dd if=/dev/urandom of=$(DTOP)/lr_10MB.txt count=1024 bs=10240
 
-data_gen: $(DTOP)/lr_10MB.txt
+data_gen:
 	cd data_tool && g++ gen.cc -o gen
 	bash data_tool/data-gen.sh
 
