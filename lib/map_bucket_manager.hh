@@ -164,10 +164,11 @@ template <bool S, typename DT, typename OPT>
 void map_bucket_manager<S, DT, OPT>::reset() {
     for (size_t i = 0; i < output_.size(); ++i)
         output_[i].shallow_free();
+    output_.shallow_free();
     for (size_t i = 0; i < rows_; ++i)
         for (size_t j = 0; j < cols_; ++j)
             mapdt_bucket(i, j)->shallow_free();
-    mapdt_.resize(0);
+    mapdt_.shallow_free();
 }
 
 template <bool S, typename DT, typename OPT>
