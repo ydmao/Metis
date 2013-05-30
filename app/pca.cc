@@ -400,7 +400,7 @@ int main(int argc, char **argv) {
 	    cnt = 0;
 	}
 	free(cov.results_[i].val);
-	free(cov.results_[i].key);
+	free(cov.results_[i].key_);
     }
     for (int i = 0; i < rows; i++) {
 	free(m.results_[i].val);

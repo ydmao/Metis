@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
     // ADD UP RESULTS
     for (size_t i = 0; i < app.results_.size(); ++i) {
 	keyval_t *curr = &app.results_[i];
-	switch ((long int) curr->key) {
+	switch ((long int) curr->key_) {
 	case KEY_SX:
 	    SX_ll = (long long) curr->val;
 	    break;

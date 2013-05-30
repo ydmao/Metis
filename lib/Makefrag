@@ -2,7 +2,6 @@ LIB_SRCS := pthreadpool.cc		\
 	    profile.cc		\
 	    ibs.cc			\
 	    cpumap.cc		\
-            btree.cc    \
             mr-types.cc \
             application.cc \
             threadinfo.cc

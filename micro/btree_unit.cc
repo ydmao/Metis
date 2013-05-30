@@ -34,11 +34,15 @@ struct mock_app : public map_only {
     }
 };
 
-void check_tree(btree_type &bt) {
+typedef btree_param<keyvals_t, static_appbase::key_comparator, 
+                    static_appbase::key_copy_type, static_appbase::value_apply_type> btree_param_type;
+typedef btree_type<btree_param_type> this_btree;
+
+void check_tree(this_btree &bt) {
     int64_t i = 1;
-    btree_type::iterator it = bt.begin();
+    auto it = bt.begin();
     while (it != bt.end()) {
-        CHECK_EQ(i, int64_t(it->key));
+        CHECK_EQ(i, int64_t(it->key_));
         CHECK_EQ(1, int64_t(it->size()));
         CHECK_EQ(i + 1, int64_t((*it)[0]));
         ++it;
@@ -47,23 +51,23 @@ void check_tree(btree_type &bt) {
     assert(size_t(i) == (bt.size() + 1));
 }
 
-void check_tree_copy(btree_type &bt) {
+void check_tree_copy(this_btree &bt) {
     xarray<keyvals_t> dst;
     bt.copy(&dst);
     for (int64_t i = 1; i <= int64_t(bt.size()); ++i) {
-        CHECK_EQ(i, int64_t(dst[i - 1].key));
+        CHECK_EQ(i, int64_t(dst[i - 1].key_));
         CHECK_EQ(1, int64_t(dst[i - 1].size()));
         CHECK_EQ(i + 1, int64_t(dst[i - 1][0]));
         ++i;
     }
 }
 
-void check_tree_copy_and_free(btree_type &bt) {
+void check_tree_copy_and_free(this_btree &bt) {
     xarray<keyvals_t> dst;
     bt.copy(&dst);
     bt.shallow_free();
     for (int64_t i = 1; i <= int64_t(bt.size()); ++i) {
-        CHECK_EQ(i, int64_t(dst[i - 1].key));
+        CHECK_EQ(i, int64_t(dst[i - 1].key_));
         CHECK_EQ(1, int64_t(dst[i - 1].size()));
         CHECK_EQ(i + 1, int64_t(dst[i - 1][0]));
         ++i;
@@ -71,7 +75,7 @@ void check_tree_copy_and_free(btree_type &bt) {
 }
 
 void test1() {
-    btree_type bt;
+    this_btree bt;
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);
@@ -84,13 +88,13 @@ void test1() {
 }
 
 void test2() {
-    btree_type bt;
+    this_btree bt;
     bt.init();
     check_tree(bt);
     check_tree_copy(bt);
     for (int64_t i = 1; i < 1000; ++i) {
         keyvals_t kvs;
-        kvs.key = (void *)i;
+        kvs.key_ = (void *)i;
         kvs.push_back((void *) (i + 1));
         bt.map_insert_sorted_new_and_raw(&kvs);
         kvs.init();

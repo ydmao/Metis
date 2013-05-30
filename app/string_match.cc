@@ -304,7 +304,7 @@ int main(int argc, char *argv[]) {
 	printf("\nstring match: results:\n");
 	for (size_t i = 0; i < app.results_.size(); ++i) {
 	    keyval_t *curr = &app.results_[i];
-	    printf("%15s - %d\n", (char *)curr->key, (unsigned) (size_t) curr->val);
+	    printf("%15s - %d\n", (char *)curr->key_, (unsigned) (size_t) curr->val);
 	}
     }
     free(key1_final);
