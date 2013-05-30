@@ -53,7 +53,7 @@ struct xarray {
             set_capacity(0);
         init();
     }
-    static const size_t elem_size() {
+    static constexpr size_t elem_size() {
         return sizeof(T);
     }
     size_t size() const {
