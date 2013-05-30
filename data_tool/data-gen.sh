@@ -3,7 +3,7 @@
 TOP=./data
 
 if test ! -d $TOP ; then
-  echo "Please download data.tar.gz and decompress it"
+  echo "Please download data2.tar.gz and decompress it"
   echo "You can download it from the pdos.csail.mit.edu/metis, or \
         am.csail.mit.edu:~/metis_data_release.git"
   exit -1
@@ -30,6 +30,7 @@ while [ "$i" -lt "887" ]; do
 done
 
 # Generate linear regression input
+dd if=/dev/urandom of=data/lr_10MB.txt count=1024 bs=10240
 i=0
 while [ "$i" -lt "400" ]; do
   cat $TOP/lr_10MB.txt >> $TOP/lr_4GB.txt
