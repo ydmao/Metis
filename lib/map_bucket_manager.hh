@@ -23,7 +23,7 @@
 struct map_bucket_manager_base {
     virtual ~map_bucket_manager_base() {}
     virtual void global_init(size_t rows, size_t cols) = 0;
-    virtual void per_core_init(size_t row) = 0;
+    virtual void per_worker_init(size_t row) = 0;
     virtual void reset(void) = 0;
     virtual void rehash(size_t row, map_bucket_manager_base *backup) = 0;
     virtual bool emit(size_t row, void *key, void *val, size_t keylen,
@@ -86,7 +86,7 @@ struct map_insert_analyzer<DT, false> {
 template <bool S, typename DT, typename OPT>
 struct map_bucket_manager : public map_bucket_manager_base {
     void global_init(size_t rows, size_t cols);
-    void per_core_init(size_t row);
+    void per_worker_init(size_t row);
     void reset(void);
     void rehash(size_t row, map_bucket_manager_base *backup);
     bool emit(size_t row, void *key, void *val, size_t keylen,
@@ -152,7 +152,7 @@ void map_bucket_manager<S, DT, OPT>::global_init(size_t rows, size_t cols) {
 }
 
 template <bool S, typename DT, typename OPT>
-void map_bucket_manager<S, DT, OPT>::per_core_init(size_t row) {
+void map_bucket_manager<S, DT, OPT>::per_worker_init(size_t row) {
     mapdt_[row] = safe_malloc<xarray<DT> >();
     mapdt_[row]->init();
     mapdt_[row]->resize(cols_);
