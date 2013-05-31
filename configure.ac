@@ -104,6 +104,14 @@ if test "$ac_cv_profile" = true ; then
                        [Define if you want metis to print out profiling results from performance counters])
 fi
 
+dnl constexpr
+AC_CACHE_CHECK([whether the C++ compiler understands constexpr], [ac_cv_cxx_constexpr], [
+               AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[constexpr int f(int x) { return x + 1; }]], [[]])],
+               [ac_cv_cxx_constexpr=yes], [ac_cv_cxx_constexpr=no])])
+if test "$ac_cv_cxx_constexpr" = yes; then
+    AC_DEFINE([HAVE_CXX_CONSTEXPR], [1], [Define if the C++ compiler understands constexpr.])
+fi
+
 AC_SUBST([OPT_LEVEL])
 
 AC_OUTPUT

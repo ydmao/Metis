@@ -3,6 +3,9 @@
 /* Define data structure for map phase */
 #undef DEFAULT_MAP_DS
 
+/* Define if the C++ compiler understands constexpr. */
+#undef HAVE_CXX_CONSTEXPR
+
 /* map -> merge -> reduce */
 #undef MAP_MERGE_REDUCE
 

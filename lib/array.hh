@@ -53,9 +53,15 @@ struct xarray {
             set_capacity(0);
         init();
     }
+#if HAVE_CXX_CONSTEXPR
     static constexpr size_t elem_size() {
         return sizeof(T);
     }
+#else
+    static size_t elem_size() {
+        return sizeof(T);
+    }
+#endif
     size_t size() const {
         return n_;
     }
