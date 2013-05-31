@@ -13,7 +13,7 @@ CFLAGS	:= -D_GNU_SOURCE -Wall $(OPTFLAGS) -include config.h \
 	   -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64 \
 	   -DJOS_NCPU=$(MAXCPUS) -D__STDC_FORMAT_MACROS
 
-LIB := -L$(O) -lmetis -ldl @MEM_ALLOCATOR@ -lnuma -lc -lm -lpthread -ldl
+LIB := -L$(O) -lmetis -ldl @MEM_ALLOCATOR@ -lc -lm -lpthread -ldl
 LDEPS := $(O)/libmetis.a
 
 PROGS := obj/kmeans 			    \
