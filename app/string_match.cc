@@ -72,9 +72,9 @@ static uint64_t nsplits = 0;
 static str_data_t str_data;
 
 /** Function to get the next word */
-int getnextline(char *output, int max_len, char *file) {
+int getnextword(char *output, int max_len, char *file) {
     int i = 0;
-    while (i < max_len - 1) {
+    while (i < max_len) {
 	if (file[i] == '\0')
 	    return i + 1;
 	if (file[i] == '\r')
@@ -135,15 +135,17 @@ bool sm::split(split_t * out, int ncores) {
     int counter = data->bytes_comp + out->length;
 
     /* make sure we end at a word */
-    while (counter <= data->keys_file_len && *final_ptr != '\n'
-	   && *final_ptr != '\r' && *final_ptr != '\0') {
+    while (counter < data->keys_file_len && *final_ptr != '\n'
+	   && *final_ptr != '\r' && *final_ptr != '\0' && *final_ptr != ' ') {
 	counter++;
 	final_ptr++;
     }
-    if (*final_ptr == '\r')
-	counter += 2;
-    else if (*final_ptr == '\n')
-	counter++;
+    if (counter < data->keys_file_len) {
+        if (*final_ptr == '\r')
+	    counter += 2;
+        else if (*final_ptr == '\n')
+    	    counter++;
+    }
 
     out->length = counter - data->bytes_comp;
     data->bytes_comp = counter;
@@ -165,7 +167,7 @@ void sm::map_function(split_t *args) {
     bzero(cur_word_final, MAX_REC_LEN);
     int cnt1 = 0, cnt2 = 0, cnt3 = 0, cnt4 = 0;	/* avoid compiler complaining */
     while ((total_len < args->length)
-	   && ((key_len = getnextline(cur_word, MAX_REC_LEN, key_file)) >= 0)) {
+	   && ((key_len = getnextword(cur_word, std::min(size_t(MAX_REC_LEN), args->length - total_len), key_file)) >= 0)) {
 	compute_hashes(cur_word, cur_word_final);
 	if (strcmp(key1, cur_word_final)) {
 	    cnt1++;
