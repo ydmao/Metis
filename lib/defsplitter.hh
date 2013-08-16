@@ -88,7 +88,7 @@ bool defsplitter::split(split_t *ma, int ncores, const char *stop, size_t align)
 	nsplit_ = ncores * def_nsplits_per_core;
 
     ma->data = (void *) &d_[pos_];
-    ma->length = std::min(size_ - pos_, size_ / nsplit_);
+    ma->length = std::min(size_ - pos_, std::max(size_ / nsplit_, sizeof(char)));
     if (align) {
         ma->length = round_down(ma->length, align);
         assert(ma->length);
