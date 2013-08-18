@@ -104,24 +104,24 @@ struct split_word {
     split_word(split_t *ma) : ma_(ma), pos_(0) {
         assert(ma_ && ma_->data);
     }
-    char *fill(char *k, size_t maxlen, size_t &klen) {
+    char *fill(char *k, size_t maxlen, size_t &klen, bool upper = true) {
         char *d = (char *)ma_->data;
         klen = 0;
-        for (; pos_ < ma_->length && !letter(d[pos_]); ++pos_)
+        for (; pos_ < ma_->length && whitespace(d[pos_]); ++pos_)
             ;
         if (pos_ == ma_->length)
             return NULL;
         char *index = &d[pos_];
-        for (; pos_ < ma_->length && letter(d[pos_]); ++pos_) {
-            k[klen++] = toupper(d[pos_]);
+        for (; pos_ < ma_->length && !whitespace(d[pos_]); ++pos_) {
+            k[klen++] = upper ? toupper(d[pos_]) : d[pos_];
 	    assert(klen < maxlen);
         }
 	k[klen] = 0;
         return index;
     }
   private:
-    bool letter(char c) {
-        return toupper(c) >= 'A' && toupper(c) <= 'Z';
+    bool whitespace(char c) {
+        return c == ' ' || c == '\n' || c == '\r' || c == '\0' || c == '\t';
     }
     split_t *ma_;
     size_t pos_;
