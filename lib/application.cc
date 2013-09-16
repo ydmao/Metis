@@ -108,20 +108,19 @@ int mapreduce_appbase::map_worker() {
     }
     if (!sampling_ && skip_reduce_or_group_phase()) {
         m_->prepare_merge(ti->cur_core_);
-        assert(application_type() == atype_maponly);
-#ifdef SINGLE_APPEND_GROUP_FIRST
-        typedef map_bucket_manager<false, keyval_arr_t, keyvals_t> expected_mtype;
-#else
-        typedef map_bucket_manager<false, keyval_arr_t, keyval_t> expected_mtype;
-#endif
-        expected_mtype* m = static_cast<expected_mtype*>(m_);
-        auto output = m->get_output(ti->cur_core_);
+        if (application_type() == atype_maponly) {
+#ifndef SINGLE_APPEND_GROUP_FIRST
+            typedef map_bucket_manager<false, keyval_arr_t, keyval_t> expected_mtype;
+            expected_mtype* m = static_cast<expected_mtype*>(m_);
+            auto output = m->get_output(ti->cur_core_);
 
-        reduce_bucket_manager_base *rb = get_reduce_bucket_manager();
-        typedef reduce_bucket_manager<keyval_t> expected_rtype;
-        expected_rtype *x = static_cast<expected_rtype *>(rb);
-        assert(x);
-        x->set(ti->cur_core_, output);   
+            reduce_bucket_manager_base *rb = get_reduce_bucket_manager();
+            typedef reduce_bucket_manager<keyval_t> expected_rtype;
+            expected_rtype *x = static_cast<expected_rtype *>(rb);
+            assert(x);
+            x->set(ti->cur_core_, output);
+#endif
+        }
     }
     return n;
 }
