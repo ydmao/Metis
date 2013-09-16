@@ -29,7 +29,8 @@ PROGS := obj/kmeans 			    \
 	 obj/sf_sample                    \
          obj/btree_unit                 \
          obj/search_unit              \
-         obj/misc
+         obj/misc \
+         obj/minmaponly
 
 all: $(PROGS)
 

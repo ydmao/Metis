@@ -86,6 +86,10 @@ struct reduce_bucket_manager : public reduce_bucket_manager_base {
             delete out;
         }
     }
+    void set(int p, C *src) {
+        assert(get(p)->size() == 0);
+        get(p)->swap(*src);
+    }
     void transfer(int p, C *dst) {
         assert(dst->size() == 0);
         get(p)->swap(*dst);

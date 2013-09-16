@@ -101,6 +101,10 @@ struct map_bucket_manager : public map_bucket_manager_base {
     }
     void psrs_output_and_reduce(size_t ncpus, size_t lcpu);
     typedef xarray<OPT> C;  // output bucket type
+    C* get_output(size_t row) {
+        assert(cols_ == 1);
+        return &output_[row];
+    }
   private:
     DT *mapdt_bucket(size_t row, size_t col) {
         return mapdt_[row]->at(col);
